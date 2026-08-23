@@ -146,8 +146,14 @@
     background:none; border:none; color: var(--wa-text-soft); cursor:pointer; font-size:14px; padding:3px 6px;
   }
   .manage-label-row button:hover{ color: var(--wa-rust); }
-  .add-label-form{ display:flex; gap:8px; margin-top:14px; align-items:center; }
-  .add-label-form input{ flex:1; font-size:13px; padding: 8px 10px; border-radius:6px; border:1px solid var(--wa-border); }
+  .add-label-form{ display:flex; flex-direction:column; gap:12px; margin-top:14px; }
+  .add-label-input-row{ display:flex; gap:8px; }
+  .add-label-input-row input{
+    flex:1; min-width:0; font-size:13px; padding: 8px 10px; border-radius:6px; border:1px solid var(--wa-border);
+  }
+  .add-label-input-row button{
+    flex-shrink:0; white-space:nowrap; padding: 8px 16px;
+  }
 
   .chat-list{ flex:1; overflow-y:auto; }
   .chat-row{
@@ -380,7 +386,7 @@
   .modal-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:18px; }
   .btn-ghost{ background:none; border:1px solid var(--wa-border); color: var(--wa-text-soft); padding:9px 15px; border-radius:20px; cursor:pointer; font-size:13px; font-weight:600;}
   .btn-primary{ background: var(--wa-header); color:#fff; border:none; padding:9px 18px; border-radius:20px; cursor:pointer; font-size:13px; font-weight:600; }
-  .swatches{ display:flex; gap:8px; margin-top:4px; }
+  .swatches{ display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; }
   .swatch{ width:24px; height:24px; border-radius:50%; cursor:pointer; border:2px solid transparent; }
   .swatch.selected{ border-color: var(--wa-text); }
 
@@ -659,8 +665,10 @@
     <div id="labelManageList"></div>
     <div class="add-label-form">
       <div class="swatches" id="labelColorSwatches"></div>
-      <input type="text" id="newLabelNameInput" placeholder="New label name" onkeydown="if(event.key==='Enter') addLabel()">
-      <button class="btn-primary" style="padding:8px 14px;" onclick="addLabel()">Add</button>
+      <div class="add-label-input-row">
+        <input type="text" id="newLabelNameInput" placeholder="New label name" onkeydown="if(event.key==='Enter') addLabel()">
+        <button class="btn-primary" onclick="addLabel()">Add</button>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn-ghost" onclick="closeLabelManageModal()">Done</button>
