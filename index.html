@@ -30,7 +30,7 @@
     --wa-search-bg: #f0f2f1;
   }
   *{ box-sizing:border-box; }
-  html,body{ margin:0; padding:0; height:100%; }
+  html,body{ margin:0; padding:0; height:100%; overflow:hidden; overscroll-behavior:none; }
   body{
     font-family: 'Inter', -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
     color: var(--wa-text);
@@ -38,6 +38,7 @@
   }
 
   .app{
+    overflow:hidden;
     max-width: 1400px;
     margin: 0 auto;
     height: 100vh;
@@ -192,7 +193,7 @@
     flex-shrink:0; white-space:nowrap; padding: 8px 16px;
   }
 
-  .chat-list{ flex:1; overflow-y:auto; }
+  .chat-list{ flex:1; overflow-y:auto; overscroll-behavior:contain; padding-bottom: 12px; }
   .chat-row{
     display:flex; align-items:center; gap:14px; padding: 11px 16px;
     cursor:pointer; border-bottom: 1px solid #f2f2f2;
@@ -272,7 +273,7 @@
   .task-chip .dot{ width:7px; height:7px; border-radius:50%; }
 
   .chat-body{
-    flex:1; overflow-y:auto; padding: 18px 6% ;
+    flex:1; overflow-y:auto; overscroll-behavior:contain; padding: 18px 6% ;
     background-image: linear-gradient(rgba(239,234,226,0.9), rgba(239,234,226,0.9));
   }
   .day-divider{
