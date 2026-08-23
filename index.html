@@ -39,6 +39,7 @@
     max-width: 1400px;
     margin: 0 auto;
     height: 100vh;
+    height: 100dvh;
     display: grid;
     grid-template-columns: 400px 1fr;
     background: var(--wa-panel);
@@ -46,7 +47,7 @@
   }
 
   /* ---------- Sidebar ---------- */
-  .sidebar{ display:flex; flex-direction:column; border-right: 1px solid var(--wa-border); min-width:0; height:100vh; }
+  .sidebar{ display:flex; flex-direction:column; border-right: 1px solid var(--wa-border); min-width:0; height:100%; }
   .sidebar-header{
     background: var(--wa-header);
     color:#fff; padding: 12px 16px;
@@ -182,7 +183,7 @@
   .empty-list-hint{ padding: 30px 20px; text-align:center; color: var(--wa-text-soft); font-size:13px; }
 
   /* ---------- Chat panel ---------- */
-  .chat-panel{ display:flex; flex-direction:column; min-width:0; height:100vh; background: var(--wa-chat-bg); }
+  .chat-panel{ display:flex; flex-direction:column; min-width:0; height:100%; background: var(--wa-chat-bg); }
 
   .chat-empty{
     flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -821,33 +822,37 @@
 
   function anyModalOpen(){ return document.querySelectorAll('.modal-overlay.open').length > 0; }
 
-  async function pollForUpdates(){
-    if(anyModalOpen()) return;
-    try{
-      const doc = await boardDocRef.get();
-      if(doc.exists){
-        const data = doc.data();
-        const snapshot = JSON.stringify({
-          members: data.members||[], tasks: data.tasks||[], labels: data.labels||[],
-          taskCounter: data.taskCounter, labelCounter: data.labelCounter,
-          adminPin: data.adminPin||null, adminName: data.adminName||'Super Admin'
-        });
-        if(snapshot !== lastSavedSnapshot){
-          members = data.members || [];
-          tasks = data.tasks || [];
-          labels = data.labels || [];
-          taskCounter = data.taskCounter || taskCounter;
-          labelCounter = data.labelCounter || labelCounter;
-          adminPin = data.adminPin || adminPin;
-          adminName = data.adminName || adminName;
-          lastSavedSnapshot = snapshot;
-          renderAll();
-          setSidebarSubtitle('Updated ' + timeNow());
-        }
-      }
-    } catch(err){ /* silent */ }
+  function captureDraftText(){
+    const input = document.getElementById('composeInput');
+    return (input && document.activeElement === input) ? input.value : null;
   }
-  function manualRefresh(){ pollForUpdates(); }
+  function restoreDraftText(draft){
+    if(draft === null) return;
+    const input = document.getElementById('composeInput');
+    if(input){ input.value = draft; input.focus(); const v = input.value; input.value=''; input.value=v; }
+  }
+
+  let firestoreUnsubscribe = null;
+  function startRealtimeSync(){
+    firestoreUnsubscribe = boardDocRef.onSnapshot(doc => {
+      if(!doc.exists) return;
+      if(anyModalOpen()) return; // don't yank a modal out from under someone mid-edit
+      const data = doc.data();
+      members = data.members || [];
+      tasks = data.tasks || [];
+      labels = data.labels || [];
+      taskCounter = data.taskCounter || taskCounter;
+      labelCounter = data.labelCounter || labelCounter;
+      adminPin = data.adminPin || adminPin;
+      adminName = data.adminName || adminName;
+      lastSavedSnapshot = JSON.stringify({members, tasks, labels, taskCounter, labelCounter, adminPin, adminName});
+      const draft = captureDraftText();
+      renderAll();
+      restoreDraftText(draft);
+      setSidebarSubtitle('Synced ' + timeNow());
+    }, err => { console.error('Realtime sync error', err); setSidebarSubtitle('Sync error — check connection'); });
+  }
+  function manualRefresh(){ setSidebarSubtitle('Synced ' + timeNow()); }
   function timeNow(){ return new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}); }
 
   function relativeTime(ts){
@@ -1823,7 +1828,7 @@
       document.getElementById('authOverlay').classList.add('open');
       renderAuthOverlay();
     }
-    setInterval(pollForUpdates, POLL_MS);
+    startRealtimeSync();
   }
   init();
 </script>
