@@ -58,7 +58,8 @@
   .sidebar-title{ display:flex; align-items:center; gap:10px; }
   .sidebar-title .app-logo{
     width:34px; height:34px; border-radius:50%; background: rgba(255,255,255,0.18);
-    display:flex; align-items:center; justify-content:center; font-size:17px;
+    display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700;
+    overflow:hidden; flex-shrink:0; color:#fff;
   }
   .sidebar-title h1{ font-size:16px; font-weight:600; margin:0; }
   .sidebar-title .subtitle{ font-size:11px; opacity:0.85; margin-top:1px; }
@@ -583,9 +584,9 @@
   <div class="sidebar">
     <div class="sidebar-header">
       <div class="sidebar-title">
-        <div class="app-logo">✓</div>
+        <div class="app-logo" id="headerAvatarSlot">✓</div>
         <div>
-          <h1>Team Tasks</h1>
+          <h1 id="headerUserName">Team Tasks</h1>
           <div class="subtitle" id="sidebarSubtitle">Loading…</div>
         </div>
       </div>
@@ -847,9 +848,30 @@
 
   function setSidebarSubtitle(text){
     const el = document.getElementById('sidebarSubtitle');
-    if(!el) return;
-    const name = currentIdentityName();
-    el.textContent = name ? (name + ' · ' + text) : text;
+    if(el) el.textContent = text;
+  }
+
+  function currentUserAvatarData(){
+    if(!session) return { color: 'rgba(255,255,255,0.18)', label: '?', photo: null };
+    if(session.type === 'admin') return adminAvatarData();
+    const m = memberById(session.memberId);
+    return m ? memberAvatarData(m) : { color: '#999', label: '?', photo: null };
+  }
+
+  function renderHeaderIdentity(){
+    const slot = document.getElementById('headerAvatarSlot');
+    const nameEl = document.getElementById('headerUserName');
+    if(!slot || !nameEl) return;
+    if(!session){ slot.innerHTML = '✓'; slot.style.background = 'rgba(255,255,255,0.18)'; nameEl.textContent = 'Team Tasks'; return; }
+    const av = currentUserAvatarData();
+    if(av.photo){
+      slot.innerHTML = `<img src="${av.photo}" style="width:100%;height:100%;object-fit:cover;">`;
+      slot.style.background = 'transparent';
+    } else {
+      slot.innerHTML = av.label;
+      slot.style.background = 'rgba(255,255,255,0.18)';
+    }
+    nameEl.textContent = currentIdentityName() || 'Team Tasks';
   }
 
   async function loadBoard(){
@@ -1300,6 +1322,7 @@
   }
 
   function renderAll(){
+    renderHeaderIdentity();
     renderSidebar();
     renderChatPanel();
   }
@@ -1307,14 +1330,11 @@
   // ---------- Task modal ----------
   function populateAssigneeSelect(){
     const sel = document.getElementById('taskAssigneeInput');
-    if(session && session.type === 'member'){
-      const me = memberById(session.memberId);
-      sel.innerHTML = me ? `<option value="${me.id}">${escapeHtml(me.name)} (you)</option>` : '';
-      sel.disabled = true;
-    } else {
-      sel.disabled = false;
-      sel.innerHTML = members.map(m=>`<option value="${m.id}">${escapeHtml(m.name)}</option>`).join('');
-    }
+    sel.disabled = false;
+    const isMember = session && session.type === 'member';
+    sel.innerHTML = members.map(m =>
+      `<option value="${m.id}">${escapeHtml(m.name)}${(isMember && m.id === session.memberId) ? ' (you)' : ''}</option>`
+    ).join('');
   }
 
   function populateAssignorSelect(){
