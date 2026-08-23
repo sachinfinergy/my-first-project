@@ -181,6 +181,8 @@
   .row-status-dot{
     display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; vertical-align:middle;
   }
+  .row-due-text{ color: var(--wa-text-soft); font-weight:500; }
+  .row-due-text.overdue{ color: var(--wa-rust); font-weight:700; }
   .badge{
     background: var(--wa-badge); color:#fff; font-size:11px; font-weight:700;
     min-width:19px; height:19px; border-radius:10px; display:flex; align-items:center;
@@ -258,36 +260,47 @@
     text-align:center; font-size:12.5px; color: var(--wa-text-soft); padding: 24px 10px;
   }
 
-  /* Task bubble (assignment card, always shown as incoming/system style) */
+  /* Task card */
   .task-bubble{
-    max-width: 82%; background: var(--wa-bubble-in); border-radius:8px; border-top-left-radius:0;
-    padding: 10px 12px 8px; box-shadow: 0 1px 0.5px rgba(0,0,0,0.13); margin-bottom: 10px;
-    border-left: 3px solid var(--wa-header);
+    max-width: 92%; background: var(--wa-bubble-in); border-radius:10px; border-top-left-radius:0;
+    padding: 14px 15px 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 12px;
+    border-left: 4px solid var(--wa-header);
   }
-  .task-bubble-top{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:4px; }
+  .task-bubble-top{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; }
   .task-bubble-id{ font-size:11px; color: var(--wa-text-soft); font-weight:600; letter-spacing:.02em; }
   .prio-pill{
-    font-size:10.5px; font-weight:700; padding:1px 8px; border-radius:10px; color:#fff; text-transform:uppercase;
+    font-size:10.5px; font-weight:700; padding:2px 9px; border-radius:10px; color:#fff; text-transform:uppercase;
   }
   .prio-low{ background: var(--wa-sage); }
   .prio-medium{ background: var(--wa-amber); }
   .prio-high{ background: #e07a3f; }
   .prio-urgent{ background: var(--wa-rust); }
-  .task-bubble-title{ font-size:15px; font-weight:600; margin: 2px 0 4px; }
-  .task-bubble-desc{ font-size:13px; color:#3b4a52; margin-bottom:6px; }
-  .task-bubble-meta{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:4px; }
-  .status-pill-select{
-    font-size:11.5px; border-radius:12px; padding:3px 9px; border:1px solid var(--wa-border);
-    background:#f7f7f7; color:#3b4a52; cursor:pointer;
+  .task-bubble-title-lg{ font-size:18px; font-weight:700; line-height:1.3; margin: 2px 0 6px; color: var(--wa-text); }
+  .task-bubble-desc{ font-size:13.5px; color:#3b4a52; margin-bottom:8px; line-height:1.5; }
+  .task-bubble-divider{ border-top:1px solid var(--wa-border); margin: 10px 0 10px; }
+  .task-bubble-meta{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+
+  .status-badge-select{
+    display:inline-flex; align-items:center; gap:6px; border-radius:14px; padding:4px 10px 4px 8px;
+    background:#f7f7f5; border:1px solid var(--wa-border);
   }
-  .due-label{ font-size:11.5px; color: var(--wa-text-soft); }
+  .status-badge-dot{ width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+  .status-badge-select select{
+    border:none; background:transparent; font-size:12.5px; font-weight:700; cursor:pointer; padding:0;
+  }
+
+  .due-label{ font-size:12px; color: var(--wa-text-soft); }
   .due-label.overdue{ color: var(--wa-rust); font-weight:700; }
-  .task-bubble-actions{ display:flex; gap:2px; }
-  .task-bubble-actions button{
-    background:none; border:none; color: var(--wa-text-soft); cursor:pointer; font-size:13px; padding:3px 5px;
-    border-radius:3px;
+
+  .task-bubble-actions-row{ display:flex; gap:8px; margin-top:12px; }
+  .task-action-btn{
+    flex:1; display:flex; align-items:center; justify-content:center; gap:6px;
+    font-size:12.5px; font-weight:600; padding: 8px 10px; border-radius:8px;
+    border:1px solid var(--wa-border); background:#fff; color: var(--wa-text-soft); cursor:pointer;
   }
-  .task-bubble-actions button:hover{ background: var(--wa-hover); }
+  .task-action-btn:hover{ background: var(--wa-hover); }
+  .task-action-btn.danger{ color: var(--wa-rust); border-color:#f0d4cf; }
+  .task-action-btn.danger:hover{ background:#fdf2ef; }
   .task-bubble-time{ font-size:10.5px; color: var(--wa-text-soft); text-align:right; margin-top:2px; }
 
   .no-tasks-hint{
@@ -416,9 +429,17 @@
 
   .task-customer-row{
     display:flex; align-items:center; gap:10px; font-size:12px; color: var(--wa-text-soft);
-    background:#f7f7f5; border-radius:6px; padding: 5px 9px; margin: 4px 0 6px;
+    background:#f7f7f5; border-radius:6px; padding: 5px 9px; margin: 0 0 6px;
+  }
+  .customer-name-row{
+    font-size:16px; font-weight:700; color: var(--wa-text); margin: 2px 0 5px;
   }
   .task-customer-row span{ display:flex; align-items:center; gap:4px; }
+  .customer-action{
+    display:flex; align-items:center; gap:4px; color: var(--wa-header); text-decoration:none; font-weight:600;
+  }
+  .customer-action:hover{ text-decoration:underline; }
+  .customer-action.wa{ font-weight:400; }
   .task-assignor-row{
     font-size:11px; color: var(--wa-text-soft); font-style:italic; margin: 2px 0 4px;
   }
@@ -976,6 +997,8 @@
       const heading = isSelfView ? (assignorLabel(t) || 'Unknown') : (memberById(t.assignee) ? memberById(t.assignee).name : 'Unassigned');
       const meta = STATUS_FILTERS.find(s=>s.status===t.status) || { label: t.status, color: '#999' };
       const av = isSelfView ? taskAssignorAvatar(t) : taskAssigneeAvatar(t);
+      const overdue = isOverdue(t.due, t.status);
+      const dueText = t.due ? `${overdue?'Overdue ':'Due '}${formatDate(t.due)}` : '';
       return `
         <div class="chat-row" onclick="openTaskRow('${t.id}')">
           <div class="avatar" style="background:${av.color}">${av.label}</div>
@@ -985,7 +1008,9 @@
               <span class="chat-row-time">${relativeTime(latest)}</span>
             </div>
             <div class="chat-row-bottom">
-              <span class="chat-row-preview"><span class="row-status-dot" style="background:${meta.color}"></span><span style="color:${meta.color}; font-weight:700;">${meta.label}</span> — ${escapeHtml(t.title)}</span>
+              <span class="chat-row-preview">
+                <span class="row-status-dot" style="background:${meta.color}"></span><span style="color:${meta.color}; font-weight:700;">${meta.label}</span>${dueText ? `<span class="row-due-text ${overdue?'overdue':''}"> · ${dueText}</span>` : ''} — ${escapeHtml(t.title)}
+              </span>
             </div>
           </div>
         </div>`;
@@ -1057,33 +1082,47 @@
 
   function taskSummaryHtml(t){
     const overdue = isOverdue(t.due, t.status);
+    const prioColors = { urgent: 'var(--wa-rust)', high: '#e07a3f', medium: 'var(--wa-amber)', low: 'var(--wa-sage)' };
+    const borderColor = prioColors[t.priority.toLowerCase()] || 'var(--wa-header)';
+    const statusMeta = {
+      todo: { label: 'New', color: 'var(--wa-rust)' },
+      doing: { label: 'In progress', color: 'var(--wa-amber)' },
+      done: { label: 'Completed', color: 'var(--wa-sage)' },
+    }[t.status] || { label: t.status, color: '#999' };
+    const cleanMobile = (t.customerMobile || '').replace(/[^\d+]/g, '');
+
     return `
-      <div class="task-bubble" id="task-${t.id}">
+      <div class="task-bubble" id="task-${t.id}" style="border-left-color:${borderColor};">
         <div class="task-bubble-top">
           <span class="task-bubble-id">${t.id}</span>
           <span class="prio-pill prio-${t.priority.toLowerCase()}">${t.priority}</span>
         </div>
-        <div class="task-bubble-title">${escapeHtml(t.title)}</div>
+        <div class="task-bubble-title-lg">${escapeHtml(t.title)}</div>
         ${(assignorLabel(t) && t.assignorId !== t.assignee) ? `<div class="task-assignor-row">Assigned by ${escapeHtml(assignorLabel(t))}</div>` : ''}
-        ${(t.customerName || t.customerMobile) ? `
+        ${t.customerName ? `<div class="customer-name-row">👤 ${escapeHtml(t.customerName)}</div>` : ''}
+        ${t.customerMobile ? `
           <div class="task-customer-row">
-            ${t.customerName ? `<span>👤 ${escapeHtml(t.customerName)}</span>` : ''}
-            ${t.customerMobile ? `<span>📞 ${escapeHtml(t.customerMobile)}</span>` : ''}
+            <a href="tel:${cleanMobile}" class="customer-action" title="Call">📞 ${escapeHtml(t.customerMobile)}</a>
+            <a href="https://wa.me/${cleanMobile.replace(/^\+/,'')}" target="_blank" rel="noopener" class="customer-action wa" title="Message on WhatsApp">💬</a>
           </div>` : ''}
         ${(t.labels && t.labels.length) ? `<div class="task-label-row">${t.labels.map(lid => { const l = labelById(lid); return l ? `<span class="task-label-pill" style="background:${l.color}">${escapeHtml(l.name)}</span>` : ''; }).join('')}</div>` : ''}
         ${t.desc ? `<div class="task-bubble-desc">${escapeHtml(t.desc)}</div>` : ''}
         ${t.image ? `<img class="task-image-thumb" src="${t.image}" onclick="openLightboxForTask('${t.id}')">` : ''}
+        <div class="task-bubble-divider"></div>
         <div class="task-bubble-meta">
-          <select class="status-pill-select" onchange="moveTask('${t.id}', this.value)">
-            <option value="todo" ${t.status==='todo'?'selected':''}>New</option>
-            <option value="doing" ${t.status==='doing'?'selected':''}>In progress</option>
-            <option value="done" ${t.status==='done'?'selected':''}>Completed</option>
-          </select>
-          ${t.due ? `<span class="due-label ${overdue?'overdue':''}">${overdue?'Overdue · ':'Due '}${formatDate(t.due)}</span>` : '<span></span>'}
-          <div class="task-bubble-actions">
-            <button onclick="openTaskModal('${t.id}')" title="Edit">✎</button>
-            <button onclick="deleteTask('${t.id}')" title="Delete">✕</button>
+          <div class="status-badge-select">
+            <span class="status-badge-dot" style="background:${statusMeta.color}"></span>
+            <select onchange="moveTask('${t.id}', this.value)" style="color:${statusMeta.color};">
+              <option value="todo" ${t.status==='todo'?'selected':''}>New</option>
+              <option value="doing" ${t.status==='doing'?'selected':''}>In progress</option>
+              <option value="done" ${t.status==='done'?'selected':''}>Completed</option>
+            </select>
           </div>
+          ${t.due ? `<span class="due-label ${overdue?'overdue':''}">📅 ${overdue?'Overdue · ':'Due '}${formatDate(t.due)}</span>` : '<span></span>'}
+        </div>
+        <div class="task-bubble-actions-row">
+          <button class="task-action-btn" onclick="openTaskModal('${t.id}')">✎ Edit</button>
+          <button class="task-action-btn danger" onclick="deleteTask('${t.id}')">✕ Delete</button>
         </div>
       </div>`;
   }
