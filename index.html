@@ -242,6 +242,14 @@
   .bubble-time{
     float:right; font-size:11px; color: var(--wa-text-soft); margin: 4px -4px -2px 8px; margin-top: 3px;
   }
+  .bubble-author{
+    font-size:12px; font-weight:700; color: var(--wa-header); margin-bottom:2px;
+  }
+
+  .notes-thread{ padding-top: 4px; }
+  .notes-empty-hint{
+    text-align:center; font-size:12.5px; color: var(--wa-text-soft); padding: 24px 10px;
+  }
 
   /* Task bubble (assignment card, always shown as incoming/system style) */
   .task-bubble{
@@ -712,6 +720,7 @@
   let selectedColor = COLORS[0];
   let selectedLabelColor = COLORS[0];
   let selectedMemberId = null;
+  let selectedTaskId = null;
   let expandedNotes = new Set();
   let searchQuery = '';
   let activeLabelFilter = null; // labelId or null for "All"
@@ -973,15 +982,10 @@
   function openTaskRow(taskId){
     const t = tasks.find(t => t.id === taskId);
     if(!t) return;
-    selectMember(t.assignee);
-    setTimeout(() => {
-      const el = document.getElementById('task-' + taskId);
-      if(el){
-        el.scrollIntoView({behavior:'smooth', block:'center'});
-        el.style.boxShadow = '0 0 0 2px var(--wa-header)';
-        setTimeout(() => { el.style.boxShadow = ''; }, 1400);
-      }
-    }, 60);
+    selectedTaskId = taskId;
+    selectedMemberId = t.assignee;
+    document.getElementById('appRoot').classList.add('chat-open');
+    renderAll();
   }
 
   function onSearchInput(){
@@ -989,76 +993,57 @@
     renderSidebar();
   }
 
-  function selectMember(id){
-    selectedMemberId = id;
-    document.getElementById('appRoot').classList.add('chat-open');
-    renderAll();
-  }
   function backToList(){
+    selectedTaskId = null;
     document.getElementById('appRoot').classList.remove('chat-open');
   }
 
   // ---------- Chat panel ----------
   function renderChatPanel(){
     const panel = document.getElementById('chatPanel');
-    if(!selectedMemberId){
+    const t = selectedTaskId ? tasks.find(t => t.id === selectedTaskId) : null;
+
+    if(!t){
+      selectedTaskId = null;
       panel.innerHTML = `
         <div class="chat-empty">
           <div class="big-icon">💬</div>
           <h2>Team Tasks</h2>
-          <p>Select a team member on the left to see tasks assigned to them, or start a new task with the ＋ icon. Every update you post here syncs to the whole team.</p>
+          <p>Select a task on the left to view its details, or start a new one with the ＋ icon. Every update you post here syncs to the whole team.</p>
         </div>`;
       return;
     }
-    const m = memberById(selectedMemberId);
-    if(!m){ selectedMemberId = null; renderChatPanel(); return; }
-    const memberTasks = tasks.filter(t=>t.assignee===m.id).sort((a,b)=>a.created-b.created);
-    const openCount = memberTasks.filter(t=>t.status!=='done').length;
+
+    const m = memberById(t.assignee);
 
     panel.innerHTML = `
       <div class="chat-header">
         <button class="back-btn" onclick="backToList()">←</button>
-        <div class="avatar sm" style="background:${m.color}">${initials(m.name)}</div>
+        <div class="avatar sm" style="background:${m?m.color:'#999'}">${m?initials(m.name):'?'}</div>
         <div class="chat-header-info">
-          <div class="chat-header-name">${escapeHtml(m.name)}</div>
-          <div class="chat-header-sub">${memberTasks.length} task${memberTasks.length!==1?'s':''} · ${openCount} open</div>
+          <div class="chat-header-name">${m?escapeHtml(m.name):'Unassigned'}</div>
+          <div class="chat-header-sub">${t.id}</div>
         </div>
         <div class="chat-header-actions">
-          <button class="icon-btn-round dark" onclick="openTaskModal(null,'${m.id}')" title="New task for ${escapeHtml(m.name)}">＋</button>
+          <button class="icon-btn-round dark" onclick="openTaskModal(null,'${t.assignee}')" title="New task for ${m?escapeHtml(m.name):''}">＋</button>
         </div>
       </div>
-      <div class="chat-body" id="chatBody"></div>
+      <div class="chat-body" id="chatBody">
+        ${taskSummaryHtml(t)}
+        <div class="notes-thread">${notesThreadHtml(t)}</div>
+      </div>
+      <div class="chat-compose">
+        <input type="text" class="compose-input" id="composeInput" placeholder="Type an update…" onkeydown="if(event.key==='Enter') sendNote('${t.id}')">
+        <button class="send-btn" onclick="sendNote('${t.id}')" title="Send">➤</button>
+      </div>
     `;
 
     const body = document.getElementById('chatBody');
-    if(memberTasks.length === 0){
-      body.innerHTML = `<div class="no-tasks-hint">No tasks assigned to ${escapeHtml(m.name)} yet.<button onclick="openTaskModal(null,'${m.id}')">Assign a task</button></div>`;
-      return;
-    }
-
-    const sections = [
-      { status: 'todo', label: 'New', color: 'var(--wa-rust)' },
-      { status: 'doing', label: 'In Progress', color: 'var(--wa-amber)' },
-      { status: 'done', label: 'Completed', color: 'var(--wa-sage)' },
-    ];
-    body.innerHTML = sections.map(sec => {
-      const secTasks = memberTasks.filter(t => t.status === sec.status);
-      if(secTasks.length === 0) return '';
-      return `
-        <div class="status-section-header">
-          <span class="dot" style="background:${sec.color}"></span>
-          <span>${sec.label}</span>
-          <span class="status-section-count">${secTasks.length}</span>
-        </div>
-        ${secTasks.map(t => taskThreadHtml(t)).join('')}
-      `;
-    }).join('');
+    body.scrollTop = body.scrollHeight;
   }
 
-  function taskThreadHtml(t){
+  function taskSummaryHtml(t){
     const overdue = isOverdue(t.due, t.status);
-    const notes = t.notes || [];
-    const expanded = expandedNotes.has(t.id);
     return `
       <div class="task-bubble" id="task-${t.id}">
         <div class="task-bubble-top">
@@ -1087,11 +1072,6 @@
             <button onclick="deleteTask('${t.id}')" title="Delete">✕</button>
           </div>
         </div>
-        <button class="notes-toggle" onclick="toggleNotes('${t.id}')">
-          <span>${notes.length ? notes.length + ' note' + (notes.length!==1?'s':'') : 'Add a note'}</span>
-          <span>${expanded ? '▲' : '▼'}</span>
-        </button>
-        ${expanded ? renderNotesSection(t) : ''}
       </div>`;
   }
 
@@ -1099,6 +1079,7 @@
     if(n.authorId){
       const author = memberById(n.authorId);
       if(author) return author.name;
+      if(n.authorId === 'admin') return adminName || 'Super Admin';
     }
     return n.role === 'assignor' ? 'Assignor' : 'Assignee';
   }
@@ -1110,53 +1091,41 @@
     return m ? m.name : null;
   }
 
-  function renderNotesSection(t){
+  function notesThreadHtml(t){
     const notes = t.notes || [];
-    const notesHtml = notes.length
-      ? notes.map(n => `
-          <div class="note-item role-${n.role}">
-            <div class="note-head">
-              <span class="note-author">${escapeHtml(noteAuthorLabel(n))}</span>
-              <span class="note-time">${relativeTime(n.time)}</span>
-            </div>
-            <div class="note-text">${escapeHtml(n.text)}</div>
-          </div>`).join('')
-      : `<div class="note-empty">No updates logged yet.</div>`;
-
-    const authorOptions = members.map(m =>
-      `<option value="${m.id}" ${m.id===t.assignee?'selected':''}>${escapeHtml(m.name)}${m.id===t.assignee?' (assignee)':''}</option>`
-    ).join('');
-
-    return `
-      <div class="notes-section">
-        <div class="notes-list">${notesHtml}</div>
-        <div class="add-note-row">
-          <select id="noteAuthor-${t.id}">${authorOptions}</select>
-          <input type="text" id="noteText-${t.id}" placeholder="Write an update…" onkeydown="if(event.key==='Enter') addNote('${t.id}')">
-          <button onclick="addNote('${t.id}')">Add</button>
-        </div>
-      </div>`;
+    if(notes.length === 0){
+      return `<div class="notes-empty-hint">No updates yet — say something below to get the thread going.</div>`;
+    }
+    const me = currentIdentity();
+    return notes.map(n => {
+      const isMe = n.authorId === me;
+      return `
+        <div class="bubble-row ${isMe?'out':'in'}">
+          <div class="bubble ${isMe?'out':'in'}">
+            ${!isMe ? `<div class="bubble-author">${escapeHtml(noteAuthorLabel(n))}</div>` : ''}
+            ${escapeHtml(n.text)}
+            <span class="bubble-time">${clockTime(n.time)}</span>
+          </div>
+        </div>`;
+    }).join('');
   }
 
-  function toggleNotes(id){
-    if(expandedNotes.has(id)) expandedNotes.delete(id);
-    else expandedNotes.add(id);
-    renderChatPanel();
-  }
-
-  function addNote(id){
-    const authorSel = document.getElementById('noteAuthor-' + id);
-    const textInput = document.getElementById('noteText-' + id);
-    const text = textInput.value.trim();
+  function sendNote(taskId){
+    const input = document.getElementById('composeInput');
+    if(!input) return;
+    const text = input.value.trim();
     if(!text) return;
-    const t = tasks.find(t=>t.id===id);
+    const t = tasks.find(t => t.id === taskId);
+    if(!t) return;
     if(!t.notes) t.notes = [];
-    const authorId = authorSel.value;
+    const authorId = currentIdentity();
     const role = authorId === t.assignee ? 'assignee' : 'assignor';
     t.notes.push({ authorId, role, text, time: Date.now() });
-    expandedNotes.add(id);
+    input.value = '';
     renderAll();
     saveBoard();
+    const body = document.getElementById('chatBody');
+    if(body) body.scrollTop = body.scrollHeight;
   }
 
   const COMPLETED_LABEL_NAME = 'Completed';
@@ -1458,6 +1427,7 @@
     }
     syncCompletedLabel(t);
     closeTaskModal();
+    selectedTaskId = newId;
     selectedMemberId = data.assignee;
     document.getElementById('appRoot').classList.add('chat-open');
     renderAll();
@@ -1810,9 +1780,6 @@
     root.style.display = 'grid';
     document.querySelectorAll('.admin-only').forEach(el => el.classList.toggle('hidden-for-member', session.type !== 'admin'));
     document.querySelectorAll('.member-only').forEach(el => el.classList.toggle('show-for-member', session.type === 'member'));
-    if(session.type === 'member'){
-      selectMember(session.memberId);
-    }
     renderAll();
   }
 
