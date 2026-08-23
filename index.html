@@ -898,6 +898,17 @@
   function formatDate(iso){ return new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', {day:'2-digit', month:'short'}); }
   function isOverdue(due, status){ if(!due || status==='done') return false; return due < new Date().toISOString().slice(0,10); }
 
+  function daysInHandLabel(due, status){
+    if(!due) return null;
+    if(status === 'done') return { text: 'Completed', overdue:false, done:true };
+    const today = new Date().toISOString().slice(0,10);
+    const diffDays = Math.round((new Date(due+'T00:00:00') - new Date(today+'T00:00:00')) / 86400000);
+    if(diffDays < 0) return { text: `Overdue by ${Math.abs(diffDays)}d`, overdue:true };
+    if(diffDays === 0) return { text: 'Due today', overdue:false, today:true };
+    if(diffDays === 1) return { text: '1 day left', overdue:false };
+    return { text: `${diffDays} days left`, overdue:false };
+  }
+
   // ---------- Sidebar (chat list) ----------
   function labelById(id){ return labels.find(l=>l.id===id); }
 
@@ -997,8 +1008,7 @@
       const heading = isSelfView ? (assignorLabel(t) || 'Unknown') : (memberById(t.assignee) ? memberById(t.assignee).name : 'Unassigned');
       const meta = STATUS_FILTERS.find(s=>s.status===t.status) || { label: t.status, color: '#999' };
       const av = isSelfView ? taskAssignorAvatar(t) : taskAssigneeAvatar(t);
-      const overdue = isOverdue(t.due, t.status);
-      const dueText = t.due ? `${overdue?'Overdue ':'Due '}${formatDate(t.due)}` : '';
+      const dayInfo = (t.status !== 'done') ? daysInHandLabel(t.due, t.status) : null;
       return `
         <div class="chat-row" onclick="openTaskRow('${t.id}')">
           <div class="avatar" style="background:${av.color}">${av.label}</div>
@@ -1009,7 +1019,7 @@
             </div>
             <div class="chat-row-bottom">
               <span class="chat-row-preview">
-                <span class="row-status-dot" style="background:${meta.color}"></span><span style="color:${meta.color}; font-weight:700;">${meta.label}</span>${dueText ? `<span class="row-due-text ${overdue?'overdue':''}"> · ${dueText}</span>` : ''} — ${escapeHtml(t.title)}
+                <span class="row-status-dot" style="background:${meta.color}"></span><span style="color:${meta.color}; font-weight:700;">${meta.label}</span>${dayInfo ? `<span class="row-due-text ${dayInfo.overdue?'overdue':''}" title="${t.due?formatDate(t.due):''}"> · ${dayInfo.text}</span>` : ''} — ${escapeHtml(t.title)}
               </span>
             </div>
           </div>
@@ -1081,7 +1091,7 @@
   }
 
   function taskSummaryHtml(t){
-    const overdue = isOverdue(t.due, t.status);
+    const dayInfo = daysInHandLabel(t.due, t.status);
     const prioColors = { urgent: 'var(--wa-rust)', high: '#e07a3f', medium: 'var(--wa-amber)', low: 'var(--wa-sage)' };
     const borderColor = prioColors[t.priority.toLowerCase()] || 'var(--wa-header)';
     const statusMeta = {
@@ -1118,7 +1128,7 @@
               <option value="done" ${t.status==='done'?'selected':''}>Completed</option>
             </select>
           </div>
-          ${t.due ? `<span class="due-label ${overdue?'overdue':''}">📅 ${overdue?'Overdue · ':'Due '}${formatDate(t.due)}</span>` : '<span></span>'}
+          ${dayInfo && !dayInfo.done ? `<span class="due-label ${dayInfo.overdue?'overdue':''}" title="${t.due?formatDate(t.due):''}">📅 ${dayInfo.text}</span>` : (t.due ? `<span class="due-label" title="${formatDate(t.due)}">📅 ${formatDate(t.due)}</span>` : '<span></span>')}
         </div>
         <div class="task-bubble-actions-row">
           <button class="task-action-btn" onclick="openTaskModal('${t.id}')">✎ Edit</button>
