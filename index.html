@@ -612,7 +612,7 @@
     <div class="search-wrap">
       <div class="search-box">
         <span class="icon">🔍</span>
-        <input type="text" id="searchInput" placeholder="Search tasks, notes, or members" oninput="onSearchInput()">
+        <input type="text" id="searchInput" placeholder="Search tasks, clients, notes, or members" oninput="onSearchInput()">
       </div>
     </div>
     <div class="status-filter-row" id="statusFilterRow"></div>
@@ -1078,6 +1078,8 @@
       relevantTasks = relevantTasks.filter(t => {
         if(t.title.toLowerCase().includes(q)) return true;
         if(t.desc && t.desc.toLowerCase().includes(q)) return true;
+        if(t.customerName && t.customerName.toLowerCase().includes(q)) return true;
+        if(t.customerMobile && t.customerMobile.replace(/\s+/g,'').includes(q.replace(/\s+/g,''))) return true;
         if((t.notes||[]).some(n => n.text.toLowerCase().includes(q))) return true;
         const assignor = assignorLabel(t);
         if(assignor && assignor.toLowerCase().includes(q)) return true;
