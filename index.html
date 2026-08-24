@@ -317,6 +317,8 @@
   .bubble-time{
     float:right; font-size:11px; color: var(--wa-text-soft); margin: 4px -4px -2px 8px; margin-top: 3px;
   }
+  .msg-ticks{ color: var(--wa-text-soft); letter-spacing:-2px; font-size:12px; }
+  .msg-ticks.read{ color: #34b7f1; }
   .bubble-author{
     font-size:12px; font-weight:700; color: var(--wa-header); margin-bottom:2px;
   }
@@ -471,6 +473,7 @@
     background:#fff; border-radius: 8px; width:100%; max-width: 440px;
     padding: 22px; max-height: 88vh; overflow-y:auto;
   }
+  .modal-wide{ max-width: 620px; padding: 28px 32px; }
   .modal h3{ font-size:18px; font-weight:600; margin: 0 0 16px; color: var(--wa-text); }
   .field{ margin-bottom:14px; }
   .field label{ display:block; font-size:12px; color: var(--wa-text-soft); margin-bottom:5px; font-weight:600; }
@@ -479,7 +482,7 @@
     background:#fafafa; color: var(--wa-text); font-family:inherit;
   }
   .field textarea{ resize:vertical; min-height:56px; }
-  .field-row{ display:flex; gap:10px; }
+  .field-row{ display:flex; gap:16px; }
   .field-row .field{ flex:1; }
   .modal-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:18px; }
   .btn-ghost{ background:none; border:1px solid var(--wa-border); color: var(--wa-text-soft); padding:9px 15px; border-radius:20px; cursor:pointer; font-size:13px; font-weight:600;}
@@ -691,7 +694,7 @@
 
 <!-- Task Modal -->
 <div class="modal-overlay" id="taskModalOverlay">
-  <div class="modal">
+  <div class="modal modal-wide">
     <h3 id="taskModalTitle">New task</h3>
     <input type="hidden" id="taskId">
     <div class="field">
@@ -1076,7 +1079,7 @@
 
   function renderSidebar(){
     const isMemberSession = session && session.type === 'member';
-    renderDirectionFilterRow(isMemberSession);
+    renderDirectionFilterRow();
     renderStatusFilterRow();
     renderLabelFilterRow();
     const list = document.getElementById('chatList');
@@ -1084,13 +1087,13 @@
     renderTaskList(list, scopeMemberId);
   }
 
-  function renderDirectionFilterRow(isMemberSession){
+  function renderDirectionFilterRow(){
     const row = document.getElementById('directionFilterRow');
     if(!row) return;
-    if(!isMemberSession){ row.innerHTML = ''; return; }
-    const scopeMemberId = session.memberId;
-    const receivedCount = tasks.filter(t => t.assignee === scopeMemberId).length;
-    const givenCount = tasks.filter(t => t.assignorId === scopeMemberId && t.assignee !== scopeMemberId).length;
+    if(!session){ row.innerHTML = ''; return; }
+    const identity = session.type === 'admin' ? 'admin' : session.memberId;
+    const receivedCount = tasks.filter(t => t.assignee === identity).length;
+    const givenCount = tasks.filter(t => t.assignorId === identity && t.assignee !== identity).length;
     row.innerHTML = `
       <div class="direction-filter-chip ${activeDirectionFilter===null?'active':''}" onclick="setDirectionFilter(null)">All</div>
       <div class="direction-filter-chip ${activeDirectionFilter==='received'?'active':''}" onclick="setDirectionFilter('received')">Task Received <span class="count">${receivedCount}</span></div>
@@ -1228,7 +1231,15 @@
       }
       list.innerHTML = html || `<div class="empty-list-hint">Nothing matches these filters.</div>`;
     } else {
-      list.innerHTML = withActivity.map(x => rowHtml(x, 'admin')).join('');
+      let adminList = withActivity;
+      if(activeDirectionFilter === 'given'){
+        adminList = withActivity.filter(x => x.t.assignorId === 'admin');
+      } else if(activeDirectionFilter === 'received'){
+        adminList = withActivity.filter(x => x.t.assignee === 'admin');
+      }
+      list.innerHTML = adminList.length
+        ? adminList.map(x => rowHtml(x, 'admin')).join('')
+        : `<div class="empty-list-hint">Nothing matches these filters.</div>`;
     }
   }
 
@@ -1270,6 +1281,7 @@
     }
 
     const m = memberById(t.assignee);
+    markTaskNotesAsRead(t);
 
     panel.innerHTML = `
       <div class="chat-header">
@@ -1374,16 +1386,46 @@
     const me = currentIdentity();
     return notes.map((n, idx) => {
       const isMe = n.authorId === me;
+      const ticks = isMe ? tickMarkHtml(n, t) : '';
       return `
         <div class="bubble-row ${isMe?'out':'in'}">
           <div class="bubble ${isMe?'out':'in'} ${n.image?'has-image':''}">
             ${!isMe ? `<div class="bubble-author">${escapeHtml(noteAuthorLabel(n))}</div>` : ''}
             ${n.image ? `<img class="bubble-image" src="${n.image}" onclick="openNoteLightbox('${t.id}', ${idx})">` : ''}
             ${n.text ? escapeHtml(n.text) : ''}
-            <span class="bubble-time">${clockTime(n.time)}</span>
+            <span class="bubble-time">${clockTime(n.time)}${ticks}</span>
           </div>
         </div>`;
     }).join('');
+  }
+
+  function noteCounterpartId(n, t){
+    // The "other side" of this specific exchange: if I'm the assignee, the counterpart is the assignor, and vice versa.
+    return n.authorId === t.assignee ? t.assignorId : t.assignee;
+  }
+
+  function tickMarkHtml(n, t){
+    const readBy = n.readBy || [];
+    const counterpart = noteCounterpartId(n, t);
+    const readByCounterpart = counterpart && readBy.includes(counterpart);
+    if(readByCounterpart){
+      return ` <span class="msg-ticks read" title="Read">✓✓</span>`;
+    }
+    return ` <span class="msg-ticks" title="Sent">✓✓</span>`;
+  }
+
+  function markTaskNotesAsRead(t){
+    const me = currentIdentity();
+    let changed = false;
+    (t.notes || []).forEach(n => {
+      if(n.authorId === me) return;
+      if(!n.readBy) n.readBy = [];
+      if(!n.readBy.includes(me)){
+        n.readBy.push(me);
+        changed = true;
+      }
+    });
+    if(changed) saveBoard();
   }
 
   function openNoteLightbox(taskId, noteIndex){
@@ -1402,7 +1444,7 @@
     if(!t.notes) t.notes = [];
     const authorId = currentIdentity();
     const role = authorId === t.assignee ? 'assignee' : 'assignor';
-    t.notes.push({ authorId, role, text, image: pendingNoteImage, time: Date.now() });
+    t.notes.push({ authorId, role, text, image: pendingNoteImage, time: Date.now(), readBy: [authorId] });
     input.value = '';
     pendingNoteImage = null;
     renderAll();
