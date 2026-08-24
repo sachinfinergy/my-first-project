@@ -11,9 +11,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --wa-header: #FFCE00;
-    --wa-header-dark: #C6A000;
-    --wa-header-text: #1a1a1a;
+    --wa-header: #008069;
+    --wa-header-dark: #005c4b;
+    --wa-header-text: #ffffff;
     --wa-panel: #ffffff;
     --wa-hover: #f5f6f6;
     --wa-selected: #f0f2f1;
@@ -23,8 +23,8 @@
     --wa-icon: #54656f;
     --wa-chat-bg: #efeae2;
     --wa-bubble-in: #ffffff;
-    --wa-bubble-out: #FFF2BF;
-    --wa-badge: #E0A400;
+    --wa-bubble-out: #d9fdd3;
+    --wa-badge: #06d755;
     --wa-rust: #c0392b;
     --wa-amber: #d9a441;
     --wa-sage: #4c9a5b;
@@ -107,6 +107,24 @@
   .status-filter-chip .dot{ width:7px; height:7px; border-radius:50%; flex-shrink:0; }
   .status-filter-chip.active{ color:#fff; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05); }
   .status-filter-chip:not(.active):hover{ background:#f0f0ee; }
+
+  .direction-filter-row{
+    display:flex; gap:0; padding: 8px 12px 0; margin: 0;
+  }
+  .direction-filter-row:empty{ padding:0; }
+  .direction-filter-chip{
+    flex:1; display:flex; align-items:center; justify-content:center; gap:6px; padding: 8px 8px;
+    border:1.5px solid var(--wa-border); border-right:none; background:#fff; cursor:pointer;
+    font-size:12.5px; white-space:nowrap; color: var(--wa-text-soft); font-weight:700; transition: background .12s;
+  }
+  .direction-filter-chip:first-child{ border-top-left-radius:8px; border-bottom-left-radius:8px; }
+  .direction-filter-chip:last-child{ border-right:1.5px solid var(--wa-border); border-top-right-radius:8px; border-bottom-right-radius:8px; }
+  .direction-filter-chip .count{
+    background:#e4e0d8; color: var(--wa-text-soft); font-size:10px; font-weight:700; border-radius:9px; padding:1px 6px;
+  }
+  .direction-filter-chip.active{ background: var(--wa-header); color: var(--wa-header-text); border-color: var(--wa-header); }
+  .direction-filter-chip.active .count{ background: rgba(255,255,255,0.35); color: var(--wa-header-text); }
+  .direction-filter-chip:not(.active):hover{ background:#f5f5f3; }
 
   .label-filter-row{
     display:flex; gap:8px; padding: 6px 12px 10px; overflow-x:auto; align-items:center;
@@ -441,7 +459,7 @@
     font-size:16px; cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center;
   }
   .attach-btn{ background:#fff; color: var(--wa-icon); border:1px solid var(--wa-border); }
-  .send-btn:disabled{ background:#f5e6a8; color:#b3a05a; cursor:default; }
+  .send-btn:disabled{ background:#bcd6cf; cursor:default; }
 
   /* ---------- Modals ---------- */
   .modal-overlay{
@@ -635,6 +653,7 @@
         <input type="text" id="searchInput" placeholder="Search tasks, clients, notes, or members" oninput="onSearchInput()">
       </div>
     </div>
+    <div class="direction-filter-row" id="directionFilterRow"></div>
     <div class="status-filter-row" id="statusFilterRow"></div>
     <div class="label-filter-row" id="labelFilterRow"></div>
     <div class="chat-list" id="chatList"></div>
@@ -829,6 +848,7 @@
   let searchQuery = '';
   let activeLabelFilter = null; // labelId or null for "All"
   let activeStatusFilter = null; // 'todo' | 'doing' | 'done' | null for "All"
+  let activeDirectionFilter = null; // 'given' | 'received' | null for "All" (member self-view only)
   let pendingTaskLabels = new Set(); // labels toggled while task modal is open
   let pendingTaskImage = null; // data URL of attached image while task modal is open
   let adminPin = null;
@@ -1055,12 +1075,31 @@
   }
 
   function renderSidebar(){
+    const isMemberSession = session && session.type === 'member';
+    renderDirectionFilterRow(isMemberSession);
     renderStatusFilterRow();
     renderLabelFilterRow();
     const list = document.getElementById('chatList');
-    const isMemberSession = session && session.type === 'member';
     const scopeMemberId = isMemberSession ? session.memberId : null;
     renderTaskList(list, scopeMemberId);
+  }
+
+  function renderDirectionFilterRow(isMemberSession){
+    const row = document.getElementById('directionFilterRow');
+    if(!row) return;
+    if(!isMemberSession){ row.innerHTML = ''; return; }
+    const scopeMemberId = session.memberId;
+    const receivedCount = tasks.filter(t => t.assignee === scopeMemberId).length;
+    const givenCount = tasks.filter(t => t.assignorId === scopeMemberId && t.assignee !== scopeMemberId).length;
+    row.innerHTML = `
+      <div class="direction-filter-chip ${activeDirectionFilter===null?'active':''}" onclick="setDirectionFilter(null)">All</div>
+      <div class="direction-filter-chip ${activeDirectionFilter==='received'?'active':''}" onclick="setDirectionFilter('received')">Task Received <span class="count">${receivedCount}</span></div>
+      <div class="direction-filter-chip ${activeDirectionFilter==='given'?'active':''}" onclick="setDirectionFilter('given')">Task Given <span class="count">${givenCount}</span></div>
+    `;
+  }
+  function setDirectionFilter(dir){
+    activeDirectionFilter = dir;
+    renderAll();
   }
 
   function avatarHtml(av, sizeClass){
@@ -1173,13 +1212,19 @@
       const received = withActivity.filter(x => x.t.assignee === scopeMemberId);
       const given = withActivity.filter(x => x.t.assignorId === scopeMemberId && x.t.assignee !== scopeMemberId);
       let html = '';
-      if(received.length){
-        html += `<div class="status-section-header"><span>Task Received</span><span class="status-section-count">${received.length}</span></div>`;
-        html += received.map(x => rowHtml(x, 'received')).join('');
-      }
-      if(given.length){
-        html += `<div class="status-section-header"><span>Task Given</span><span class="status-section-count">${given.length}</span></div>`;
-        html += given.map(x => rowHtml(x, 'given')).join('');
+      if(activeDirectionFilter === 'received'){
+        html = received.length ? received.map(x => rowHtml(x, 'received')).join('') : '';
+      } else if(activeDirectionFilter === 'given'){
+        html = given.length ? given.map(x => rowHtml(x, 'given')).join('') : '';
+      } else {
+        if(received.length){
+          html += `<div class="status-section-header"><span>Task Received</span><span class="status-section-count">${received.length}</span></div>`;
+          html += received.map(x => rowHtml(x, 'received')).join('');
+        }
+        if(given.length){
+          html += `<div class="status-section-header"><span>Task Given</span><span class="status-section-count">${given.length}</span></div>`;
+          html += given.map(x => rowHtml(x, 'given')).join('');
+        }
       }
       list.innerHTML = html || `<div class="empty-list-hint">Nothing matches these filters.</div>`;
     } else {
@@ -2180,6 +2225,10 @@
     clearSessionStorage();
     session = null;
     selectedMemberId = null;
+    selectedTaskId = null;
+    activeDirectionFilter = null;
+    activeStatusFilter = null;
+    activeLabelFilter = null;
     document.getElementById('appRoot').style.display = 'none';
     authTab = 'member';
     document.getElementById('authOverlay').classList.add('open');
