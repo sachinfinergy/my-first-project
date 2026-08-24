@@ -1432,16 +1432,37 @@
     return m ? m.name : null;
   }
 
+  function dayLabel(ts){
+    const d = new Date(ts);
+    const today = new Date();
+    const yesterday = new Date(); yesterday.setDate(today.getDate() - 1);
+    const sameDay = (a,b) => a.toDateString() === b.toDateString();
+    if(sameDay(d, today)) return 'Today';
+    if(sameDay(d, yesterday)) return 'Yesterday';
+    const dd = String(d.getDate()).padStart(2,'0');
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const yyyy = d.getFullYear();
+    const dayName = d.toLocaleDateString('en-GB', { weekday: 'long' });
+    return `${dd}/${mm}/${yyyy} ${dayName}`;
+  }
+
   function notesThreadHtml(t){
     const notes = t.notes || [];
     if(notes.length === 0){
       return `<div class="notes-empty-hint">No updates yet — say something below to get the thread going.</div>`;
     }
     const me = currentIdentity();
+    let lastDateStr = null;
     return notes.map((n, idx) => {
       const isMe = n.authorId === me;
       const ticks = isMe ? tickMarkHtml(n, t) : '';
-      return `
+      const thisDateStr = new Date(n.time).toDateString();
+      let divider = '';
+      if(thisDateStr !== lastDateStr){
+        divider = `<div class="day-divider"><span>${dayLabel(n.time)}</span></div>`;
+        lastDateStr = thisDateStr;
+      }
+      return `${divider}
         <div class="bubble-row ${isMe?'out':'in'}">
           <div class="bubble ${isMe?'out':'in'} ${n.image?'has-image':''}">
             ${!isMe ? `<div class="bubble-author">${escapeHtml(noteAuthorLabel(n))}</div>` : ''}
