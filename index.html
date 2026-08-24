@@ -1205,7 +1205,7 @@
       } else {
         previewHtml = `${t.customerName ? `<span class="row-client-name">👤 ${escapeHtml(t.customerName)}</span> · ` : ''}${escapeHtml(t.title)}`;
       }
-      const replyCount = (t.notes || []).length;
+      const unreadCount = unreadCountForTask(t);
 
       return `
         <div class="chat-row" onclick="openTaskRow('${t.id}')">
@@ -1223,7 +1223,7 @@
               ${previewHtml}
             </div>
           </div>
-          ${replyCount > 0 ? `<div class="chat-row-badge-col"><span class="badge" title="${replyCount} update${replyCount!==1?'s':''}">${replyCount}</span></div>` : ''}
+          ${unreadCount > 0 ? `<div class="chat-row-badge-col"><span class="badge" title="${unreadCount} unread update${unreadCount!==1?'s':''}">${unreadCount}</span></div>` : ''}
         </div>`;
     }
 
@@ -1444,6 +1444,11 @@
     if(changed) saveBoard();
   }
 
+  function unreadCountForTask(t){
+    const me = currentIdentity();
+    return (t.notes || []).filter(n => n.authorId !== me && !(n.readBy || []).includes(me)).length;
+  }
+
   function openNoteLightbox(taskId, noteIndex){
     const t = tasks.find(t => t.id === taskId);
     const n = t && t.notes && t.notes[noteIndex];
@@ -1534,8 +1539,8 @@
 
   function renderAll(){
     renderHeaderIdentity();
-    renderSidebar();
     renderChatPanel();
+    renderSidebar();
   }
 
   // ---------- Task modal ----------
