@@ -248,11 +248,13 @@
     font-size:13px; color: var(--wa-text-soft); margin-top:3px; line-height:1.35;
     display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
   }
+  .chat-row-preview b{ color: var(--wa-text); font-weight:600; }
   .row-client-name{ color: var(--wa-text); font-weight:600; }
+  .chat-row-badge-col{ display:flex; align-items:center; flex-shrink:0; }
   .badge{
     background: var(--wa-badge); color: var(--wa-header-text); font-size:11px; font-weight:700;
-    min-width:19px; height:19px; border-radius:10px; display:flex; align-items:center;
-    justify-content:center; padding:0 5px; flex-shrink:0;
+    min-width:22px; height:22px; border-radius:11px; display:flex; align-items:center;
+    justify-content:center; padding:0 6px; flex-shrink:0;
   }
   .empty-list-hint{ padding: 30px 20px; text-align:center; color: var(--wa-text-soft); font-size:13px; }
 
@@ -1162,8 +1164,9 @@
 
     const withActivity = relevantTasks.map(t => {
       let latest = t.created;
-      (t.notes||[]).forEach(n => { if(n.time > latest) latest = n.time; });
-      return { t, latest };
+      let latestNote = null;
+      (t.notes||[]).forEach(n => { if(n.time > latest){ latest = n.time; latestNote = n; } });
+      return { t, latest, latestNote };
     });
     withActivity.sort((a,b) => b.latest - a.latest);
 
@@ -1178,7 +1181,7 @@
     const statusBadgeClass = { todo: 'status-badge-new', doing: 'status-badge-progress', done: 'status-badge-done' };
 
     function rowHtml(entry, direction){
-      const t = entry.t, latest = entry.latest;
+      const t = entry.t, latest = entry.latest, latestNote = entry.latestNote;
       let heading, av;
       if(direction === 'given'){
         heading = memberById(t.assignee) ? memberById(t.assignee).name : 'Unassigned';
@@ -1192,6 +1195,18 @@
       }
       const meta = STATUS_FILTERS.find(s=>s.status===t.status) || { label: t.status, color: '#999' };
       const dayInfo = (t.status !== 'done') ? daysInHandLabel(t.due, t.status) : null;
+
+      let previewHtml;
+      if(latestNote){
+        const isMe = latestNote.authorId === currentIdentity();
+        const authorPrefix = isMe ? 'You' : noteAuthorLabel(latestNote);
+        const msgBody = latestNote.text ? escapeHtml(latestNote.text) : (latestNote.image ? '📷 Photo' : '');
+        previewHtml = `<b>${escapeHtml(authorPrefix)}:</b> ${msgBody}`;
+      } else {
+        previewHtml = `${t.customerName ? `<span class="row-client-name">👤 ${escapeHtml(t.customerName)}</span> · ` : ''}${escapeHtml(t.title)}`;
+      }
+      const replyCount = (t.notes || []).length;
+
       return `
         <div class="chat-row" onclick="openTaskRow('${t.id}')">
           ${avatarHtml(av)}
@@ -1205,9 +1220,10 @@
               <span class="chat-row-time">${relativeTime(latest)}</span>
             </div>
             <div class="chat-row-preview">
-              ${t.customerName ? `<span class="row-client-name">👤 ${escapeHtml(t.customerName)}</span> · ` : ''}${escapeHtml(t.title)}
+              ${previewHtml}
             </div>
           </div>
+          ${replyCount > 0 ? `<div class="chat-row-badge-col"><span class="badge" title="${replyCount} update${replyCount!==1?'s':''}">${replyCount}</span></div>` : ''}
         </div>`;
     }
 
