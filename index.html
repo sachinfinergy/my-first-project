@@ -81,6 +81,7 @@
   .sidebar-title h1{ font-size:16px; font-weight:600; margin:0; color: var(--wa-header-text); }
   .sidebar-title .subtitle{ font-size:11px; opacity:0.75; margin-top:1px; color: var(--wa-header-text); }
   .header-icons{ display:flex; gap:4px; }
+  .mobile-only-icons{ display:none; }
   .admin-only.hidden-for-member{ display:none !important; }
   .member-only{ display:none; }
   .member-only.show-for-member{ display:flex; }
@@ -639,6 +640,10 @@
     .back-btn{ display:flex; align-items:center; justify-content:center; }
     .app.chat-open .sidebar{ display:none; }
     .app.chat-open .chat-panel{ display:flex; }
+    .sidebar-header{ flex-wrap:wrap; row-gap:6px; }
+    .mobile-only-icons{ display:flex; }
+    .mobile-only-icons .icon-btn-round{ width:30px; height:30px; font-size:15px; }
+    .sidebar-title h1{ font-size:15px; }
   }
 </style>
 </head>
@@ -677,6 +682,15 @@
           <h1 id="headerUserName">Team Tasks</h1>
           <div class="subtitle" id="sidebarSubtitle">Loading…</div>
         </div>
+      </div>
+      <div class="header-icons mobile-only-icons" id="mobileHeaderIcons">
+        <button class="icon-btn-round admin-only" onclick="openDashboard()" title="Dashboard">📊</button>
+        <button class="icon-btn-round member-only" onclick="openDashboard(session.memberId)" title="My dashboard">📊</button>
+        <button class="icon-btn-round admin-only" onclick="openLabelManageModal()" title="Manage labels">🏷️</button>
+        <button class="icon-btn-round admin-only" onclick="openMemberModal()" title="Add team member">👤+</button>
+        <button class="icon-btn-round" onclick="openTaskModal()" title="New task">＋</button>
+        <button class="icon-btn-round" onclick="manualRefresh()" title="Refresh">↻</button>
+        <button class="icon-btn-round" onclick="logout()" title="Log out">⏻</button>
       </div>
     </div>
     <div class="search-wrap">
