@@ -11,8 +11,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --wa-header: #008069;
-    --wa-header-dark: #005c4b;
+    --wa-header: #FFCE00;
+    --wa-header-dark: #C6A000;
+    --wa-header-text: #1a1a1a;
     --wa-panel: #ffffff;
     --wa-hover: #f5f6f6;
     --wa-selected: #f0f2f1;
@@ -22,8 +23,8 @@
     --wa-icon: #54656f;
     --wa-chat-bg: #efeae2;
     --wa-bubble-in: #ffffff;
-    --wa-bubble-out: #d9fdd3;
-    --wa-badge: #06d755;
+    --wa-bubble-out: #FFF2BF;
+    --wa-badge: #E0A400;
     --wa-rust: #c0392b;
     --wa-amber: #d9a441;
     --wa-sage: #4c9a5b;
@@ -53,26 +54,26 @@
   .sidebar{ display:flex; flex-direction:column; border-right: 1px solid var(--wa-border); min-width:0; min-height:0; height:100%; }
   .sidebar-header{
     background: var(--wa-header);
-    color:#fff; padding: 12px 16px;
+    color: var(--wa-header-text); padding: 12px 16px;
     display:flex; align-items:center; justify-content:space-between;
   }
   .sidebar-title{ display:flex; align-items:center; gap:10px; }
   .sidebar-title .app-logo{
-    width:34px; height:34px; border-radius:50%; background: rgba(255,255,255,0.18);
+    width:34px; height:34px; border-radius:50%; background: rgba(0,0,0,0.12);
     display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700;
-    overflow:hidden; flex-shrink:0; color:#fff;
+    overflow:hidden; flex-shrink:0; color: var(--wa-header-text);
   }
-  .sidebar-title h1{ font-size:16px; font-weight:600; margin:0; }
-  .sidebar-title .subtitle{ font-size:11px; opacity:0.85; margin-top:1px; }
+  .sidebar-title h1{ font-size:16px; font-weight:600; margin:0; color: var(--wa-header-text); }
+  .sidebar-title .subtitle{ font-size:11px; opacity:0.75; margin-top:1px; color: var(--wa-header-text); }
   .header-icons{ display:flex; gap:4px; }
   .admin-only.hidden-for-member{ display:none !important; }
   .member-only{ display:none; }
   .member-only.show-for-member{ display:flex; }
   .icon-btn-round{
     width:34px; height:34px; border-radius:50%; border:none; background:transparent;
-    color:#fff; font-size:17px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    color: var(--wa-header-text); font-size:17px; cursor:pointer; display:flex; align-items:center; justify-content:center;
   }
-  .icon-btn-round:hover{ background: rgba(255,255,255,0.14); }
+  .icon-btn-round:hover{ background: rgba(0,0,0,0.08); }
 
   .search-wrap{ padding: 8px 12px; background: var(--wa-panel); }
   .search-box{
@@ -161,7 +162,7 @@
   .avatar-upload-wrap .avatar{ width:40px; height:40px; }
   .avatar-upload-btn{
     position:absolute; bottom:-3px; right:-3px; width:18px; height:18px; border-radius:50%;
-    background: var(--wa-header); color:#fff; display:flex; align-items:center; justify-content:center;
+    background: var(--wa-header); color: var(--wa-header-text); display:flex; align-items:center; justify-content:center;
     font-size:9px; cursor:pointer; border:2px solid #fff;
   }
   .avatar-upload-btn input{ display:none; }
@@ -231,7 +232,7 @@
   }
   .row-client-name{ color: var(--wa-text); font-weight:600; }
   .badge{
-    background: var(--wa-badge); color:#fff; font-size:11px; font-weight:700;
+    background: var(--wa-badge); color: var(--wa-header-text); font-size:11px; font-weight:700;
     min-width:19px; height:19px; border-radius:10px; display:flex; align-items:center;
     justify-content:center; padding:0 5px; flex-shrink:0;
   }
@@ -269,7 +270,7 @@
     border-radius:16px; border:1px solid var(--wa-border); background:#fff; cursor:pointer;
     font-size:12px; white-space:nowrap; color: var(--wa-text-soft);
   }
-  .task-chip.active{ background: var(--wa-header); color:#fff; border-color: var(--wa-header); }
+  .task-chip.active{ background: var(--wa-header); color: var(--wa-header-text); border-color: var(--wa-header); }
   .task-chip .dot{ width:7px; height:7px; border-radius:50%; }
 
   .chat-body{
@@ -301,6 +302,11 @@
   .bubble-author{
     font-size:12px; font-weight:700; color: var(--wa-header); margin-bottom:2px;
   }
+  .bubble-image{
+    display:block; max-width:100%; max-height:220px; border-radius:6px; cursor:pointer; margin-bottom:4px;
+  }
+  .bubble.has-image{ padding: 5px 5px 6px; }
+  .bubble.has-image .bubble-time{ margin: 4px 4px -2px 8px; }
 
   .notes-thread{ padding-top: 4px; }
   .notes-empty-hint{
@@ -354,7 +360,7 @@
     text-align:center; padding: 40px 20px; color: #6b7c85; font-size:13.5px;
   }
   .no-tasks-hint button{
-    display:block; margin: 14px auto 0; background: var(--wa-header); color:#fff; border:none;
+    display:block; margin: 14px auto 0; background: var(--wa-header); color: var(--wa-header-text); border:none;
     padding: 9px 18px; border-radius: 20px; font-size:13px; cursor:pointer; font-weight:600;
   }
 
@@ -397,9 +403,23 @@
     flex:1; font-size:12.5px; border:1px solid var(--wa-border); border-radius:6px; padding: 6px 9px; background:#fff; color: var(--wa-text);
   }
   .add-note-row button{
-    font-size:11.5px; font-weight:700; background: var(--wa-header); color:#fff; border:none; border-radius:6px; padding: 0 12px; cursor:pointer;
+    font-size:11.5px; font-weight:700; background: var(--wa-header); color: var(--wa-header-text); border:none; border-radius:6px; padding: 0 12px; cursor:pointer;
   }
   .add-note-row button:hover{ background: var(--wa-header-dark); }
+
+  .compose-wrap{ background: #f0f2f1; }
+  .note-image-preview-row{ padding: 0 16px; }
+  .note-image-preview-row:empty{ display:none; }
+  .note-image-preview-thumb{
+    position:relative; display:inline-block; padding-top:8px;
+  }
+  .note-image-preview-thumb img{
+    max-height:90px; max-width:140px; border-radius:8px; display:block; border:1px solid var(--wa-border);
+  }
+  .note-image-preview-remove{
+    position:absolute; top:2px; right:-8px; width:20px; height:20px; border-radius:50%;
+    background: var(--wa-rust); color:#fff; border:2px solid #f0f2f1; cursor:pointer; font-size:11px; line-height:1;
+  }
 
   .chat-compose{
     background: #f0f2f1; padding: 10px 16px; display:flex; align-items:center; gap:10px;
@@ -417,11 +437,11 @@
   }
   .compose-input:disabled{ background:#e9e9e9; color:#999; }
   .send-btn, .attach-btn{
-    width:40px; height:40px; border-radius:50%; border:none; background: var(--wa-header); color:#fff;
+    width:40px; height:40px; border-radius:50%; border:none; background: var(--wa-header); color: var(--wa-header-text);
     font-size:16px; cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center;
   }
   .attach-btn{ background:#fff; color: var(--wa-icon); border:1px solid var(--wa-border); }
-  .send-btn:disabled{ background:#bcd6cf; cursor:default; }
+  .send-btn:disabled{ background:#f5e6a8; color:#b3a05a; cursor:default; }
 
   /* ---------- Modals ---------- */
   .modal-overlay{
@@ -445,7 +465,7 @@
   .field-row .field{ flex:1; }
   .modal-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:18px; }
   .btn-ghost{ background:none; border:1px solid var(--wa-border); color: var(--wa-text-soft); padding:9px 15px; border-radius:20px; cursor:pointer; font-size:13px; font-weight:600;}
-  .btn-primary{ background: var(--wa-header); color:#fff; border:none; padding:9px 18px; border-radius:20px; cursor:pointer; font-size:13px; font-weight:600; }
+  .btn-primary{ background: var(--wa-header); color: var(--wa-header-text); border:none; padding:9px 18px; border-radius:20px; cursor:pointer; font-size:13px; font-weight:600; }
   .swatches{ display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; }
   .swatch{ width:24px; height:24px; border-radius:50%; cursor:pointer; border:2px solid transparent; }
   .swatch.selected{ border-color: var(--wa-text); }
@@ -521,7 +541,7 @@
     background:#fafafa; color: var(--wa-text-soft); border-right:1px solid var(--wa-border);
   }
   .auth-tab:last-child{ border-right:none; }
-  .auth-tab.active{ background: var(--wa-header); color:#fff; }
+  .auth-tab.active{ background: var(--wa-header); color: var(--wa-header-text); }
   .auth-error{ font-size:12px; color: var(--wa-rust); margin: -4px 0 12px; display:none; }
   .auth-error.show{ display:block; }
   .auth-note{ font-size:11px; color: var(--wa-text-soft); text-align:center; margin-top:16px; line-height:1.5; }
@@ -534,7 +554,7 @@
   }
   .dashboard-overlay.open{ display:flex; }
   .dashboard-header{
-    background: var(--wa-header); color:#fff; padding: 12px 18px;
+    background: var(--wa-header); color: var(--wa-header-text); padding: 12px 18px;
     display:flex; align-items:center; gap:14px; flex-shrink:0;
   }
   .dashboard-body{ flex:1; overflow-y:auto; padding: 24px; max-width:1100px; margin:0 auto; width:100%; }
@@ -871,14 +891,14 @@
     const slot = document.getElementById('headerAvatarSlot');
     const nameEl = document.getElementById('headerUserName');
     if(!slot || !nameEl) return;
-    if(!session){ slot.innerHTML = '✓'; slot.style.background = 'rgba(255,255,255,0.18)'; nameEl.textContent = 'Team Tasks'; return; }
+    if(!session){ slot.innerHTML = '✓'; slot.style.background = 'rgba(0,0,0,0.12)'; nameEl.textContent = 'Team Tasks'; return; }
     const av = currentUserAvatarData();
     if(av.photo){
       slot.innerHTML = `<img src="${av.photo}" style="width:100%;height:100%;object-fit:cover;">`;
       slot.style.background = 'transparent';
     } else {
       slot.innerHTML = av.label;
-      slot.style.background = 'rgba(255,255,255,0.18)';
+      slot.style.background = 'rgba(0,0,0,0.12)';
     }
     nameEl.textContent = currentIdentityName() || 'Team Tasks';
   }
@@ -962,6 +982,7 @@
       const draft = captureDraftText();
       renderAll();
       restoreDraftText(draft);
+      renderNoteImagePreview();
       setSidebarSubtitle('Synced ' + timeNow());
     }, err => { console.error('Realtime sync error', err); setSidebarSubtitle('Sync error — check connection'); });
   }
@@ -1004,7 +1025,7 @@
 
   function renderStatusFilterRow(){
     const row = document.getElementById('statusFilterRow');
-    let html = `<div class="status-filter-chip ${activeStatusFilter===null?'active':''}" style="${activeStatusFilter===null?'background:var(--wa-header);':''}" onclick="setStatusFilter(null)">All</div>`;
+    let html = `<div class="status-filter-chip ${activeStatusFilter===null?'active':''}" style="${activeStatusFilter===null?'background:var(--wa-header); color:var(--wa-header-text);':''}" onclick="setStatusFilter(null)">All</div>`;
     html += STATUS_FILTERS.map(s => `
       <div class="status-filter-chip ${activeStatusFilter===s.status?'active':''}" style="${activeStatusFilter===s.status?'background:'+s.color+';':''}" onclick="setStatusFilter('${s.status}')">
         <span class="dot" style="background:${activeStatusFilter===s.status?'#fff':s.color}"></span>${s.label}
@@ -1047,7 +1068,9 @@
     if(av.photo){
       return `<div class="${cls}" style="padding:0; overflow:hidden;"><img src="${av.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;"></div>`;
     }
-    return `<div class="${cls}" style="background:${av.color}">${av.label}</div>`;
+    const isBrandColor = av.color === 'var(--wa-header)';
+    const textColor = isBrandColor ? 'var(--wa-header-text)' : '#fff';
+    return `<div class="${cls}" style="background:${av.color}; color:${textColor};">${av.label}</div>`;
   }
 
   function taskAssignorAvatar(t){
@@ -1070,7 +1093,12 @@
 
   function renderTaskList(list, scopeMemberId){
     const isSelfView = !!scopeMemberId;
-    let relevantTasks = isSelfView ? tasks.filter(t => t.assignee === scopeMemberId) : tasks.slice();
+    let relevantTasks;
+    if(isSelfView){
+      relevantTasks = tasks.filter(t => t.assignee === scopeMemberId || t.assignorId === scopeMemberId);
+    } else {
+      relevantTasks = tasks.slice();
+    }
     const totalCount = relevantTasks.length;
 
     if(searchQuery){
@@ -1099,7 +1127,7 @@
 
     if(withActivity.length === 0){
       const emptyMsg = totalCount === 0
-        ? (isSelfView ? 'No tasks assigned to you yet.' : 'No tasks yet. Tap ＋ to create one.')
+        ? (isSelfView ? 'No tasks given or received yet.' : 'No tasks yet. Tap ＋ to create one.')
         : 'Nothing matches these filters.';
       list.innerHTML = `<div class="empty-list-hint">${emptyMsg}</div>`;
       return;
@@ -1107,10 +1135,20 @@
 
     const statusBadgeClass = { todo: 'status-badge-new', doing: 'status-badge-progress', done: 'status-badge-done' };
 
-    list.innerHTML = withActivity.map(({t, latest}) => {
-      const heading = isSelfView ? (assignorLabel(t) || 'Unknown') : (memberById(t.assignee) ? memberById(t.assignee).name : 'Unassigned');
+    function rowHtml(entry, direction){
+      const t = entry.t, latest = entry.latest;
+      let heading, av;
+      if(direction === 'given'){
+        heading = memberById(t.assignee) ? memberById(t.assignee).name : 'Unassigned';
+        av = taskAssigneeAvatar(t);
+      } else if(direction === 'received'){
+        heading = assignorLabel(t) || 'Unknown';
+        av = taskAssignorAvatar(t);
+      } else {
+        heading = memberById(t.assignee) ? memberById(t.assignee).name : 'Unassigned';
+        av = taskAssigneeAvatar(t);
+      }
       const meta = STATUS_FILTERS.find(s=>s.status===t.status) || { label: t.status, color: '#999' };
-      const av = isSelfView ? taskAssignorAvatar(t) : taskAssigneeAvatar(t);
       const dayInfo = (t.status !== 'done') ? daysInHandLabel(t.due, t.status) : null;
       return `
         <div class="chat-row" onclick="openTaskRow('${t.id}')">
@@ -1129,12 +1167,30 @@
             </div>
           </div>
         </div>`;
-    }).join('');
+    }
+
+    if(isSelfView){
+      const received = withActivity.filter(x => x.t.assignee === scopeMemberId);
+      const given = withActivity.filter(x => x.t.assignorId === scopeMemberId && x.t.assignee !== scopeMemberId);
+      let html = '';
+      if(received.length){
+        html += `<div class="status-section-header"><span>Task Received</span><span class="status-section-count">${received.length}</span></div>`;
+        html += received.map(x => rowHtml(x, 'received')).join('');
+      }
+      if(given.length){
+        html += `<div class="status-section-header"><span>Task Given</span><span class="status-section-count">${given.length}</span></div>`;
+        html += given.map(x => rowHtml(x, 'given')).join('');
+      }
+      list.innerHTML = html || `<div class="empty-list-hint">Nothing matches these filters.</div>`;
+    } else {
+      list.innerHTML = withActivity.map(x => rowHtml(x, 'admin')).join('');
+    }
   }
 
   function openTaskRow(taskId){
     const t = tasks.find(t => t.id === taskId);
     if(!t) return;
+    if(selectedTaskId !== taskId) pendingNoteImage = null;
     selectedTaskId = taskId;
     selectedMemberId = t.assignee;
     document.getElementById('appRoot').classList.add('chat-open');
@@ -1148,6 +1204,7 @@
 
   function backToList(){
     selectedTaskId = null;
+    pendingNoteImage = null;
     document.getElementById('appRoot').classList.remove('chat-open');
   }
 
@@ -1185,9 +1242,15 @@
         ${taskSummaryHtml(t)}
         <div class="notes-thread">${notesThreadHtml(t)}</div>
       </div>
-      <div class="chat-compose">
-        <input type="text" class="compose-input" id="composeInput" placeholder="Type an update…" onkeydown="if(event.key==='Enter') sendNote('${t.id}')">
-        <button class="send-btn" onclick="sendNote('${t.id}')" title="Send">➤</button>
+      <div class="compose-wrap">
+        <div id="noteImagePreviewRow" class="note-image-preview-row"></div>
+        <div class="chat-compose">
+          <label class="attach-btn" title="Attach image">
+            📎<input type="file" accept="image/*" style="display:none;" onchange="handleNoteImageSelect(event)">
+          </label>
+          <input type="text" class="compose-input" id="composeInput" placeholder="Type an update…" onkeydown="if(event.key==='Enter') sendNote('${t.id}')">
+          <button class="send-btn" onclick="sendNote('${t.id}')" title="Send">➤</button>
+        </div>
       </div>
     `;
 
@@ -1264,35 +1327,65 @@
       return `<div class="notes-empty-hint">No updates yet — say something below to get the thread going.</div>`;
     }
     const me = currentIdentity();
-    return notes.map(n => {
+    return notes.map((n, idx) => {
       const isMe = n.authorId === me;
       return `
         <div class="bubble-row ${isMe?'out':'in'}">
-          <div class="bubble ${isMe?'out':'in'}">
+          <div class="bubble ${isMe?'out':'in'} ${n.image?'has-image':''}">
             ${!isMe ? `<div class="bubble-author">${escapeHtml(noteAuthorLabel(n))}</div>` : ''}
-            ${escapeHtml(n.text)}
+            ${n.image ? `<img class="bubble-image" src="${n.image}" onclick="openNoteLightbox('${t.id}', ${idx})">` : ''}
+            ${n.text ? escapeHtml(n.text) : ''}
             <span class="bubble-time">${clockTime(n.time)}</span>
           </div>
         </div>`;
     }).join('');
   }
 
+  function openNoteLightbox(taskId, noteIndex){
+    const t = tasks.find(t => t.id === taskId);
+    const n = t && t.notes && t.notes[noteIndex];
+    if(n && n.image) openLightbox(n.image);
+  }
+
   function sendNote(taskId){
     const input = document.getElementById('composeInput');
     if(!input) return;
     const text = input.value.trim();
-    if(!text) return;
+    if(!text && !pendingNoteImage) return;
     const t = tasks.find(t => t.id === taskId);
     if(!t) return;
     if(!t.notes) t.notes = [];
     const authorId = currentIdentity();
     const role = authorId === t.assignee ? 'assignee' : 'assignor';
-    t.notes.push({ authorId, role, text, time: Date.now() });
+    t.notes.push({ authorId, role, text, image: pendingNoteImage, time: Date.now() });
     input.value = '';
+    pendingNoteImage = null;
     renderAll();
     saveBoard();
     const body = document.getElementById('chatBody');
     if(body) body.scrollTop = body.scrollHeight;
+  }
+
+  let pendingNoteImage = null;
+  async function handleNoteImageSelect(event){
+    const file = event.target.files[0];
+    if(!file) return;
+    try{
+      pendingNoteImage = await resizeImageFile(file, 900, 0.75);
+      renderNoteImagePreview();
+    } catch(err){ alert('Could not use that image — please try a different photo.'); }
+    event.target.value = '';
+  }
+  function renderNoteImagePreview(){
+    const row = document.getElementById('noteImagePreviewRow');
+    if(!row) return;
+    row.innerHTML = pendingNoteImage
+      ? `<div class="note-image-preview-thumb"><img src="${pendingNoteImage}"><button class="note-image-preview-remove" onclick="removeNoteImage()" title="Remove">✕</button></div>`
+      : '';
+  }
+  function removeNoteImage(){
+    pendingNoteImage = null;
+    renderNoteImagePreview();
   }
 
   const COMPLETED_LABEL_NAME = 'Completed';
