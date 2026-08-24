@@ -1882,6 +1882,7 @@
         <input type="text" class="person-name-input" value="${escapeHtml(m.name)}" onchange="renameMember('${m.id}', this.value)">
         <span class="person-pin-status">${m.pin ? 'PIN set' : "No PIN yet"}</span>
         <button onclick="resetMemberPin('${m.id}')" title="Set/reset PIN" style="color: var(--wa-header); background:none; border:none; cursor:pointer; font-size:14px;">🔑</button>
+        <button onclick="deleteMember('${m.id}')" title="Delete member" style="color: var(--wa-rust); background:none; border:none; cursor:pointer; font-size:14px;">🗑️</button>
       </div>`).join('');
   }
   async function handleMemberPhotoSelect(event, memberId){
@@ -1913,6 +1914,21 @@
     renderExistingMembersList();
     saveBoard();
     alert(`${m.name}'s new login PIN is ${newPin}. Share it with them.`);
+  }
+  function deleteMember(memberId){
+    const m = memberById(memberId);
+    if(!m) return;
+    const assignedCount = tasks.filter(t => t.assignee === memberId).length;
+    const givenCount = tasks.filter(t => t.assignorId === memberId).length;
+    let warning = `Delete ${m.name}? They will immediately lose access and won't be able to log in anymore.`;
+    if(assignedCount > 0 || givenCount > 0){
+      warning += `\n\nThey currently have ${assignedCount} task(s) assigned to them and ${givenCount} task(s) they assigned to others. Those tasks won't be deleted — they'll just show as "Unassigned" instead. You may want to reassign them first.`;
+    }
+    if(!confirm(warning)) return;
+    members = members.filter(x => x.id !== memberId);
+    renderExistingMembersList();
+    renderAll();
+    saveBoard();
   }
 
   function renderNewMemberPhotoPreview(){
