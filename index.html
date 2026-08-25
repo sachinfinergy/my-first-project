@@ -254,8 +254,7 @@
   .row-status-badge{
     flex-shrink:0; font-size:10.5px; font-weight:700; padding:2px 9px; border-radius:10px; text-transform:uppercase; letter-spacing:.02em;
   }
-  .status-badge-new{ background:#fdeceb; color: var(--wa-rust); }
-  .status-badge-progress{ background:#faf1dc; color:#b5811f; }
+  .status-badge-open{ background:#faf1dc; color:#b5811f; }
   .status-badge-done{ background:#e5f3e7; color: var(--wa-sage); }
 
   .chat-row-days{
@@ -779,8 +778,7 @@
     <div class="field">
       <label>Status</label>
       <select id="taskStatusInput">
-        <option value="todo">New</option>
-        <option value="doing">In progress</option>
+        <option value="open">Open</option>
         <option value="done">Completed</option>
       </select>
     </div>
@@ -895,7 +893,7 @@
   let expandedNotes = new Set();
   let searchQuery = '';
   let activeLabelFilter = null; // labelId or null for "All"
-  let activeStatusFilter = null; // 'todo' | 'doing' | 'done' | null for "All"
+  let activeStatusFilter = null; // 'open' | 'done' | null for "All"
   let activeDirectionFilter = null; // 'given' | 'received' | null for "All" (member self-view only)
   let pendingTaskLabels = new Set(); // labels toggled while task modal is open
   let pendingTaskImage = null; // data URL of attached image while task modal is open
@@ -928,13 +926,13 @@
         { id: 'l2', name: 'Internal', color: '#4c9a5b' },
       ],
       tasks: [
-        { id: 'T-001', title: 'Finalize webinar brochure copy', desc: 'Problem-first arc, 6 pages', assignee: 'm1', priority: 'High', due: addDays(2), status: 'doing', created: Date.now()-3000, labels: ['l1'], assignorId: 'admin',
+        { id: 'T-001', title: 'Finalize webinar brochure copy', desc: 'Problem-first arc, 6 pages', assignee: 'm1', priority: 'High', due: addDays(2), status: 'open', created: Date.now()-3000, labels: ['l1'], assignorId: 'admin',
           notes: [
             { authorId: 'm2', role: 'assignor', text: 'Keep it problem-first — lead with the client pain point, not the product.', time: Date.now() - 86400000 },
             { authorId: 'm1', role: 'assignee', text: 'Draft done for pages 1-3, working on the T4 section next.', time: Date.now() - 3600000 },
           ] },
-        { id: 'T-002', title: 'Review LIC audit tool PRD', desc: '', assignee: 'm1', priority: 'Medium', due: addDays(5), status: 'todo', created: Date.now()-2000, labels: ['l2'], notes: [], assignorId: 'admin' },
-        { id: 'T-003', title: 'Clean webinar transcript', desc: 'For marketing repurposing', assignee: 'm2', priority: 'Low', due: addDays(-1), status: 'todo', created: Date.now()-1000, labels: ['l1','l2'], notes: [], assignorId: 'm1' },
+        { id: 'T-002', title: 'Review LIC audit tool PRD', desc: '', assignee: 'm1', priority: 'Medium', due: addDays(5), status: 'open', created: Date.now()-2000, labels: ['l2'], notes: [], assignorId: 'admin' },
+        { id: 'T-003', title: 'Clean webinar transcript', desc: 'For marketing repurposing', assignee: 'm2', priority: 'Low', due: addDays(-1), status: 'open', created: Date.now()-1000, labels: ['l1','l2'], notes: [], assignorId: 'm1' },
       ],
       taskCounter: 4,
       labelCounter: 3,
@@ -980,6 +978,17 @@
     if(railSlot) railSlot.title = name;
   }
 
+  function migrateTaskStatuses(taskList){
+    let changed = false;
+    (taskList || []).forEach(t => {
+      if(t.status === 'todo' || t.status === 'doing'){
+        t.status = 'open';
+        changed = true;
+      }
+    });
+    return changed;
+  }
+
   async function loadBoard(){
     setSidebarSubtitle('Loading…');
     try{
@@ -994,6 +1003,7 @@
         adminPin = data.adminPin || null;
         adminName = data.adminName || 'Super Admin';
         adminPhoto = data.adminPhoto || null;
+        if(migrateTaskStatuses(tasks)) await saveBoard();
       } else {
         const seed = defaultBoard();
         members = seed.members; tasks = seed.tasks; labels = seed.labels;
@@ -1049,6 +1059,7 @@
       const data = doc.data();
       members = data.members || [];
       tasks = data.tasks || [];
+      migrateTaskStatuses(tasks);
       labels = data.labels || [];
       taskCounter = data.taskCounter || taskCounter;
       labelCounter = data.labelCounter || labelCounter;
@@ -1073,6 +1084,7 @@
         const data = doc.data();
         members = data.members || [];
         tasks = data.tasks || [];
+        migrateTaskStatuses(tasks);
         labels = data.labels || [];
         taskCounter = data.taskCounter || taskCounter;
         labelCounter = data.labelCounter || labelCounter;
@@ -1120,8 +1132,7 @@
   function labelById(id){ return labels.find(l=>l.id===id); }
 
   const STATUS_FILTERS = [
-    { status: 'todo', label: 'New', color: 'var(--wa-rust)' },
-    { status: 'doing', label: 'In Progress', color: 'var(--wa-amber)' },
+    { status: 'open', label: 'Open', color: 'var(--wa-amber)' },
     { status: 'done', label: 'Completed', color: 'var(--wa-sage)' },
   ];
 
@@ -1255,7 +1266,7 @@
       return;
     }
 
-    const statusBadgeClass = { todo: 'status-badge-new', doing: 'status-badge-progress', done: 'status-badge-done' };
+    const statusBadgeClass = { open: 'status-badge-open', done: 'status-badge-done' };
 
     function rowHtml(entry, direction){
       const t = entry.t, latest = entry.latest, latestNote = entry.latestNote;
@@ -1415,8 +1426,7 @@
     const prioColors = { urgent: 'var(--wa-rust)', high: '#e07a3f', medium: 'var(--wa-amber)', low: 'var(--wa-sage)' };
     const borderColor = prioColors[t.priority.toLowerCase()] || 'var(--wa-header)';
     const statusMeta = {
-      todo: { label: 'New', color: 'var(--wa-rust)' },
-      doing: { label: 'In progress', color: 'var(--wa-amber)' },
+      open: { label: 'Open', color: 'var(--wa-amber)' },
       done: { label: 'Completed', color: 'var(--wa-sage)' },
     }[t.status] || { label: t.status, color: '#999' };
     const cleanMobile = (t.customerMobile || '').replace(/[^\d+]/g, '');
@@ -1443,8 +1453,7 @@
           <div class="status-badge-select">
             <span class="status-badge-dot" style="background:${statusMeta.color}"></span>
             <select onchange="moveTask('${t.id}', this.value)" style="color:${statusMeta.color};">
-              <option value="todo" ${t.status==='todo'?'selected':''}>New</option>
-              <option value="doing" ${t.status==='doing'?'selected':''}>In progress</option>
+              <option value="open" ${t.status==='open'?'selected':''}>Open</option>
               <option value="done" ${t.status==='done'?'selected':''}>Completed</option>
             </select>
           </div>
@@ -1859,7 +1868,7 @@
       renderAssignorLocked(true);
       document.getElementById('taskPriorityInput').value = 'Medium';
       document.getElementById('taskDueInput').value = '';
-      document.getElementById('taskStatusInput').value = 'todo';
+      document.getElementById('taskStatusInput').value = 'open';
       document.getElementById('taskCustomerNameInput').value = '';
       document.getElementById('taskCustomerMobileInput').value = '';
       pendingTaskImage = null;
@@ -2159,7 +2168,7 @@
 
     const scopedTasks = scopeMemberId ? tasks.filter(t => t.assignee === scopeMemberId) : tasks;
     const total = scopedTasks.length;
-    const byStatus = { todo:0, doing:0, done:0 };
+    const byStatus = { open:0, done:0 };
     const byPriority = { Urgent:0, High:0, Medium:0, Low:0 };
     let totalNotes = 0;
     const overdue = [];
@@ -2183,8 +2192,8 @@
         ${scopeMember ? '' : `<div class="kpi-card"><div class="kpi-value">${members.length}</div><div class="kpi-label">Team members</div></div>`}
       </div>`;
 
-    const statusColors = { todo: 'var(--wa-rust)', doing: 'var(--wa-amber)', done: 'var(--wa-sage)' };
-    const statusLabels = { todo: 'New', doing: 'In progress', done: 'Completed' };
+    const statusColors = { open: 'var(--wa-amber)', done: 'var(--wa-sage)' };
+    const statusLabels = { open: 'Open', done: 'Completed' };
     const statusHtml = Object.keys(statusLabels).map(k => barRow(statusLabels[k], byStatus[k], total, statusColors[k])).join('');
 
     const prioColors = { Urgent: 'var(--wa-rust)', High: '#e07a3f', Medium: 'var(--wa-amber)', Low: 'var(--wa-sage)' };
