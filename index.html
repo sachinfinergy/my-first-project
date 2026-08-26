@@ -7,6 +7,7 @@
 <!-- Firebase SDK, loaded via CDN -->
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-storage-compat.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -896,6 +897,7 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
   const boardDocRef = db.collection('boards').doc('main');
+  const storage = firebase.storage();
   // ============================================================
 
   const COLORS = ['#c0392b','#d9a441','#4c9a5b','#3b7a8a','#7c5295','#008069','#c25b8f'];
@@ -1074,7 +1076,6 @@
   function startRealtimeSync(){
     firestoreUnsubscribe = boardDocRef.onSnapshot(doc => {
       if(!doc.exists) return;
-      if(anyModalOpen()) return; // don't yank a modal out from under someone mid-edit
       const data = doc.data();
       members = data.members || [];
       tasks = data.tasks || [];
@@ -1086,6 +1087,12 @@
       adminName = data.adminName || adminName;
       adminPhoto = data.adminPhoto !== undefined ? data.adminPhoto : adminPhoto;
       lastSavedSnapshot = JSON.stringify({members, tasks, labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto});
+      if(anyModalOpen()){
+        // Keep the underlying data current so any in-progress edit saves against fresh data,
+        // but don't visually disturb whatever modal the person currently has open.
+        setSidebarSubtitle('Synced ' + timeNow());
+        return;
+      }
       const draft = captureDraftText();
       renderAll();
       restoreDraftText(draft);
@@ -1624,11 +1631,13 @@
     const file = event.target.files[0];
     if(!file) return;
     if(file.type === 'application/pdf'){
+      const row = document.getElementById('noteImagePreviewRow');
+      if(row) row.innerHTML = `<div class="note-pdf-preview">📤 Uploading ${escapeHtml(file.name)}…</div>`;
       try{
-        pendingNotePdf = await readPdfFile(file);
+        pendingNotePdf = await uploadPdfToStorage(file);
         pendingNoteImage = null;
         renderNoteImagePreview();
-      } catch(err){ alert(err.message || 'Could not attach that PDF.'); }
+      } catch(err){ alert(err.message || 'Could not attach that PDF.'); renderNoteImagePreview(); }
       event.target.value = '';
       return;
     }
@@ -1836,11 +1845,13 @@
     const file = event.target.files[0];
     if(!file) return;
     if(file.type === 'application/pdf'){
+      const box = document.getElementById('taskImagePreview');
+      if(box) box.innerHTML = `<div class="attach-preview-empty">📤 Uploading ${escapeHtml(file.name)}…</div>`;
       try{
-        pendingTaskPdf = await readPdfFile(file);
+        pendingTaskPdf = await uploadPdfToStorage(file);
         pendingTaskImage = null;
         renderImagePreview();
-      } catch(err){ alert(err.message || 'Could not attach that PDF.'); }
+      } catch(err){ alert(err.message || 'Could not attach that PDF.'); renderImagePreview(); }
       return;
     }
     if(!file.type.startsWith('image/')){ alert('Please choose an image or a PDF file.'); return; }
@@ -2001,16 +2012,15 @@
     });
   }
 
-  const PDF_SIZE_CAP = 350 * 1024; // ~350KB — the whole shared board must stay under Firestore's 1MB document limit
-  function readPdfFile(file){
-    return new Promise((resolve, reject) => {
-      if(!file || file.type !== 'application/pdf'){ reject(new Error('not a pdf')); return; }
-      if(file.size > PDF_SIZE_CAP){ reject(new Error('PDF is too large — please keep it under 350KB, since it has to fit in the shared team board.')); return; }
-      const reader = new FileReader();
-      reader.onload = e => resolve({ name: file.name, data: e.target.result });
-      reader.onerror = () => reject(new Error('read failed'));
-      reader.readAsDataURL(file);
-    });
+  const PDF_SIZE_CAP_MB = 3;
+  async function uploadPdfToStorage(file){
+    if(!file || file.type !== 'application/pdf') throw new Error('Please choose a PDF file.');
+    if(file.size > PDF_SIZE_CAP_MB * 1024 * 1024) throw new Error(`PDF is too large — please keep it under ${PDF_SIZE_CAP_MB}MB.`);
+    const path = 'pdfs/' + Date.now() + '_' + Math.random().toString(36).slice(2) + '_' + file.name;
+    const ref = storage.ref().child(path);
+    await ref.put(file);
+    const url = await ref.getDownloadURL();
+    return { name: file.name, data: url };
   }
 
   // ---------- Super Admin profile ----------
