@@ -1880,7 +1880,7 @@
         } catch(err){ alert(err.message || 'Could not attach that PDF.'); }
       } else if(file.type.startsWith('image/')){
         try{
-          const data = await resizeImageFile(file, 900, 0.75);
+          const data = await compressAndUploadImage(file, 900, 0.75, 'note-images');
           pendingNoteAttachments.push({ type:'image', data });
         } catch(err){ alert(`Could not use "${file.name}" — please try a different file.`); }
       } else {
@@ -2096,7 +2096,7 @@
       } else if(file.type.startsWith('image/')){
         if(file.size > 8 * 1024 * 1024){ alert(`"${file.name}" is too large — please choose images under 8MB.`); continue; }
         try{
-          const data = await resizeImageFile(file, 900, 0.72);
+          const data = await compressAndUploadImage(file, 900, 0.72, 'task-images');
           pendingTaskAttachments.push({ type:'image', data });
         } catch(err){ alert(`Could not use "${file.name}" — please try a different file.`); }
       } else {
@@ -2301,6 +2301,14 @@
     });
   }
 
+  async function compressAndUploadImage(file, maxDim, quality, folder){
+    const dataUrl = await resizeImageFile(file, maxDim, quality);
+    const path = (folder || 'images') + '/' + Date.now() + '_' + Math.random().toString(36).slice(2) + '.jpg';
+    const ref = storage.ref().child(path);
+    await ref.putString(dataUrl, 'data_url');
+    return await ref.getDownloadURL();
+  }
+
   const PDF_SIZE_CAP_MB = 3;
   async function uploadPdfToStorage(file){
     if(!file || file.type !== 'application/pdf') throw new Error('Please choose a PDF file.');
@@ -2329,7 +2337,7 @@
     const file = event.target.files[0];
     if(!file) return;
     try{
-      adminPhoto = await resizeImageFile(file, 240, 0.82);
+      adminPhoto = await compressAndUploadImage(file, 240, 0.82, 'profile-photos');
       renderAdminProfileSection();
       renderAll();
       saveBoard();
@@ -2368,7 +2376,7 @@
     const m = memberById(memberId);
     if(!m) return;
     try{
-      m.photo = await resizeImageFile(file, 240, 0.82);
+      m.photo = await compressAndUploadImage(file, 240, 0.82, 'profile-photos');
       renderExistingMembersList();
       renderAll();
       saveBoard();
@@ -2419,7 +2427,7 @@
     const file = event.target.files[0];
     if(!file) return;
     try{
-      pendingNewMemberPhoto = await resizeImageFile(file, 240, 0.82);
+      pendingNewMemberPhoto = await compressAndUploadImage(file, 240, 0.82, 'profile-photos');
       renderNewMemberPhotoPreview();
     } catch(err){ alert('Could not use that image — please try a different photo.'); }
   }
