@@ -294,8 +294,9 @@
     border-bottom: 1px solid var(--wa-border);
   }
   .back-btn{ display:none; background:none; border:none; font-size:20px; cursor:pointer; color: var(--wa-icon); }
-  .chat-header-info{ flex:1; min-width:0; }
-  .chat-header-name{ font-size:15.5px; font-weight:600; }
+  .chat-header-info{ flex:1; min-width:0; overflow:hidden; }
+  .chat-header-name{ font-size:15.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .chat-header-assignor{ font-size:12.5px; font-weight:400; color: var(--wa-text-soft); }
   .chat-header-sub{ font-size:12.5px; color: var(--wa-text-soft); }
   .chat-header-actions{ display:flex; gap:4px; }
   .icon-btn-round.dark{ color: var(--wa-icon); }
@@ -422,22 +423,30 @@
   /* Task card */
   .task-bubble{
     max-width: 92%; background: var(--wa-bubble-in); border-radius:10px; border-top-left-radius:0;
-    padding: 14px 15px 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 12px;
+    padding: 12px 14px 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 12px;
     border-left: 4px solid var(--wa-header);
   }
-  .task-bubble-top{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; }
-  .task-bubble-id{ font-size:11px; color: var(--wa-text-soft); font-weight:600; letter-spacing:.02em; }
   .prio-pill{
     font-size:10.5px; font-weight:700; padding:2px 9px; border-radius:10px; color:#fff; text-transform:uppercase;
+    flex-shrink:0;
   }
   .prio-low{ background: var(--wa-sage); }
   .prio-medium{ background: var(--wa-amber); }
   .prio-high{ background: #e07a3f; }
   .prio-urgent{ background: var(--wa-rust); }
-  .task-bubble-title-lg{ font-size:18px; font-weight:700; line-height:1.3; margin: 2px 0 6px; color: var(--wa-text); }
-  .task-bubble-desc{ font-size:13.5px; color:#3b4a52; margin-bottom:8px; line-height:1.5; }
-  .task-bubble-divider{ border-top:1px solid var(--wa-border); margin: 10px 0 10px; }
-  .task-bubble-meta{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .task-bubble-title-lg{ font-size:18px; font-weight:700; line-height:1.3; margin: 0 0 3px; color: var(--wa-text); }
+  .due-label-sm{ display:block; font-size:11.5px; color: var(--wa-text-soft); margin-bottom:6px; }
+  .due-label-sm.overdue{ color: var(--wa-rust); font-weight:700; }
+  .task-bubble-desc{ font-size:13.5px; color:#3b4a52; margin-bottom:2px; line-height:1.5; }
+  .task-bubble-desc.clamped{ display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .desc-toggle{
+    background:none; border:none; color: var(--wa-header); font-size:12px; font-weight:700; cursor:pointer;
+    padding:0; margin-bottom:8px; display:block;
+  }
+  .task-bubble-divider{ border-top:1px solid var(--wa-border); margin: 10px 0 8px; }
+
+  .task-bottom-row{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .task-bottom-spacer{ flex:1; }
 
   .status-badge-select{
     display:inline-flex; align-items:center; gap:6px; border-radius:14px; padding:4px 10px 4px 8px;
@@ -448,18 +457,13 @@
     border:none; background:transparent; font-size:12.5px; font-weight:700; cursor:pointer; padding:0;
   }
 
-  .due-label{ font-size:12px; color: var(--wa-text-soft); }
-  .due-label.overdue{ color: var(--wa-rust); font-weight:700; }
-
-  .task-bubble-actions-row{ display:flex; gap:8px; margin-top:12px; }
-  .task-action-btn{
-    flex:1; display:flex; align-items:center; justify-content:center; gap:6px;
-    font-size:12.5px; font-weight:600; padding: 8px 10px; border-radius:8px;
-    border:1px solid var(--wa-border); background:#fff; color: var(--wa-text-soft); cursor:pointer;
+  .icon-only-btn{
+    width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    border:1px solid var(--wa-border); background:#fff; color: var(--wa-text-soft); cursor:pointer; font-size:14px; flex-shrink:0;
   }
-  .task-action-btn:hover{ background: var(--wa-hover); }
-  .task-action-btn.danger{ color: var(--wa-rust); border-color:#f0d4cf; }
-  .task-action-btn.danger:hover{ background:#fdf2ef; }
+  .icon-only-btn:hover{ background: var(--wa-hover); }
+  .icon-only-btn.danger{ color: var(--wa-rust); border-color:#f0d4cf; }
+  .icon-only-btn.danger:hover{ background:#fdf2ef; }
   .task-bubble-time{ font-size:10.5px; color: var(--wa-text-soft); text-align:right; margin-top:2px; }
 
   .no-tasks-hint{
@@ -604,45 +608,46 @@
   }
   .attach-preview-pdf{ margin-bottom:0; }
 
-  .task-customer-row{
-    display:flex; align-items:center; gap:10px; font-size:12px; color: var(--wa-text-soft);
-    background:#f7f7f5; border-radius:6px; padding: 5px 9px; margin: 0 0 6px;
+  .customer-info-row{
+    display:flex; align-items:center; flex-wrap:wrap; gap:10px 14px; margin: 4px 0 8px;
   }
   .customer-name-row{
-    font-size:16px; font-weight:700; color: var(--wa-text); margin: 2px 0 5px;
+    font-size:16px; font-weight:700; color: var(--wa-text); margin:0;
   }
-  .task-customer-row span{ display:flex; align-items:center; gap:4px; }
   .customer-action{
-    display:flex; align-items:center; gap:4px; color: var(--wa-header); text-decoration:none; font-weight:600;
+    display:flex; align-items:center; gap:4px; color: var(--wa-header); text-decoration:none; font-weight:600; font-size:13px;
   }
   .customer-action:hover{ text-decoration:underline; }
   .customer-action.wa{ font-weight:400; }
-  .task-assignor-row{
-    font-size:11px; color: var(--wa-text-soft); font-style:italic; margin: 2px 0 4px;
+
+  .attachment-strip{
+    display:flex; gap:8px; overflow-x:auto; margin: 6px 0 4px; padding-bottom:2px;
   }
-  .task-image-thumb{
-    max-width:100%; max-height:180px; border-radius:8px; margin: 4px 0 6px; cursor:pointer; display:block;
-    border:1px solid var(--wa-border);
+  .attach-thumb-sq{
+    position:relative; width:64px; height:64px; border-radius:8px; overflow:hidden;
+    flex-shrink:0; cursor:pointer; border:1px solid var(--wa-border); background:#f0f0ee;
   }
-  .attachment-wrap{ position:relative; display:inline-block; margin: 4px 0 6px; max-width:100%; }
-  .attachment-wrap .task-image-thumb, .attachment-wrap .bubble-image{ margin:0; }
-  .attachment-share-btn{
-    position:absolute; top:6px; right:6px; width:26px; height:26px; border-radius:50%;
-    background: rgba(0,0,0,0.55); color:#fff; border:none; cursor:pointer; font-size:14px;
+  .attach-thumb-sq img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .attach-thumb-share{
+    position:absolute; bottom:2px; right:2px; width:20px; height:20px; border-radius:50%;
+    background: rgba(0,0,0,0.6); color:#fff; border:none; cursor:pointer; font-size:11px;
     display:flex; align-items:center; justify-content:center;
   }
-  .attachment-share-btn:hover{ background: rgba(0,0,0,0.75); }
-  .attachment-share-btn.static{
-    position:static; width:30px; height:30px; background: var(--wa-header); color: var(--wa-header-text); flex-shrink:0;
+  .attach-thumb-share:hover{ background: rgba(0,0,0,0.8); }
+  .attach-thumb-share.static{
+    position:static; width:22px; height:22px; background: var(--wa-header); color: var(--wa-header-text); flex-shrink:0; margin-left:2px;
   }
-  .pdf-attachment-row{ display:flex; align-items:center; gap:8px; }
-  .pdf-attachment-row .pdf-attachment-card{ flex:1; min-width:0; margin:4px 0 6px; }
-  .pdf-attachment-card{
-    display:flex; align-items:center; gap:8px; background:#f7f7f5; border:1px solid var(--wa-border);
-    border-radius:8px; padding:9px 11px; margin: 4px 0 6px; text-decoration:none; color: var(--wa-text);
+  .attach-pdf-chip{
+    display:flex; align-items:center; gap:5px; width:104px; height:64px; flex-shrink:0;
+    background:#f7f7f5; border:1px solid var(--wa-border); border-radius:8px; padding:0 8px;
+    text-decoration:none; color: var(--wa-text); overflow:hidden;
   }
-  .pdf-attachment-name{ flex:1; min-width:0; font-size:13px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .pdf-attachment-open{ font-size:11.5px; color: var(--wa-header); font-weight:700; flex-shrink:0; }
+  .attach-pdf-chip-icon{ font-size:16px; flex-shrink:0; }
+  .attach-pdf-chip-name{
+    font-size:10.5px; font-weight:600; line-height:1.25; overflow:hidden; text-overflow:ellipsis;
+    display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; flex:1; min-width:0;
+  }
+
   .attach-preview-pdf{
     display:flex; align-items:center; gap:8px; background:#f7f7f5; border:1px solid var(--wa-border);
     border-radius:6px; padding:8px 10px; margin-bottom:8px; font-size:12.5px;
@@ -1117,17 +1122,33 @@
     }
   }
 
-  async function saveBoard(){
+  function getPayloadSizeKB(payload){
+    return Math.round(new Blob([JSON.stringify(payload)]).size / 1024);
+  }
+
+  async function saveBoard(retryCount){
+    retryCount = retryCount || 0;
     const payload = { members, tasks, labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto };
     const snapshot = JSON.stringify(payload);
-    if(snapshot === lastSavedSnapshot) return;
+    if(snapshot === lastSavedSnapshot) return true;
+    const sizeKB = getPayloadSizeKB(payload);
+    if(sizeKB > 950){
+      alert(`⚠️ Your team board is almost full (${sizeKB}KB of a 1024KB limit). This change may not save. Please ask your Super Admin to remove some old images or PDFs to free up space.`);
+    }
     try{
       await boardDocRef.set(payload);
       lastSavedSnapshot = snapshot;
       setSidebarSubtitle('Synced ' + timeNow());
+      return true;
     } catch(err){
       console.error('Save failed', err);
-      setSidebarSubtitle('Save failed — will retry');
+      if(retryCount < 1){
+        await new Promise(r => setTimeout(r, 1200));
+        return saveBoard(retryCount + 1);
+      }
+      setSidebarSubtitle('Save failed');
+      alert('⚠️ This change could not be saved to the shared board — most likely because the board has reached its storage limit. Please try again, or ask your Super Admin to free up space by removing old images/PDFs. Nothing you just did was saved.');
+      return false;
     }
   }
 
@@ -1485,13 +1506,14 @@
 
     const m = memberById(t.assignee);
     markTaskNotesAsRead(t);
+    const assignorText = (assignorLabel(t) && t.assignorId !== t.assignee) ? assignorLabel(t) : null;
 
     panel.innerHTML = `
       <div class="chat-header">
         <button class="back-btn" onclick="backToList()">←</button>
         ${avatarHtml(m ? memberAvatarData(m) : {color:'#999', label:'?', photo:null}, 'sm')}
         <div class="chat-header-info">
-          <div class="chat-header-name">${m?escapeHtml(m.name):'Unassigned'}</div>
+          <div class="chat-header-name">${m?escapeHtml(m.name):'Unassigned'}${assignorText ? `<span class="chat-header-assignor"> · Assigned by ${escapeHtml(assignorText)}</span>` : ''}</div>
           <div class="chat-header-sub">${t.id}</div>
         </div>
         <div class="chat-header-actions">
@@ -1530,26 +1552,29 @@
       done: { label: 'Completed', color: 'var(--wa-sage)' },
     }[t.status] || { label: t.status, color: '#999' };
     const cleanMobile = (t.customerMobile || '').replace(/[^\d+]/g, '');
+    const dueLine = (dayInfo && !dayInfo.done)
+      ? `<span class="due-label-sm ${dayInfo.overdue?'overdue':''}" title="${t.due?formatDate(t.due):''}">📅 ${dayInfo.text}</span>`
+      : (t.due ? `<span class="due-label-sm" title="${formatDate(t.due)}">📅 ${formatDate(t.due)}</span>` : '');
+    const isLongDesc = t.desc && t.desc.length > 100;
 
     return `
       <div class="task-bubble" id="task-${t.id}" style="border-left-color:${borderColor};">
-        <div class="task-bubble-top">
-          <span class="task-bubble-id">${t.id}</span>
-          <span class="prio-pill prio-${t.priority.toLowerCase()}">${t.priority}</span>
-        </div>
         <div class="task-bubble-title-lg">${escapeHtml(t.title)}</div>
-        ${(assignorLabel(t) && t.assignorId !== t.assignee) ? `<div class="task-assignor-row">Assigned by ${escapeHtml(assignorLabel(t))}</div>` : ''}
-        ${t.customerName ? `<div class="customer-name-row">👤 ${escapeHtml(t.customerName)}</div>` : ''}
-        ${t.customerMobile ? `
-          <div class="task-customer-row">
-            <a href="tel:${cleanMobile}" class="customer-action" title="Call">📞 ${escapeHtml(t.customerMobile)}</a>
-            <a href="https://wa.me/${cleanMobile.replace(/^\+/,'')}" target="_blank" rel="noopener" class="customer-action wa" title="Message on WhatsApp">💬</a>
+        ${dueLine}
+        ${(t.customerName || t.customerMobile) ? `
+          <div class="customer-info-row">
+            ${t.customerName ? `<span class="customer-name-row">👤 ${escapeHtml(t.customerName)}</span>` : ''}
+            ${t.customerMobile ? `<a href="tel:${cleanMobile}" class="customer-action" title="Call">📞 ${escapeHtml(t.customerMobile)}</a>` : ''}
+            ${t.customerMobile ? `<a href="https://wa.me/${cleanMobile.replace(/^\+/,'')}" target="_blank" rel="noopener" class="customer-action wa" title="Message on WhatsApp">💬</a>` : ''}
           </div>` : ''}
         ${(t.labels && t.labels.length) ? `<div class="task-label-row">${t.labels.map(lid => { const l = labelById(lid); return l ? `<span class="task-label-pill" style="background:${l.color}">${escapeHtml(l.name)}</span>` : ''; }).join('')}</div>` : ''}
-        ${t.desc ? `<div class="task-bubble-desc">${escapeHtml(t.desc)}</div>` : ''}
+        ${t.desc ? `
+          <div class="task-bubble-desc ${isLongDesc?'clamped':''}" id="desc-${t.id}">${escapeHtml(t.desc)}</div>
+          ${isLongDesc ? `<button class="desc-toggle" onclick="toggleDescClamp('${t.id}', this)">Show more</button>` : ''}
+        ` : ''}
         ${attachmentGalleryHtml(getAttachments(t), t.title)}
         <div class="task-bubble-divider"></div>
-        <div class="task-bubble-meta">
+        <div class="task-bottom-row">
           <div class="status-badge-select">
             <span class="status-badge-dot" style="background:${statusMeta.color}"></span>
             <select onchange="moveTask('${t.id}', this.value)" style="color:${statusMeta.color};">
@@ -1557,13 +1582,19 @@
               <option value="done" ${t.status==='done'?'selected':''}>Completed</option>
             </select>
           </div>
-          ${dayInfo && !dayInfo.done ? `<span class="due-label ${dayInfo.overdue?'overdue':''}" title="${t.due?formatDate(t.due):''}">📅 ${dayInfo.text}</span>` : (t.due ? `<span class="due-label" title="${formatDate(t.due)}">📅 ${formatDate(t.due)}</span>` : '<span></span>')}
-        </div>
-        <div class="task-bubble-actions-row">
-          <button class="task-action-btn" onclick="openTaskModal('${t.id}')">✎ Edit</button>
-          <button class="task-action-btn danger" onclick="deleteTask('${t.id}')">✕ Delete</button>
+          <span class="prio-pill prio-${t.priority.toLowerCase()}">${t.priority}</span>
+          <div class="task-bottom-spacer"></div>
+          <button class="icon-only-btn" onclick="openTaskModal('${t.id}')" title="Edit"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+          <button class="icon-only-btn danger" onclick="deleteTask('${t.id}')" title="Delete"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>
         </div>
       </div>`;
+  }
+
+  function toggleDescClamp(taskId, btn){
+    const el = document.getElementById('desc-' + taskId);
+    if(!el) return;
+    el.classList.toggle('clamped');
+    btn.textContent = el.classList.contains('clamped') ? 'Show more' : 'Show less';
   }
 
   function noteAuthorLabel(n){
@@ -2108,12 +2139,20 @@
 
   function attachmentGalleryHtml(attachments, shareTitle){
     if(!attachments || attachments.length === 0) return '';
-    return attachments.map(a => {
+    const items = attachments.map(a => {
       if(a.type === 'image'){
-        return `<div class="attachment-wrap"><img class="task-image-thumb" src="${a.data}" onclick="openLightbox('${a.data}')"><button class="attachment-share-btn" onclick="event.stopPropagation(); shareFile('${a.data}', 'image.jpg', 'image/jpeg', '${escapeHtml(shareTitle||'').replace(/'/g,'')}')" title="Share">↗</button></div>`;
+        return `<div class="attach-thumb-sq" onclick="openLightbox('${a.data}')">
+          <img src="${a.data}">
+          <button class="attach-thumb-share" onclick="event.stopPropagation(); shareFile('${a.data}', 'image.jpg', 'image/jpeg', '${escapeHtml(shareTitle||'').replace(/'/g,'')}')" title="Share">↗</button>
+        </div>`;
       }
-      return `<div class="pdf-attachment-row"><a class="pdf-attachment-card" href="${a.data}" target="_blank" rel="noopener"><span>📄</span><span class="pdf-attachment-name">${escapeHtml(a.name||'Document')}</span><span class="pdf-attachment-open">Open →</span></a><button class="attachment-share-btn static" onclick="shareFile('${a.data}', '${escapeHtml(a.name||'document').replace(/'/g,'')}', 'application/pdf', '${escapeHtml(a.name||'').replace(/'/g,'')}')" title="Share">↗</button></div>`;
+      return `<a class="attach-pdf-chip" href="${a.data}" target="_blank" rel="noopener" title="${escapeHtml(a.name||'Document')}">
+        <span class="attach-pdf-chip-icon">📄</span>
+        <span class="attach-pdf-chip-name">${escapeHtml(a.name||'Document')}</span>
+        <button class="attach-thumb-share static" onclick="event.preventDefault(); event.stopPropagation(); shareFile('${a.data}', '${escapeHtml(a.name||'document').replace(/'/g,'')}', 'application/pdf', '${escapeHtml(a.name||'').replace(/'/g,'')}')" title="Share">↗</button>
+      </a>`;
     }).join('');
+    return `<div class="attachment-strip">${items}</div>`;
   }
 
   async function shareFile(url, filename, mimeType, title){
