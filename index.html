@@ -990,7 +990,7 @@
   let expandedNotes = new Set();
   let searchQuery = '';
   let activeLabelFilter = null; // labelId or null for "All"
-  let activeStatusFilter = null; // 'open' | 'done' | null for "All"
+  let activeStatusFilter = 'open'; // 'open' | 'done' — no "All" option anymore
   let activeDirectionFilter = null; // 'given' | 'received' | null for "All" (member self-view only)
   let pendingTaskLabels = new Set(); // labels toggled while task modal is open
   // (legacy pendingTaskImage variable removed — see pendingTaskAttachments)
@@ -1257,8 +1257,7 @@
 
   function renderStatusFilterRow(){
     const row = document.getElementById('statusFilterRow');
-    let html = `<div class="status-filter-chip ${activeStatusFilter===null?'active':''}" style="${activeStatusFilter===null?'background:var(--wa-header); color:var(--wa-header-text);':''}" onclick="setStatusFilter(null)">All</div>`;
-    html += STATUS_FILTERS.map(s => `
+    let html = STATUS_FILTERS.map(s => `
       <div class="status-filter-chip ${activeStatusFilter===s.status?'active':''}" style="${activeStatusFilter===s.status?'background:'+s.color+';':''}" onclick="setStatusFilter('${s.status}')">
         <span class="dot" style="background:${activeStatusFilter===s.status?'#fff':s.color}"></span>${s.label}
       </div>`).join('');
@@ -1577,7 +1576,7 @@
         <div class="task-bottom-row">
           <div class="status-badge-select">
             <span class="status-badge-dot" style="background:${statusMeta.color}"></span>
-            <select onchange="moveTask('${t.id}', this.value)" style="color:${statusMeta.color};">
+            <select onchange="moveTask('${t.id}', this.value)" style="color:${statusMeta.color};" ${canChangeStatus(t)?'':'disabled title="Only the assignee (or Super Admin) can change this task\'s status"'}>
               <option value="open" ${t.status==='open'?'selected':''}>Open</option>
               <option value="done" ${t.status==='done'?'selected':''}>Completed</option>
             </select>
@@ -1930,12 +1929,21 @@
     }
   }
 
+  function canChangeStatus(t){
+    if(session && session.type === 'admin') return true;
+    return currentIdentity() === t.assignee;
+  }
+
   function moveTask(id, status){
     const t = tasks.find(t=>t.id===id);
-    if(t){
-      t.status = status;
-      syncCompletedLabel(t);
+    if(!t) return;
+    if(!canChangeStatus(t)){
+      alert("Only the assignee (or Super Admin) can change this task's status.");
+      renderAll();
+      return;
     }
+    t.status = status;
+    syncCompletedLabel(t);
     renderAll();
     saveBoard();
   }
@@ -2208,6 +2216,7 @@
       document.getElementById('taskPriorityInput').value = t.priority;
       document.getElementById('taskDueInput').value = t.due || '';
       document.getElementById('taskStatusInput').value = t.status;
+      document.getElementById('taskStatusInput').disabled = !canChangeStatus(t);
       document.getElementById('taskCustomerNameInput').value = t.customerName || '';
       document.getElementById('taskCustomerMobileInput').value = t.customerMobile || '';
       pendingTaskAttachments = getAttachments(t).slice();
@@ -2224,6 +2233,7 @@
       document.getElementById('taskPriorityInput').value = 'Medium';
       document.getElementById('taskDueInput').value = '';
       document.getElementById('taskStatusInput').value = 'open';
+      document.getElementById('taskStatusInput').disabled = true;
       document.getElementById('taskCustomerNameInput').value = '';
       document.getElementById('taskCustomerMobileInput').value = '';
       pendingTaskAttachments = [];
@@ -2258,8 +2268,10 @@
     let t;
     if(id){
       t = tasks.find(t=>t.id===id);
+      if(!canChangeStatus(t)) data.status = t.status;
       Object.assign(t, data);
     } else {
+      data.status = 'open';
       newId = 'T-' + String(taskCounter++).padStart(3,'0');
       t = { id: newId, created: Date.now(), notes: [], ...data };
       tasks.push(t);
@@ -2791,7 +2803,7 @@
     selectedMemberId = null;
     selectedTaskId = null;
     activeDirectionFilter = null;
-    activeStatusFilter = null;
+    activeStatusFilter = 'open';
     activeLabelFilter = null;
     document.getElementById('appRoot').style.display = 'none';
     authTab = 'member';
