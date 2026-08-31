@@ -1576,7 +1576,7 @@
         <div class="task-bottom-row">
           <div class="status-badge-select">
             <span class="status-badge-dot" style="background:${statusMeta.color}"></span>
-            <select onchange="moveTask('${t.id}', this.value)" style="color:${statusMeta.color};" ${canChangeStatus(t)?'':'disabled title="Only the assignee (or Super Admin) can change this task\'s status"'}>
+            <select onchange="moveTask('${t.id}', this.value)" style="color:${statusMeta.color};" ${canChangeStatus(t)?'':'disabled title="Only the assignor (or Super Admin) can change this task\'s status"'}>
               <option value="open" ${t.status==='open'?'selected':''}>Open</option>
               <option value="done" ${t.status==='done'?'selected':''}>Completed</option>
             </select>
@@ -1931,14 +1931,14 @@
 
   function canChangeStatus(t){
     if(session && session.type === 'admin') return true;
-    return currentIdentity() === t.assignee;
+    return currentIdentity() === t.assignorId;
   }
 
   function moveTask(id, status){
     const t = tasks.find(t=>t.id===id);
     if(!t) return;
     if(!canChangeStatus(t)){
-      alert("Only the assignee (or Super Admin) can change this task's status.");
+      alert("Only the assignor (or Super Admin) can change this task's status.");
       renderAll();
       return;
     }
