@@ -1329,8 +1329,13 @@
     return m ? { color: m.color, label: initials(m.name), photo: m.photo } : { color: '#999', label: '?', photo: null };
   }
 
+  function getAssigneeEntity(t){
+    if(t.assignee === 'admin') return { id: 'admin', name: adminName || 'Super Admin', color: 'var(--wa-header)', photo: adminPhoto };
+    return memberById(t.assignee);
+  }
+
   function taskAssigneeAvatar(t){
-    const m = memberById(t.assignee);
+    const m = getAssigneeEntity(t);
     return m ? { color: m.color, label: initials(m.name), photo: m.photo } : { color: '#999', label: '?', photo: null };
   }
 
@@ -1361,7 +1366,7 @@
         if((t.notes||[]).some(n => n.text.toLowerCase().includes(q))) return true;
         const assignor = assignorLabel(t);
         if(assignor && assignor.toLowerCase().includes(q)) return true;
-        const assignee = memberById(t.assignee);
+        const assignee = getAssigneeEntity(t);
         return assignee && assignee.name.toLowerCase().includes(q);
       });
     }
@@ -1390,13 +1395,13 @@
       const t = entry.t, latest = entry.latest, latestNote = entry.latestNote;
       let heading, av;
       if(direction === 'given'){
-        heading = memberById(t.assignee) ? memberById(t.assignee).name : 'Unassigned';
+        heading = (getAssigneeEntity(t) && getAssigneeEntity(t).name) || 'Unassigned';
         av = taskAssigneeAvatar(t);
       } else if(direction === 'received'){
         heading = assignorLabel(t) || 'Unknown';
         av = taskAssignorAvatar(t);
       } else {
-        heading = memberById(t.assignee) ? memberById(t.assignee).name : 'Unassigned';
+        heading = (getAssigneeEntity(t) && getAssigneeEntity(t).name) || 'Unassigned';
         av = taskAssigneeAvatar(t);
       }
       const meta = STATUS_FILTERS.find(s=>s.status===t.status) || { label: t.status, color: '#999' };
@@ -1455,7 +1460,7 @@
     } else {
       let adminList = withActivity;
       if(activeDirectionFilter === 'given'){
-        adminList = withActivity.filter(x => x.t.assignorId === 'admin');
+        adminList = withActivity.filter(x => x.t.assignorId === 'admin' && x.t.assignee !== 'admin');
       } else if(activeDirectionFilter === 'received'){
         adminList = withActivity.filter(x => x.t.assignee === 'admin');
       }
@@ -1469,9 +1474,13 @@
     const t = tasks.find(t => t.id === taskId);
     if(!t) return;
     if(selectedTaskId !== taskId){ pendingNoteAttachments = []; replyingTo = null; }
+    const wasTaskOpen = !!selectedTaskId;
     selectedTaskId = taskId;
     selectedMemberId = t.assignee;
     document.getElementById('appRoot').classList.add('chat-open');
+    if(!wasTaskOpen){
+      history.pushState({ appView: 'task' }, '');
+    }
     renderAll();
   }
 
@@ -1480,12 +1489,27 @@
     renderSidebar();
   }
 
-  function backToList(){
+  function closeTaskView(){
     selectedTaskId = null;
     pendingNoteAttachments = [];
     replyingTo = null;
     document.getElementById('appRoot').classList.remove('chat-open');
+    renderAll();
   }
+
+  function backToList(){
+    if(history.state && history.state.appView === 'task'){
+      history.back(); // triggers the popstate handler below, which closes the task view
+    } else {
+      closeTaskView();
+    }
+  }
+
+  window.addEventListener('popstate', () => {
+    if(selectedTaskId){
+      closeTaskView();
+    }
+  });
 
   // ---------- Chat panel ----------
   function renderChatPanel(){
@@ -1503,7 +1527,7 @@
       return;
     }
 
-    const m = memberById(t.assignee);
+    const m = getAssigneeEntity(t);
     markTaskNotesAsRead(t);
     const assignorText = (assignorLabel(t) && t.assignorId !== t.assignee) ? assignorLabel(t) : null;
 
@@ -1967,9 +1991,12 @@
     const sel = document.getElementById('taskAssigneeInput');
     sel.disabled = false;
     const isMember = session && session.type === 'member';
-    sel.innerHTML = members.map(m =>
+    const isAdminSession = session && session.type === 'admin';
+    let options = `<option value="admin">${escapeHtml(adminName || 'Super Admin')} (Super Admin)${isAdminSession ? ' (you)' : ''}</option>`;
+    options += members.map(m =>
       `<option value="${m.id}">${escapeHtml(m.name)}${(isMember && m.id === session.memberId) ? ' (you)' : ''}</option>`
     ).join('');
+    sel.innerHTML = options;
   }
 
   function populateAssignorSelect(){
@@ -2594,7 +2621,7 @@
 
     const overdueHtml = overdue.length
       ? overdue.slice(0, 8).map(t => {
-          const m = memberById(t.assignee);
+          const m = getAssigneeEntity(t);
           const days = Math.max(0, Math.round((Date.now() - new Date(t.due+'T00:00:00').getTime()) / 86400000));
           return `
             <div class="overdue-item">
@@ -2611,7 +2638,7 @@
     // Recent activity feed: task creations + notes, newest first
     const events = [];
     scopedTasks.forEach(t => {
-      const m = memberById(t.assignee);
+      const m = getAssigneeEntity(t);
       events.push({ time: t.created, title: (scopeMember ? 'Assigned: ' : (m?m.name:'Unassigned') + ' was assigned ') + t.title, meta: t.id });
       (t.notes||[]).forEach(n => {
         events.push({ time: n.time, title: noteAuthorLabel(n) + ' on ' + t.title, meta: n.text });
