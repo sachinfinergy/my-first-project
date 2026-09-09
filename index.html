@@ -215,6 +215,10 @@
   }
   .person-name-input:hover{ background:#f5f5f3; }
   .person-name-input:focus{ background:#fff; outline:1.5px solid var(--wa-header); }
+  .person-reportsto-select{
+    font-size:11px; color: var(--wa-text-soft); border:1px solid var(--wa-border); border-radius:5px;
+    padding:3px 5px; max-width:130px; flex-shrink:0; background:#fff; cursor:pointer;
+  }
   .person-pin-status{ font-size:10.5px; color: var(--wa-text-soft); white-space:nowrap; }
 
   .new-member-photo-row{ display:flex; align-items:center; gap:10px; margin-bottom:6px; }
@@ -722,6 +726,19 @@
     font-size:11px; font-weight:600; color: var(--wa-header); background:none; border:none; cursor:pointer; margin-left:6px;
   }
 
+  .leaderboard-legend{ display:flex; gap:16px; font-size:11.5px; color: var(--wa-text-soft); margin-bottom:10px; }
+  .leaderboard-legend .dot{ display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:5px; }
+  .leaderboard-legend .dot.open{ background: var(--wa-amber); }
+  .leaderboard-legend .dot.done{ background: var(--wa-sage); }
+  .leaderboard-row{ display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .leaderboard-name{ width:110px; flex-shrink:0; font-size:13px; font-weight:600; color: var(--wa-text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .leaderboard-bar-track{ flex:1; height:16px; background:#f0f0ee; border-radius:8px; overflow:hidden; display:flex; }
+  .leaderboard-bar-seg{ height:100%; }
+  .leaderboard-bar-seg.open{ background: var(--wa-amber); }
+  .leaderboard-bar-seg.done{ background: var(--wa-sage); }
+  .leaderboard-counts{ font-size:11.5px; color: var(--wa-text-soft); flex-shrink:0; white-space:nowrap; }
+  .overdue-count-inline{ color: var(--wa-rust); font-weight:700; }
+
   .kpi-grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:14px; margin-bottom:24px; }
   .kpi-card{ background:#fff; border-radius:10px; padding:16px 18px; border:1px solid var(--wa-border); }
   .kpi-value{ font-size:26px; font-weight:700; color: var(--wa-text); line-height:1.1; }
@@ -974,6 +991,11 @@
     <div class="field">
       <label>Login PIN (4 digits)</label>
       <input type="text" id="memberPinInput" class="pin-input" maxlength="4" inputmode="numeric" placeholder="••••">
+    </div>
+    <div class="field">
+      <label>Reports to (Team Leader)</label>
+      <select id="memberReportsToInput"><option value="">None — reports directly to Super Admin</option></select>
+      <div style="font-size:11.5px; color:var(--wa-text-soft); margin-top:4px;">Whoever they report to gets a dashboard view scoped to their own team.</div>
     </div>
     <div class="modal-actions">
       <button class="btn-ghost" onclick="closeMemberModal()">Close</button>
@@ -2440,10 +2462,21 @@
           <label class="avatar-upload-btn" title="Change photo">📷<input type="file" accept="image/*" onchange="handleMemberPhotoSelect(event,'${m.id}')"></label>
         </div>
         <input type="text" class="person-name-input" value="${escapeHtml(m.name)}" onchange="renameMember('${m.id}', this.value)">
+        <select class="person-reportsto-select" title="Reports to" onchange="updateMemberReportsTo('${m.id}', this.value)">
+          <option value="">No leader</option>
+          ${members.filter(x=>x.id!==m.id).map(x => `<option value="${x.id}" ${m.reportsTo===x.id?'selected':''}>Reports to ${escapeHtml(x.name)}</option>`).join('')}
+        </select>
         <span class="person-pin-status">${m.pin ? 'PIN set' : "No PIN yet"}</span>
         <button onclick="resetMemberPin('${m.id}')" title="Set/reset PIN" style="color: var(--wa-header); background:none; border:none; cursor:pointer; font-size:14px;">🔑</button>
         <button onclick="deleteMember('${m.id}')" title="Delete member" style="color: var(--wa-rust); background:none; border:none; cursor:pointer; font-size:14px;">🗑️</button>
       </div>`).join('');
+  }
+  function updateMemberReportsTo(memberId, newLeaderId){
+    const m = memberById(memberId);
+    if(!m) return;
+    m.reportsTo = newLeaderId || null;
+    renderAll();
+    saveBoard();
   }
   async function handleMemberPhotoSelect(event, memberId){
     const file = event.target.files[0];
@@ -2480,12 +2513,17 @@
     if(!m) return;
     const assignedCount = tasks.filter(t => t.assignee === memberId).length;
     const givenCount = tasks.filter(t => t.assignorId === memberId).length;
+    const reports = members.filter(x => x.reportsTo === memberId);
     let warning = `Delete ${m.name}? They will immediately lose access and won't be able to log in anymore.`;
     if(assignedCount > 0 || givenCount > 0){
       warning += `\n\nThey currently have ${assignedCount} task(s) assigned to them and ${givenCount} task(s) they assigned to others. Those tasks won't be deleted — they'll just show as "Unassigned" instead. You may want to reassign them first.`;
     }
+    if(reports.length > 0){
+      warning += `\n\n${reports.length} team member(s) currently report to ${m.name} (${reports.map(r=>r.name).join(', ')}). They'll be set to "No leader" — you can reassign them afterward.`;
+    }
     if(!confirm(warning)) return;
     members = members.filter(x => x.id !== memberId);
+    members.forEach(x => { if(x.reportsTo === memberId) x.reportsTo = null; });
     renderExistingMembersList();
     renderAll();
     saveBoard();
@@ -2517,6 +2555,9 @@
     renderAdminProfileSection();
     renderExistingMembersList();
     renderNewMemberPhotoPreview();
+    const reportsToSel = document.getElementById('memberReportsToInput');
+    reportsToSel.innerHTML = '<option value="">None — reports directly to Super Admin</option>' +
+      members.map(m => `<option value="${m.id}">${escapeHtml(m.name)}</option>`).join('');
     const sw = document.getElementById('colorSwatches');
     sw.innerHTML = COLORS.map(c => `<div class="swatch ${c===selectedColor?'selected':''}" style="background:${c}" onclick="pickColor('${c}', this)"></div>`).join('');
     document.getElementById('memberNameInput').focus();
@@ -2532,7 +2573,8 @@
     if(!name){ alert('Enter a name.'); return; }
     const pin = document.getElementById('memberPinInput').value.trim();
     if(!/^\d{4}$/.test(pin)){ alert('PIN must be exactly 4 digits.'); return; }
-    const newMember = { id: 'm' + (members.length+1) + '-' + Date.now(), name, color: selectedColor, pin, photo: pendingNewMemberPhoto };
+    const reportsTo = document.getElementById('memberReportsToInput').value || null;
+    const newMember = { id: 'm' + (members.length+1) + '-' + Date.now(), name, color: selectedColor, pin, photo: pendingNewMemberPhoto, reportsTo };
     members.push(newMember);
     renderAll();
     renderExistingMembersList();
@@ -2541,6 +2583,7 @@
     document.getElementById('memberNameInput').value = '';
     document.getElementById('memberPinInput').value = String(Math.floor(1000 + Math.random()*9000));
     document.getElementById('newMemberPhotoInput').value = '';
+    document.getElementById('memberReportsToInput').value = '';
     pendingNewMemberPhoto = null;
     renderNewMemberPhotoPreview();
     selectedColor = COLORS[members.length % COLORS.length];
@@ -2602,14 +2645,36 @@
   }
 
   // ---------- Dashboard ----------
-  let dashPersonFilter = ''; // '' = Overall, or a memberId, or 'admin'
+  let dashPersonFilter = ''; // '' = Overall (within scope), or a memberId, or 'admin'
   let dashTimeRange = 'all'; // 'all' | 'today' | 'week' | 'month'
   let dashTagFilter = '';
-  let dashLockedPerson = null; // set when opened as someone's own personal dashboard
+  let dashLockedPerson = null; // fully locked to one person (regular member, no reports)
+  let dashScopeIds = null; // restricted list of allowed person ids (team leader), or null = unrestricted (admin)
 
-  function openDashboard(lockedMemberId){
-    dashLockedPerson = lockedMemberId || null;
-    dashPersonFilter = lockedMemberId || '';
+  function getDirectReports(memberId){
+    return members.filter(m => m.reportsTo === memberId);
+  }
+
+  function openDashboard(viewerMemberId){
+    if(viewerMemberId){
+      const reports = getDirectReports(viewerMemberId);
+      if(reports.length > 0){
+        // Team leader: restricted dropdown scoped to themselves + their direct reports
+        dashLockedPerson = null;
+        dashScopeIds = [viewerMemberId, ...reports.map(r=>r.id)];
+        dashPersonFilter = '';
+      } else {
+        // Regular member with no reports: fully locked to just themselves
+        dashLockedPerson = viewerMemberId;
+        dashScopeIds = null;
+        dashPersonFilter = viewerMemberId;
+      }
+    } else {
+      // Super Admin: unrestricted
+      dashLockedPerson = null;
+      dashScopeIds = null;
+      dashPersonFilter = '';
+    }
     dashTimeRange = 'all';
     dashTagFilter = '';
     document.getElementById('dashboardOverlay').classList.add('open');
@@ -2635,12 +2700,25 @@
   function renderDashFilterBar(){
     const bar = document.getElementById('dashFilterBar');
     if(!bar) return;
-    const personOptions = dashLockedPerson ? '' : `
-      <select id="dashPersonFilter" onchange="onDashPersonFilterChange()">
-        <option value="" ${dashPersonFilter===''?'selected':''}>Overall (whole team)</option>
-        <option value="admin" ${dashPersonFilter==='admin'?'selected':''}>${escapeHtml(adminName||'Super Admin')} (Super Admin)</option>
-        ${members.map(m => `<option value="${m.id}" ${dashPersonFilter===m.id?'selected':''}>${escapeHtml(m.name)}</option>`).join('')}
-      </select>`;
+    let personOptions = '';
+    if(!dashLockedPerson){
+      let optionsHtml;
+      if(dashScopeIds){
+        // Team leader: only themselves + their direct reports
+        optionsHtml = `<option value="" ${dashPersonFilter===''?'selected':''}>My team (overall)</option>` +
+          dashScopeIds.map(id => {
+            const ent = id === 'admin' ? { name: adminName||'Super Admin' } : memberById(id);
+            if(!ent) return '';
+            return `<option value="${id}" ${dashPersonFilter===id?'selected':''}>${escapeHtml(ent.name)}</option>`;
+          }).join('');
+      } else {
+        // Admin: everyone
+        optionsHtml = `<option value="" ${dashPersonFilter===''?'selected':''}>Overall (whole team)</option>` +
+          `<option value="admin" ${dashPersonFilter==='admin'?'selected':''}>${escapeHtml(adminName||'Super Admin')} (Super Admin)</option>` +
+          members.map(m => `<option value="${m.id}" ${dashPersonFilter===m.id?'selected':''}>${escapeHtml(m.name)}</option>`).join('');
+      }
+      personOptions = `<select id="dashPersonFilter" onchange="onDashPersonFilterChange()">${optionsHtml}</select>`;
+    }
     const ranges = [['all','All time'],['today','Today'],['week','This week'],['month','This month']];
     const timeChips = ranges.map(([val,label]) =>
       `<button class="dash-time-chip ${dashTimeRange===val?'active':''}" onclick="setDashTimeRange('${val}')">${label}</button>`
@@ -2651,13 +2729,21 @@
   function renderDashboard(){
     renderDashFilterBar();
     const personEntity = dashPersonFilter ? (dashPersonFilter === 'admin' ? { name: adminName || 'Super Admin' } : memberById(dashPersonFilter)) : null;
-    document.querySelector('.dashboard-header > div > div:first-child').textContent = dashLockedPerson ? 'My Dashboard' : 'Team Dashboard';
+    document.querySelector('.dashboard-header > div > div:first-child').textContent =
+      dashLockedPerson ? 'My Dashboard' : (dashScopeIds ? 'My Team Dashboard' : 'Team Dashboard');
     const rangeLabel = { all:'All time', today:'Today', week:'This week', month:'This month' }[dashTimeRange];
     document.getElementById('dashboardSubtitle').textContent =
       (personEntity ? escapeHtml(personEntity.name) + ' · ' : '') + rangeLabel + ' · As of ' + timeNow();
 
     // Person + time filtered (used for KPIs, status/priority, overdue, activity, leaderboard)
-    let baseTasks = dashPersonFilter ? tasks.filter(t => t.assignee === dashPersonFilter) : tasks.slice();
+    let baseTasks;
+    if(dashPersonFilter){
+      baseTasks = tasks.filter(t => t.assignee === dashPersonFilter);
+    } else if(dashScopeIds){
+      baseTasks = tasks.filter(t => dashScopeIds.includes(t.assignee));
+    } else {
+      baseTasks = tasks.slice();
+    }
     baseTasks = baseTasks.filter(t => isWithinDashTimeRange(t.created));
     // Same again but also tag-filtered (used everywhere except the tag breakdown itself, so tag bars stay comparable)
     const scopedTasks = dashTagFilter ? baseTasks.filter(t => (t.labels||[]).includes(dashTagFilter)) : baseTasks;
@@ -2691,7 +2777,7 @@
         <div class="kpi-card"><div class="kpi-value">${completionRate}%</div><div class="kpi-label">Completion rate</div></div>
         <div class="kpi-card"><div class="kpi-value">${avgCompletionDays!==null ? avgCompletionDays + 'd' : '—'}</div><div class="kpi-label">Avg. time to complete</div></div>
         <div class="kpi-card"><div class="kpi-value">${totalNotes}</div><div class="kpi-label">Updates logged</div></div>
-        ${dashPersonFilter ? '' : `<div class="kpi-card"><div class="kpi-value">${members.length}</div><div class="kpi-label">Team members</div></div>`}
+        ${dashPersonFilter ? '' : `<div class="kpi-card"><div class="kpi-value">${dashScopeIds ? dashScopeIds.length : members.length}</div><div class="kpi-label">${dashScopeIds?'My team size':'Team members'}</div></div>`}
       </div>`;
 
     const statusColors = { open: 'var(--wa-amber)', done: 'var(--wa-sage)' };
@@ -2704,9 +2790,22 @@
     const maxLabelCount = Math.max(1, ...labels.map(l => baseTasks.filter(t=>(t.labels||[]).includes(l.id)).length));
     const labelHtml = labels.length
       ? labels.map(l => {
-          const count = baseTasks.filter(t=>(t.labels||[]).includes(l.id)).length;
+          const lTasks = baseTasks.filter(t=>(t.labels||[]).includes(l.id));
+          const completed = lTasks.filter(t=>t.status==='done').length;
+          const open = lTasks.filter(t=>t.status==='open').length;
+          const overdueCount = lTasks.filter(t=>isOverdue(t.due, t.status)).length;
+          const openPct = Math.round((open/maxLabelCount)*100);
+          const donePct = Math.round((completed/maxLabelCount)*100);
           const isActive = dashTagFilter === l.id;
-          return `<div class="bar-row-clickable ${isActive?'active':''}" onclick="setDashTagFilter('${l.id}')">${barRow(l.name, count, maxLabelCount, l.color)}</div>`;
+          return `
+            <div class="leaderboard-row bar-row-clickable ${isActive?'active':''}" onclick="setDashTagFilter('${l.id}')">
+              <span class="leaderboard-name" title="${escapeHtml(l.name)}">${escapeHtml(l.name)}</span>
+              <div class="leaderboard-bar-track">
+                <div class="leaderboard-bar-seg open" style="width:${openPct}%"></div>
+                <div class="leaderboard-bar-seg done" style="width:${donePct}%"></div>
+              </div>
+              <span class="leaderboard-counts">${lTasks.length} total · ${completed} done · ${open} open${overdueCount ? ' · <span class="overdue-count-inline">'+overdueCount+' overdue</span>' : ''}</span>
+            </div>`;
         }).join('')
       : `<div class="dash-empty">No labels created yet.</div>`;
 
@@ -2748,17 +2847,32 @@
 
     // Team leaderboard — only when viewing the whole team, not a single person
     const leaderboardSection = dashPersonFilter ? '' : (() => {
-      const allPeople = [...members.map(m=>({id:m.id, name:m.name, color:m.color, photo:m.photo})), { id:'admin', name: adminName||'Super Admin', color:'var(--wa-header)', photo: adminPhoto }];
+      let allPeople = [...members.map(m=>({id:m.id, name:m.name, color:m.color, photo:m.photo})), { id:'admin', name: adminName||'Super Admin', color:'var(--wa-header)', photo: adminPhoto }];
+      if(dashScopeIds) allPeople = allPeople.filter(p => dashScopeIds.includes(p.id));
       const rows = allPeople.map(p => {
         const pTasks = baseTasks.filter(t => t.assignee === p.id);
         const completed = pTasks.filter(t => t.status==='done').length;
         const open = pTasks.filter(t => t.status==='open').length;
         return { p, completed, open, total: pTasks.length };
-      }).filter(r => r.total > 0).sort((a,b) => b.completed - a.completed);
+      }).filter(r => r.total > 0).sort((a,b) => b.total - a.total);
       if(rows.length === 0) return `<div class="dash-section"><h3>Team leaderboard</h3><div class="dash-empty">No tasks in this time range yet.</div></div>`;
-      const maxCompleted = Math.max(1, ...rows.map(r=>r.completed));
-      const html = rows.map(r => barRow(r.p.name, r.completed, maxCompleted, r.p.color, r.open + ' open')).join('');
-      return `<div class="dash-section"><h3>Team leaderboard <span style="font-weight:400; color:var(--wa-text-soft); font-size:11.5px;">(completed, this period)</span></h3>${html}</div>`;
+      const maxTotal = Math.max(1, ...rows.map(r=>r.total));
+      const html = rows.map(r => {
+        const openPct = Math.round((r.open/maxTotal)*100);
+        const donePct = Math.round((r.completed/maxTotal)*100);
+        return `
+          <div class="leaderboard-row">
+            <span class="leaderboard-name" title="${escapeHtml(r.p.name)}">${escapeHtml(r.p.name)}</span>
+            <div class="leaderboard-bar-track">
+              <div class="leaderboard-bar-seg open" style="width:${openPct}%"></div>
+              <div class="leaderboard-bar-seg done" style="width:${donePct}%"></div>
+            </div>
+            <span class="leaderboard-counts">${r.total} total · ${r.completed} done · ${r.open} open</span>
+          </div>`;
+      }).join('');
+      return `<div class="dash-section"><h3>Team leaderboard <span style="font-weight:400; color:var(--wa-text-soft); font-size:11.5px;">(all tasks, this period)</span></h3>
+        <div class="leaderboard-legend"><span><i class="dot open"></i>Open</span><span><i class="dot done"></i>Completed</span></div>
+        ${html}</div>`;
     })();
 
     const clearTagBtn = dashTagFilter ? `<button class="dash-clear-tag" onclick="setDashTagFilter('${dashTagFilter}')">Clear</button>` : '';
@@ -2771,7 +2885,10 @@
       </div>
       <div class="dash-grid-2">
         ${leaderboardSection}
-        <div class="dash-section"><h3>Tasks by tag ${clearTagBtn}</h3>${labelHtml}</div>
+        <div class="dash-section"><h3>Tasks by tag ${clearTagBtn}</h3>
+          <div class="leaderboard-legend"><span><i class="dot open"></i>Open</span><span><i class="dot done"></i>Completed</span></div>
+          ${labelHtml}
+        </div>
       </div>
       <div class="dash-grid-2">
         <div class="dash-section"><h3>Overdue tasks</h3>${overdueHtml}</div>
