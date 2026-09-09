@@ -270,6 +270,10 @@
   }
   .chat-row-preview b{ color: var(--wa-text); font-weight:600; }
   .row-client-name{ color: var(--wa-text); font-weight:600; }
+  .chat-row-last-message{
+    font-size:12px; color: var(--wa-text-soft); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .chat-row-last-message b{ color: var(--wa-text); font-weight:600; }
   .chat-row-badge-col{ display:flex; align-items:center; flex-shrink:0; }
   .badge{
     background: var(--wa-badge); color: var(--wa-header-text); font-size:11px; font-weight:700;
@@ -1412,6 +1416,20 @@
         : escapeHtml(t.title);
       const unreadCount = unreadCountForTask(t);
 
+      let lastMessageHtml = '';
+      if(latestNote){
+        const isMe = latestNote.authorId === currentIdentity();
+        const authorPrefix = isMe ? 'You' : noteAuthorLabel(latestNote);
+        let msgBody = latestNote.text ? escapeHtml(latestNote.text) : '';
+        if(!msgBody){
+          const atts = getAttachments(latestNote);
+          if(atts.length){
+            msgBody = atts[0].type === 'image' ? '📷 Photo' : '📄 ' + escapeHtml(atts[0].name || 'Document');
+          }
+        }
+        lastMessageHtml = `<div class="chat-row-last-message"><b>${escapeHtml(authorPrefix)}:</b> ${msgBody}</div>`;
+      }
+
       return `
         <div class="chat-row" onclick="openTaskRow('${t.id}')">
           ${avatarHtml(av)}
@@ -1427,6 +1445,7 @@
             <div class="chat-row-preview">
               ${previewHtml}
             </div>
+            ${lastMessageHtml}
           </div>
           ${unreadCount > 0 ? `<div class="chat-row-badge-col"><span class="badge" title="${unreadCount} unread update${unreadCount!==1?'s':''}">${unreadCount}</span></div>` : ''}
         </div>`;
