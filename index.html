@@ -1407,15 +1407,9 @@
       const meta = STATUS_FILTERS.find(s=>s.status===t.status) || { label: t.status, color: '#999' };
       const dayInfo = (t.status !== 'done') ? daysInHandLabel(t.due, t.status) : null;
 
-      let previewHtml;
-      if(latestNote){
-        const isMe = latestNote.authorId === currentIdentity();
-        const authorPrefix = isMe ? 'You' : noteAuthorLabel(latestNote);
-        const msgBody = latestNote.text ? escapeHtml(latestNote.text) : (latestNote.image ? '📷 Photo' : '');
-        previewHtml = `<b>${escapeHtml(authorPrefix)}:</b> ${msgBody}`;
-      } else {
-        previewHtml = `${t.customerName ? `<span class="row-client-name">👤 ${escapeHtml(t.customerName)}</span> · ` : ''}${escapeHtml(t.title)}`;
-      }
+      const previewHtml = t.customerName
+        ? `<span class="row-client-name">👤 ${escapeHtml(t.customerName)}</span>`
+        : escapeHtml(t.title);
       const unreadCount = unreadCountForTask(t);
 
       return `
