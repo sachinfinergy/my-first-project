@@ -636,6 +636,18 @@
   }
   .customer-hint.show{ display:block; }
 
+  .bulk-error-box{
+    background:#fdf2ef; border:1px solid #f0d4cf; border-radius:8px; padding:12px 14px; margin-top:12px;
+    font-size:12.5px; color: var(--wa-text); max-height:240px; overflow-y:auto;
+  }
+  .bulk-error-box b{ color: var(--wa-rust); }
+  .bulk-error-box ul{ margin:8px 0 0; padding-left:18px; }
+  .bulk-error-box li{ margin-bottom:4px; color: var(--wa-text-soft); }
+  .bulk-success-box{
+    background:#e7f8f2; border:1px solid #b8e6d3; border-radius:8px; padding:12px 14px; margin-top:12px;
+    font-size:13px; font-weight:600; color: var(--wa-text);
+  }
+
   .attach-preview-empty{ font-size:12px; color: var(--wa-text-soft); margin-bottom:6px; }
   .attach-preview-row{ display:flex; flex-wrap:wrap; gap:10px; margin-bottom:4px; }
   .attach-preview-thumb{ position:relative; display:inline-block; margin-bottom:0; }
@@ -836,6 +848,7 @@
       <button class="icon-btn-round rail-btn member-only" onclick="openDashboard(session.memberId)" title="My dashboard">📊</button>
       <button class="icon-btn-round rail-btn admin-only" onclick="openLabelManageModal()" title="Manage labels"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 12.42 21.58a2 2 0 0 1-2.83 0L2.42 14.4a2 2 0 0 1 0-2.83L10.58 3.4A2 2 0 0 1 12 2.83L21 3l.17 9a2 2 0 0 1-.58 1.41z"/><circle cx="16.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/></svg></button>
       <button class="icon-btn-round rail-btn admin-only" onclick="exportToExcel()" title="Export to Excel"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+      <button class="icon-btn-round rail-btn admin-only" onclick="openBulkUploadModal()" title="Bulk upload tasks"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></button>
       <button class="icon-btn-round rail-btn admin-only" onclick="openMemberModal()" title="Add team member"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg></button>
       <button class="icon-btn-round rail-btn" onclick="openTaskModal()" title="New task"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
     </div>
@@ -861,6 +874,7 @@
         <button class="icon-btn-round member-only" onclick="openDashboard(session.memberId)" title="My dashboard">📊</button>
         <button class="icon-btn-round admin-only" onclick="openLabelManageModal()" title="Manage labels"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 12.42 21.58a2 2 0 0 1-2.83 0L2.42 14.4a2 2 0 0 1 0-2.83L10.58 3.4A2 2 0 0 1 12 2.83L21 3l.17 9a2 2 0 0 1-.58 1.41z"/><circle cx="16.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/></svg></button>
         <button class="icon-btn-round admin-only" onclick="exportToExcel()" title="Export to Excel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+        <button class="icon-btn-round admin-only" onclick="openBulkUploadModal()" title="Bulk upload tasks"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></button>
         <button class="icon-btn-round admin-only" onclick="openMemberModal()" title="Add team member"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg></button>
         <button class="icon-btn-round" onclick="openTaskModal()" title="New task"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
         <button class="icon-btn-round" onclick="manualRefresh()" title="Refresh"><svg class="refresh-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
@@ -992,14 +1006,31 @@
           </div>
           <div class="field">
             <label>Relationship Manager</label>
-            <input type="text" id="taskRmInput" list="rmNameDatalist" placeholder="e.g. Priya Nair">
-            <datalist id="rmNameDatalist"></datalist>
+            <select id="taskRmInput"><option value="">— Select —</option></select>
           </div>
         </div>
         <div class="field">
           <label>Product type</label>
           <input type="text" id="taskProductTypeInput" list="productTypeDatalist" placeholder="e.g. Term Insurance, Mutual Fund, Health Plan">
           <datalist id="productTypeDatalist"></datalist>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Type</label>
+            <select id="taskTypeInput">
+              <option value="">— Select —</option>
+              <option value="New">New</option>
+              <option value="Renewal">Renewal</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Category</label>
+            <select id="taskCategoryInput">
+              <option value="">— Select —</option>
+              <option value="Quote">Quote</option>
+              <option value="Won">Won</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -1019,6 +1050,26 @@
     <div class="modal-actions task-modal-actions">
       <button class="btn-ghost" onclick="closeTaskModal()">Cancel</button>
       <button class="btn-primary" onclick="saveTask()">Save task</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bulk Upload Modal -->
+<div class="modal-overlay" id="bulkUploadModalOverlay">
+  <div class="modal">
+    <h3>Bulk upload tasks</h3>
+    <p style="font-size:13px; color:var(--wa-text-soft); margin-bottom:14px; line-height:1.5;">
+      Download the template below, fill it in, then upload it here. Every row must be valid before anything gets imported — you'll see a full list of anything that needs fixing first.
+    </p>
+    <button class="btn-ghost" onclick="downloadTaskTemplate()" style="width:100%; margin-bottom:16px;">⬇ Download template</button>
+    <div class="field">
+      <label>Upload filled template (.xlsx)</label>
+      <input type="file" id="bulkUploadFileInput" accept=".xlsx,.xls" onchange="handleBulkUploadFile(event)">
+    </div>
+    <div id="bulkUploadResult"></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeBulkUploadModal()">Close</button>
+      <button class="btn-primary" id="bulkUploadConfirmBtn" style="display:none;" onclick="confirmBulkImport()">Import tasks</button>
     </div>
   </div>
 </div>
@@ -1270,6 +1321,8 @@
         'Agent Name': t.agentName || '',
         'Relationship Manager': t.relationshipManager || '',
         'Product Type': t.productType || '',
+        'Type': t.taskType || '',
+        'Category': t.category || '',
         'Labels': (t.labels||[]).map(lid => { const l = labelById(lid); return l ? l.name : null; }).filter(Boolean).join(', '),
         'Updates Count': (t.notes||[]).length
       };
@@ -1300,7 +1353,7 @@
     const wsTasks = XLSX.utils.json_to_sheet(taskRows);
     wsTasks['!cols'] = [
       {wch:9},{wch:28},{wch:30},{wch:16},{wch:16},{wch:9},{wch:11},{wch:11},
-      {wch:17},{wch:17},{wch:18},{wch:15},{wch:16},{wch:20},{wch:16},{wch:20},{wch:12}
+      {wch:17},{wch:17},{wch:18},{wch:15},{wch:16},{wch:20},{wch:10},{wch:10},{wch:16},{wch:20},{wch:12}
     ];
     const wsUpdates = XLSX.utils.json_to_sheet(updateRows);
     const wsMembers = XLSX.utils.json_to_sheet(memberRows);
@@ -1310,6 +1363,209 @@
 
     const dateStr = new Date().toISOString().slice(0,10);
     XLSX.writeFile(wb, `team-tasks-export-${dateStr}.xlsx`);
+  }
+
+  let pendingBulkImportRows = null; // validated rows ready to import, or null if nothing valid yet
+
+  function downloadTaskTemplate(){
+    if(typeof XLSX === 'undefined'){ alert('The template tool failed to load — please check your internet connection and try again.'); return; }
+    const sampleAssignee = members[0] ? members[0].name : 'Team Member Name';
+    const sampleAssignor = adminName || 'Super Admin';
+    const headers = ['Title','Description','Assign To','Assigned By','Priority','Due Date','Customer Name','Customer Mobile','Agent Name','Relationship Manager','Product Type','Type','Category','Labels'];
+    const example = ['Send renewal reminder','Call client before policy lapses', sampleAssignee, sampleAssignor, 'Medium', '2026-09-30', 'Rohan Mehta', '9876543210', 'Suresh Kumar', 'Priya Nair', 'Term Insurance', 'Renewal', 'Quote', ''];
+    const ws = XLSX.utils.aoa_to_sheet([headers, example]);
+    ws['!cols'] = headers.map(() => ({wch:20}));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Tasks');
+    XLSX.writeFile(wb, 'task-upload-template.xlsx');
+  }
+
+  function openBulkUploadModal(){
+    document.getElementById('bulkUploadModalOverlay').classList.add('open');
+    document.getElementById('bulkUploadFileInput').value = '';
+    document.getElementById('bulkUploadResult').innerHTML = '';
+    document.getElementById('bulkUploadConfirmBtn').style.display = 'none';
+    pendingBulkImportRows = null;
+  }
+  function closeBulkUploadModal(){ document.getElementById('bulkUploadModalOverlay').classList.remove('open'); }
+
+  function resolvePersonIdByName(name){
+    if(!name) return null;
+    const n = String(name).trim().toLowerCase();
+    if(!n) return null;
+    if((adminName||'Super Admin').toLowerCase() === n || n === 'super admin' || n === 'admin') return 'admin';
+    const m = members.find(m => m.name.toLowerCase() === n);
+    return m ? m.id : null;
+  }
+
+  function formatExcelDateValue(val){
+    if(val instanceof Date){
+      if(isNaN(val.getTime())) return null;
+      const yyyy = val.getFullYear(), mm = String(val.getMonth()+1).padStart(2,'0'), dd = String(val.getDate()).padStart(2,'0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+    const s = String(val).trim();
+    if(!s) return '';
+    if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    const parsed = new Date(s);
+    if(!isNaN(parsed.getTime())){
+      const yyyy = parsed.getFullYear(), mm = String(parsed.getMonth()+1).padStart(2,'0'), dd = String(parsed.getDate()).padStart(2,'0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+    return null;
+  }
+
+  const VALID_PRIORITIES = ['Low','Medium','High','Urgent'];
+
+  function handleBulkUploadFile(event){
+    const file = event.target.files[0];
+    if(!file) return;
+    if(typeof XLSX === 'undefined'){ alert('The import tool failed to load — please check your internet connection and try again.'); return; }
+    const reader = new FileReader();
+    reader.onload = e => {
+      try{
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data, { type:'array', cellDates:true });
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, { defval:'' });
+        validateAndPreviewBulkRows(rows);
+      } catch(err){
+        console.error('Bulk upload read failed', err);
+        document.getElementById('bulkUploadResult').innerHTML = `<div class="bulk-error-box">Could not read that file. Please make sure it's a valid .xlsx file, ideally the downloaded template.</div>`;
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function validateAndPreviewBulkRows(rows){
+    const resultBox = document.getElementById('bulkUploadResult');
+    const confirmBtn = document.getElementById('bulkUploadConfirmBtn');
+    if(rows.length === 0){
+      resultBox.innerHTML = `<div class="bulk-error-box">That file has no rows to import.</div>`;
+      confirmBtn.style.display = 'none';
+      pendingBulkImportRows = null;
+      return;
+    }
+    const errors = [];
+    const validRows = [];
+    rows.forEach((row, idx) => {
+      const rowNum = idx + 2; // header is row 1
+      const title = String(row['Title']||'').trim();
+      const assignToName = String(row['Assign To']||'').trim();
+      const assignedByName = String(row['Assigned By']||'').trim();
+      const priorityRaw = String(row['Priority']||'').trim();
+      const dueRaw = row['Due Date'];
+      const rmRaw = String(row['Relationship Manager']||'').trim();
+      const typeRaw = String(row['Type']||'').trim();
+      const categoryRaw = String(row['Category']||'').trim();
+      const labelsRaw = String(row['Labels']||'').trim();
+
+      if(!title) errors.push(`Row ${rowNum}: Title is required.`);
+
+      const assigneeId = resolvePersonIdByName(assignToName);
+      if(!assignToName) errors.push(`Row ${rowNum}: "Assign To" is required.`);
+      else if(!assigneeId) errors.push(`Row ${rowNum}: "Assign To" — no member or Super Admin named "${assignToName}" found.`);
+
+      const assignorId = resolvePersonIdByName(assignedByName);
+      if(!assignedByName) errors.push(`Row ${rowNum}: "Assigned By" is required.`);
+      else if(!assignorId) errors.push(`Row ${rowNum}: "Assigned By" — no member or Super Admin named "${assignedByName}" found.`);
+
+      let priority = 'Medium';
+      if(priorityRaw){
+        const match = VALID_PRIORITIES.find(p => p.toLowerCase() === priorityRaw.toLowerCase());
+        if(!match) errors.push(`Row ${rowNum}: Priority "${priorityRaw}" isn't valid — use Low, Medium, High, or Urgent.`);
+        else priority = match;
+      }
+
+      let due = '';
+      if(dueRaw !== '' && dueRaw !== undefined && dueRaw !== null){
+        const formatted = formatExcelDateValue(dueRaw);
+        if(formatted === null) errors.push(`Row ${rowNum}: Due Date "${dueRaw}" isn't a valid date.`);
+        else due = formatted;
+      }
+
+      let rmName = '';
+      if(rmRaw){
+        const rmId = resolvePersonIdByName(rmRaw);
+        if(!rmId) errors.push(`Row ${rowNum}: "Relationship Manager" — no member or Super Admin named "${rmRaw}" found.`);
+        else rmName = rmId === 'admin' ? (adminName||'Super Admin') : memberById(rmId).name;
+      }
+
+      let taskType = '';
+      if(typeRaw){
+        const match = ['New','Renewal'].find(v => v.toLowerCase() === typeRaw.toLowerCase());
+        if(!match) errors.push(`Row ${rowNum}: Type "${typeRaw}" isn't valid — use New or Renewal.`);
+        else taskType = match;
+      }
+
+      let category = '';
+      if(categoryRaw){
+        const match = ['Quote','Won'].find(v => v.toLowerCase() === categoryRaw.toLowerCase());
+        if(!match) errors.push(`Row ${rowNum}: Category "${categoryRaw}" isn't valid — use Quote or Won.`);
+        else category = match;
+      }
+
+      let labelIds = [];
+      if(labelsRaw){
+        const names = labelsRaw.split(',').map(s=>s.trim()).filter(Boolean);
+        names.forEach(name => {
+          const l = labels.find(l => l.name.toLowerCase() === name.toLowerCase());
+          if(!l) errors.push(`Row ${rowNum}: Label "${name}" doesn't exist yet — create it first or fix the spelling.`);
+          else labelIds.push(l.id);
+        });
+      }
+
+      if(assigneeId && assignorId && title){
+        validRows.push({
+          title, desc: String(row['Description']||'').trim(),
+          assignee: assigneeId, assignorId,
+          priority, due, status: 'open',
+          customerName: String(row['Customer Name']||'').trim(),
+          customerMobile: String(row['Customer Mobile']||'').trim(),
+          agentName: String(row['Agent Name']||'').trim(),
+          relationshipManager: rmName,
+          productType: String(row['Product Type']||'').trim(),
+          taskType, category,
+          labels: labelIds
+        });
+      }
+    });
+
+    if(errors.length > 0){
+      resultBox.innerHTML = `
+        <div class="bulk-error-box">
+          <b>${errors.length} problem${errors.length!==1?'s':''} found — fix these in the file and re-upload. Nothing has been imported.</b>
+          <ul>${errors.map(e=>`<li>${escapeHtml(e)}</li>`).join('')}</ul>
+        </div>`;
+      confirmBtn.style.display = 'none';
+      pendingBulkImportRows = null;
+    } else {
+      resultBox.innerHTML = `<div class="bulk-success-box">✅ All ${validRows.length} row${validRows.length!==1?'s':''} look good and ready to import.</div>`;
+      confirmBtn.style.display = 'inline-block';
+      confirmBtn.textContent = `Import ${validRows.length} task${validRows.length!==1?'s':''}`;
+      pendingBulkImportRows = validRows;
+    }
+  }
+
+  async function confirmBulkImport(){
+    if(!pendingBulkImportRows || pendingBulkImportRows.length === 0) return;
+    const newTasks = pendingBulkImportRows.map(r => ({
+      id: 'T-' + String(taskCounter++).padStart(3,'0'),
+      created: Date.now(),
+      notes: [],
+      completedAt: null,
+      ...r
+    }));
+    const projectedPayload = { members, tasks: [...tasks, ...newTasks], labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto };
+    const sizeKB = getPayloadSizeKB(projectedPayload);
+    if(sizeKB > 950){
+      if(!confirm(`⚠️ Importing these ${newTasks.length} tasks would bring your board to ${sizeKB}KB of the 1024KB limit, and may fail to save. Continue anyway?`)) return;
+    }
+    tasks.push(...newTasks);
+    closeBulkUploadModal();
+    renderAll();
+    const ok = await saveBoard();
+    if(ok) alert(`${newTasks.length} task${newTasks.length!==1?'s':''} imported successfully.`);
   }
 
   async function saveBoard(retryCount){
@@ -1552,6 +1808,8 @@
         if(t.agentName && t.agentName.toLowerCase().includes(q)) return true;
         if(t.relationshipManager && t.relationshipManager.toLowerCase().includes(q)) return true;
         if(t.productType && t.productType.toLowerCase().includes(q)) return true;
+        if(t.taskType && t.taskType.toLowerCase().includes(q)) return true;
+        if(t.category && t.category.toLowerCase().includes(q)) return true;
         if((t.notes||[]).some(n => n.text.toLowerCase().includes(q))) return true;
         const assignor = assignorLabel(t);
         if(assignor && assignor.toLowerCase().includes(q)) return true;
@@ -1788,8 +2046,10 @@
             ${t.customerMobile ? `<a href="tel:${cleanMobile}" class="customer-action" title="Call">📞 ${escapeHtml(t.customerMobile)}</a>` : ''}
             ${t.customerMobile ? `<a href="https://wa.me/${cleanMobile.replace(/^\+/,'')}" target="_blank" rel="noopener" class="customer-action wa" title="Message on WhatsApp">💬</a>` : ''}
           </div>` : ''}
-        ${(t.agentName || t.relationshipManager || t.productType) ? `
+        ${(t.agentName || t.relationshipManager || t.productType || t.taskType || t.category) ? `
           <div class="task-case-meta">
+            ${t.taskType ? `<span><b>Type:</b> ${escapeHtml(t.taskType)}</span>` : ''}
+            ${t.category ? `<span><b>Category:</b> ${escapeHtml(t.category)}</span>` : ''}
             ${t.agentName ? `<span><b>Agent:</b> ${escapeHtml(t.agentName)}</span>` : ''}
             ${t.relationshipManager ? `<span><b>RM:</b> ${escapeHtml(t.relationshipManager)}</span>` : ''}
             ${t.productType ? `<span><b>Product:</b> ${escapeHtml(t.productType)}</span>` : ''}
@@ -2305,8 +2565,14 @@
   }
   function populateNewFieldDatalists(){
     populateTextFieldDatalist('agentNameDatalist', 'agentName');
-    populateTextFieldDatalist('rmNameDatalist', 'relationshipManager');
     populateTextFieldDatalist('productTypeDatalist', 'productType');
+  }
+  function populateRmSelect(){
+    const sel = document.getElementById('taskRmInput');
+    if(!sel) return;
+    sel.innerHTML = '<option value="">— Select —</option>' +
+      `<option value="${escapeHtml(adminName||'Super Admin')}">${escapeHtml(adminName||'Super Admin')} (Super Admin)</option>` +
+      members.map(m => `<option value="${escapeHtml(m.name)}">${escapeHtml(m.name)}</option>`).join('');
   }
 
   function onCustomerFieldInput(){
@@ -2452,6 +2718,7 @@
     populateAssignorSelect();
     populateCustomerDatalists();
     populateNewFieldDatalists();
+    populateRmSelect();
     document.getElementById('taskModalOverlay').classList.add('open');
     document.getElementById('customerMatchHint').classList.remove('show');
     if(id){
@@ -2472,6 +2739,8 @@
       document.getElementById('taskAgentNameInput').value = t.agentName || '';
       document.getElementById('taskRmInput').value = t.relationshipManager || '';
       document.getElementById('taskProductTypeInput').value = t.productType || '';
+      document.getElementById('taskTypeInput').value = t.taskType || '';
+      document.getElementById('taskCategoryInput').value = t.category || '';
       pendingTaskAttachments = getAttachments(t).slice();
       renderImagePreview();
       renderTaskLabelPicker(t.labels || []);
@@ -2492,6 +2761,8 @@
       document.getElementById('taskAgentNameInput').value = '';
       document.getElementById('taskRmInput').value = '';
       document.getElementById('taskProductTypeInput').value = '';
+      document.getElementById('taskTypeInput').value = '';
+      document.getElementById('taskCategoryInput').value = '';
       pendingTaskAttachments = [];
       renderImagePreview();
       renderTaskLabelPicker([]);
@@ -2519,6 +2790,8 @@
       agentName: document.getElementById('taskAgentNameInput').value.trim(),
       relationshipManager: document.getElementById('taskRmInput').value.trim(),
       productType: document.getElementById('taskProductTypeInput').value.trim(),
+      taskType: document.getElementById('taskTypeInput').value,
+      category: document.getElementById('taskCategoryInput').value,
       image: null,
       pdfFile: null,
       attachments: pendingTaskAttachments.slice(),
