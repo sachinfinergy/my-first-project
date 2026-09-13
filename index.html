@@ -271,6 +271,16 @@
     flex-shrink:0; white-space:nowrap; padding: 8px 16px;
   }
 
+  .backup-reminder-banner{
+    display:flex; align-items:center; gap:8px; background:#fff8e6; border-bottom:1px solid #f0dfa8;
+    padding:9px 14px; font-size:12px; color:#8a6d1f;
+  }
+  .backup-reminder-banner button.action{
+    background:none; border:none; color: var(--wa-header); font-weight:700; font-size:12px; cursor:pointer; padding:0;
+  }
+  .backup-reminder-banner button.dismiss{
+    background:none; border:none; color:#8a6d1f; font-size:15px; cursor:pointer; padding:0; margin-left:auto;
+  }
   .chat-list{ flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; padding-bottom: 12px; }
   .chat-row{
     display:flex; align-items:center; gap:14px; padding: 11px 16px;
@@ -954,6 +964,7 @@
     <div class="direction-filter-row" id="directionFilterRow"></div>
     <div class="status-filter-row" id="statusFilterRow"></div>
     <div class="label-filter-row" id="labelFilterRow"></div>
+    <div id="backupReminderBanner"></div>
     <div class="chat-list" id="chatList"></div>
   </div>
 
@@ -1447,6 +1458,34 @@
 
     const dateStr = new Date().toISOString().slice(0,10);
     XLSX.writeFile(wb, `team-tasks-export-${dateStr}.xlsx`);
+    try{ localStorage.setItem('lastBackupExportAt', String(Date.now())); } catch(err){ /* ignore */ }
+    renderBackupReminderBanner();
+  }
+
+  function renderBackupReminderBanner(){
+    const box = document.getElementById('backupReminderBanner');
+    if(!box) return;
+    if(!session || session.type !== 'admin'){ box.innerHTML = ''; return; }
+    let dismissedAt = 0;
+    try{ dismissedAt = Number(localStorage.getItem('backupReminderDismissedAt') || 0); } catch(err){ /* ignore */ }
+    if(Date.now() - dismissedAt < 24 * 60 * 60 * 1000){ box.innerHTML = ''; return; }
+    let lastBackup = 0;
+    try{ lastBackup = Number(localStorage.getItem('lastBackupExportAt') || 0); } catch(err){ /* ignore */ }
+    const daysSince = lastBackup ? Math.floor((Date.now() - lastBackup) / 86400000) : null;
+    if(daysSince !== null && daysSince < 7){ box.innerHTML = ''; return; }
+    const message = daysSince === null
+      ? "You haven't exported a backup yet."
+      : `It's been ${daysSince} days since your last backup.`;
+    box.innerHTML = `
+      <div class="backup-reminder-banner">
+        <span>💾 ${message}</span>
+        <button class="action" onclick="exportToExcel()">Export now</button>
+        <button class="dismiss" onclick="dismissBackupReminder()" title="Remind me later">✕</button>
+      </div>`;
+  }
+  function dismissBackupReminder(){
+    try{ localStorage.setItem('backupReminderDismissedAt', String(Date.now())); } catch(err){ /* ignore */ }
+    renderBackupReminderBanner();
   }
 
   let pendingBulkImportRows = null; // validated rows ready to import, or null if nothing valid yet
@@ -1491,11 +1530,9 @@
     const s = String(val).trim();
     if(!s) return '';
     if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-    const parsed = new Date(s);
-    if(!isNaN(parsed.getTime())){
-      const yyyy = parsed.getFullYear(), mm = String(parsed.getMonth()+1).padStart(2,'0'), dd = String(parsed.getDate()).padStart(2,'0');
-      return `${yyyy}-${mm}-${dd}`;
-    }
+    // Deliberately no fallback to new Date(string) here: formats like "09/08/2026" are
+    // ambiguous (9 Aug vs Sep 8) and could silently import the wrong date. Better to
+    // reject and ask for an unambiguous format than guess wrong with no error shown.
     return null;
   }
 
@@ -1532,6 +1569,7 @@
     }
     const errors = [];
     const validRows = [];
+    let skippedBlankRows = 0;
     rows.forEach((row, idx) => {
       const rowNum = idx + 2; // header is row 1
       const title = String(row['Title']||'').trim();
@@ -1543,6 +1581,14 @@
       const typeRaw = String(row['Type']||'').trim();
       const categoryRaw = String(row['Category']||'').trim();
       const labelsRaw = String(row['Labels']||'').trim();
+
+      const isEntirelyBlank = !title && !assignToName && !assignedByName && !priorityRaw &&
+        (dueRaw === '' || dueRaw === undefined || dueRaw === null) &&
+        !rmRaw && !typeRaw && !categoryRaw && !labelsRaw &&
+        !String(row['Description']||'').trim() && !String(row['Customer Name']||'').trim() &&
+        !String(row['Customer Mobile']||'').trim() && !String(row['Agent Name']||'').trim() &&
+        !String(row['Product Type']||'').trim();
+      if(isEntirelyBlank){ skippedBlankRows++; return; }
 
       if(!title) errors.push(`Row ${rowNum}: Title is required.`);
 
@@ -1564,7 +1610,7 @@
       let due = '';
       if(dueRaw !== '' && dueRaw !== undefined && dueRaw !== null){
         const formatted = formatExcelDateValue(dueRaw);
-        if(formatted === null) errors.push(`Row ${rowNum}: Due Date "${dueRaw}" isn't a valid date.`);
+        if(formatted === null) errors.push(`Row ${rowNum}: Due Date "${dueRaw}" isn't recognized — please use YYYY-MM-DD (e.g. 2026-09-30), or format the cell as an actual Excel date, to avoid day/month mix-ups.`);
         else due = formatted;
       }
 
@@ -1623,8 +1669,13 @@
         </div>`;
       confirmBtn.style.display = 'none';
       pendingBulkImportRows = null;
+    } else if(validRows.length === 0){
+      resultBox.innerHTML = `<div class="bulk-error-box">Every row in that file was blank — nothing to import.</div>`;
+      confirmBtn.style.display = 'none';
+      pendingBulkImportRows = null;
     } else {
-      resultBox.innerHTML = `<div class="bulk-success-box">✅ All ${validRows.length} row${validRows.length!==1?'s':''} look good and ready to import.</div>`;
+      const skippedNote = skippedBlankRows > 0 ? ` (${skippedBlankRows} blank row${skippedBlankRows!==1?'s':''} skipped)` : '';
+      resultBox.innerHTML = `<div class="bulk-success-box">✅ All ${validRows.length} row${validRows.length!==1?'s':''} look good and ready to import.${skippedNote}</div>`;
       confirmBtn.style.display = 'inline-block';
       confirmBtn.textContent = `Import ${validRows.length} task${validRows.length!==1?'s':''}`;
       pendingBulkImportRows = validRows;
@@ -1633,7 +1684,9 @@
 
   async function confirmBulkImport(){
     if(!pendingBulkImportRows || pendingBulkImportRows.length === 0) return;
-    const newTasks = pendingBulkImportRows.map(r => ({
+    const rowsToImport = pendingBulkImportRows;
+    pendingBulkImportRows = null; // clear immediately so a fast double-click can't import twice
+    const newTasks = rowsToImport.map(r => ({
       id: 'T-' + String(taskCounter++).padStart(3,'0'),
       created: Date.now(),
       notes: [],
@@ -1654,26 +1707,90 @@
 
   async function saveBoard(retryCount){
     retryCount = retryCount || 0;
-    const payload = { members, tasks, labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto };
-    const snapshot = JSON.stringify(payload);
-    if(snapshot === lastSavedSnapshot) return true;
-    const sizeKB = getPayloadSizeKB(payload);
-    if(sizeKB > 950){
-      alert(`⚠️ Your team board is almost full (${sizeKB}KB of a 1024KB limit). This change may not save. Please ask your Super Admin to remove some old images or PDFs to free up space.`);
-    }
+    const localSnapshot = JSON.stringify({ members, tasks, labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto });
+    if(localSnapshot === lastSavedSnapshot) return true;
+
+    let mergedPayload = null;
     try{
-      await boardDocRef.set(payload);
-      lastSavedSnapshot = snapshot;
+      let pulledInNewItems = false;
+      await db.runTransaction(async (transaction) => {
+        const freshDoc = await transaction.get(boardDocRef);
+        const freshData = freshDoc.exists ? freshDoc.data() : {};
+        const freshTasks = freshData.tasks || [];
+        const freshMembers = freshData.members || [];
+        const freshLabels = freshData.labels || [];
+
+        const localMemberIds = new Set(members.map(m => m.id));
+        const localLabelIds = new Set(labels.map(l => l.id));
+
+        // Task-level merge: reconcile every task ID seen on either side, not just the ones
+        // missing locally — this is what protects a note someone else just added to a task
+        // we also happen to be saving at the same moment.
+        const freshTaskById = new Map(freshTasks.map(t => [t.id, t]));
+        const localTaskById = new Map(tasks.map(t => [t.id, t]));
+        const allTaskIds = new Set([...freshTaskById.keys(), ...localTaskById.keys()]);
+        const mergedTasks = Array.from(allTaskIds).map(id => {
+          const freshT = freshTaskById.get(id);
+          const localT = localTaskById.get(id);
+          if(freshT && localT){
+            const noteKey = n => `${n.time}_${n.authorId}`;
+            const seen = new Set();
+            const mergedNotes = [...(freshT.notes||[]), ...(localT.notes||[])]
+              .filter(n => { const k = noteKey(n); if(seen.has(k)) return false; seen.add(k); return true; })
+              .sort((a,b) => a.time - b.time);
+            return { ...localT, notes: mergedNotes };
+          }
+          return localT || freshT;
+        }).sort((a,b) => (a.created||0) - (b.created||0));
+        const pulledInNewTasks = freshTasks.some(t => !localTaskById.has(t.id));
+
+        // Anything on the server that we don't have locally was added by someone else
+        // since our last sync — always keep it, never silently drop it.
+        const newMembersFromOthers = freshMembers.filter(m => !localMemberIds.has(m.id));
+        const newLabelsFromOthers = freshLabels.filter(l => !localLabelIds.has(l.id));
+        pulledInNewItems = pulledInNewTasks || newMembersFromOthers.length > 0 || newLabelsFromOthers.length > 0;
+
+        mergedPayload = {
+          members: [...newMembersFromOthers, ...members],
+          tasks: mergedTasks,
+          labels: [...newLabelsFromOthers, ...labels],
+          taskCounter: Math.max(taskCounter, freshData.taskCounter || 0),
+          labelCounter: Math.max(labelCounter, freshData.labelCounter || 0),
+          adminPin, adminName, adminPhoto
+        };
+
+        const sizeKB = getPayloadSizeKB(mergedPayload);
+        if(sizeKB > 1020){ throw new Error('SIZE_LIMIT_EXCEEDED'); }
+        transaction.set(boardDocRef, mergedPayload);
+      });
+
+      // The transaction succeeded — reflect the merged, now-authoritative result locally.
+      tasks = mergedPayload.tasks;
+      members = mergedPayload.members;
+      labels = mergedPayload.labels;
+      taskCounter = mergedPayload.taskCounter;
+      labelCounter = mergedPayload.labelCounter;
+      lastSavedSnapshot = JSON.stringify(mergedPayload);
       setSidebarSubtitle('Synced ' + timeNow());
+      if(pulledInNewItems && !anyModalOpen()) renderAll();
+
+      const sizeKB = getPayloadSizeKB(mergedPayload);
+      if(sizeKB > 950){
+        alert(`⚠️ Your team board is almost full (${sizeKB}KB of a 1024KB limit). Please ask your Super Admin to archive or remove some old tasks soon.`);
+      }
       return true;
     } catch(err){
       console.error('Save failed', err);
+      if(err.message === 'SIZE_LIMIT_EXCEEDED'){
+        alert('⚠️ This change could not be saved — your team board is completely full (1024KB limit). Please ask your Super Admin to remove old tasks or attachments before trying again.');
+        return false;
+      }
       if(retryCount < 1){
         await new Promise(r => setTimeout(r, 1200));
         return saveBoard(retryCount + 1);
       }
       setSidebarSubtitle('Save failed');
-      alert('⚠️ This change could not be saved to the shared board — most likely because the board has reached its storage limit. Please try again, or ask your Super Admin to free up space by removing old images/PDFs. Nothing you just did was saved.');
+      alert('⚠️ This change could not be saved to the shared board. Please try again. Nothing you just did was saved.');
       return false;
     }
   }
@@ -2048,6 +2165,16 @@
   window.addEventListener('popstate', () => {
     if(selectedTaskId){
       closeTaskView();
+      return;
+    }
+    if(document.getElementById('dashboardOverlay').classList.contains('open')){
+      document.getElementById('dashboardOverlay').classList.remove('open');
+      return;
+    }
+    const appRootVisible = document.getElementById('appRoot').style.display !== 'none';
+    if(appRootVisible){
+      document.getElementById('homeScreen').style.display = 'flex';
+      document.getElementById('appRoot').style.display = 'none';
     }
   });
 
@@ -3209,6 +3336,9 @@
     }
     dashTimeRange = 'all';
     dashTagFilter = '';
+    if(!document.getElementById('dashboardOverlay').classList.contains('open')){
+      history.pushState({ navLevel: 'dashboard' }, '');
+    }
     document.getElementById('dashboardOverlay').classList.add('open');
     renderDashboard();
   }
@@ -3544,6 +3674,7 @@
     setSidebarSubtitle('Synced ' + timeNow());
     renderAll();
     renderHomeIdentity();
+    renderBackupReminderBanner();
     showHomeScreen();
   }
 
@@ -3568,8 +3699,12 @@
     document.getElementById('appRoot').style.display = 'none';
   }
   function goToTasks(){
+    const wasOnHome = document.getElementById('homeScreen').style.display !== 'none';
     document.getElementById('homeScreen').style.display = 'none';
     document.getElementById('appRoot').style.display = 'grid';
+    if(wasOnHome){
+      history.pushState({ navLevel: 'tasks' }, '');
+    }
     renderAll();
   }
   function goToDashboardFromHome(){
