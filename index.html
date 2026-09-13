@@ -775,7 +775,7 @@
 
   /* ---------- Dashboard ---------- */
   .dashboard-overlay{
-    position:fixed; inset:0; background:#f7f7f5; z-index:100;
+    position:fixed; inset:0; background:#f7f7f5; z-index:30;
     display:none; grid-template-columns: 68px 1fr;
   }
   .dashboard-overlay.open{ display:grid; }
@@ -973,7 +973,7 @@
   <div class="icon-rail" id="dashboardIconRail">
     <div class="icon-rail-avatar-wrap" id="dashboardRailAvatarSlot" title="Team Tasks"></div>
     <div class="icon-rail-group">
-      <button class="icon-btn-round rail-btn" onclick="showHomeScreen()" title="Home"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></button>
+      <button class="icon-btn-round rail-btn" onclick="closeDashboard(); showHomeScreen();" title="Home"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></button>
       <button class="icon-btn-round rail-btn" onclick="closeDashboard(); goToTasks();" title="Tasks"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></button>
       <button class="icon-btn-round rail-btn" onclick="closeDashboard(); goToInward();" title="Inward"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></button>
       <button class="icon-btn-round rail-btn admin-only" onclick="openLabelManageModal()" title="Manage labels"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 12.42 21.58a2 2 0 0 1-2.83 0L2.42 14.4a2 2 0 0 1 0-2.83L10.58 3.4A2 2 0 0 1 12 2.83L21 3l.17 9a2 2 0 0 1-.58 1.41z"/><circle cx="16.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/></svg></button>
