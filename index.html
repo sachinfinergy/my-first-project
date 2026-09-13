@@ -51,6 +51,39 @@
     box-shadow: 0 0 0 1px rgba(0,0,0,0.06);
   }
 
+  /* ---------- Home screen ---------- */
+  .home-screen{
+    height:100vh; height:100dvh; display:flex; flex-direction:column; background: var(--wa-chat-bg);
+  }
+  .home-header{
+    background: var(--wa-header); color: var(--wa-header-text); padding: 18px 20px;
+    display:flex; align-items:center; justify-content:space-between; flex-shrink:0;
+  }
+  .home-header-identity{ display:flex; align-items:center; gap:12px; }
+  .home-header-name{ font-size:16px; font-weight:700; }
+  .home-header-sub{ font-size:12px; opacity:0.85; margin-top:1px; }
+  .home-tiles{
+    flex:1; display:flex; flex-wrap:wrap; align-content:center; justify-content:center;
+    gap:24px; padding:32px 20px;
+  }
+  .home-tile{
+    width:150px; height:150px; background:#fff; border-radius:18px; box-shadow:0 2px 10px rgba(0,0,0,0.08);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px;
+    cursor:pointer; transition: transform .12s, box-shadow .12s; border:1px solid var(--wa-border);
+  }
+  .home-tile:hover{ transform: translateY(-3px); box-shadow:0 6px 18px rgba(0,0,0,0.12); }
+  .home-tile-icon{
+    width:56px; height:56px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff;
+  }
+  .home-tile-icon.inward{ background: var(--wa-amber); }
+  .home-tile-icon.dashboard{ background: var(--wa-header); }
+  .home-tile-icon.tasks{ background: var(--wa-sage); }
+  .home-tile-label{ font-size:14.5px; font-weight:700; color: var(--wa-text); }
+  @media (max-width:520px){
+    .home-tile{ width:130px; height:130px; }
+    .home-tiles{ gap:16px; }
+  }
+
   /* ---------- Icon rail ---------- */
   .icon-rail{
     background: #5B2C91; border-right: 1px solid #4a2277;
@@ -838,12 +871,40 @@
   <div class="auth-card" id="authCard"></div>
 </div>
 
+<div class="home-screen" id="homeScreen" style="display:none;">
+  <div class="home-header">
+    <div class="home-header-identity">
+      <div class="app-logo" id="homeAvatarSlot">✓</div>
+      <div>
+        <div class="home-header-name" id="homeUserName">Team Tasks</div>
+        <div class="home-header-sub">Choose where you'd like to go</div>
+      </div>
+    </div>
+    <button class="icon-btn-round" onclick="logout()" title="Log out"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+  </div>
+  <div class="home-tiles">
+    <div class="home-tile" onclick="goToInward()">
+      <div class="home-tile-icon inward"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></div>
+      <div class="home-tile-label">Inward</div>
+    </div>
+    <div class="home-tile" onclick="goToDashboardFromHome()">
+      <div class="home-tile-icon dashboard"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg></div>
+      <div class="home-tile-label">Dashboard</div>
+    </div>
+    <div class="home-tile" onclick="goToTasks()">
+      <div class="home-tile-icon tasks"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+      <div class="home-tile-label">Tasks</div>
+    </div>
+  </div>
+</div>
+
 <div class="app" id="appRoot" style="display:none;">
 
   <!-- Icon rail -->
   <div class="icon-rail" id="iconRail">
     <div class="icon-rail-avatar-wrap" id="railAvatarSlot" title="Team Tasks"></div>
     <div class="icon-rail-group">
+      <button class="icon-btn-round rail-btn" onclick="showHomeScreen()" title="Home"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></button>
       <button class="icon-btn-round rail-btn admin-only" onclick="openDashboard()" title="Dashboard">📊</button>
       <button class="icon-btn-round rail-btn member-only" onclick="openDashboard(session.memberId)" title="My dashboard">📊</button>
       <button class="icon-btn-round rail-btn admin-only" onclick="openLabelManageModal()" title="Manage labels"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 12.42 21.58a2 2 0 0 1-2.83 0L2.42 14.4a2 2 0 0 1 0-2.83L10.58 3.4A2 2 0 0 1 12 2.83L21 3l.17 9a2 2 0 0 1-.58 1.41z"/><circle cx="16.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/></svg></button>
@@ -870,6 +931,7 @@
         </div>
       </div>
       <div class="header-icons mobile-only-icons" id="mobileHeaderIcons">
+        <button class="icon-btn-round" onclick="showHomeScreen()" title="Home"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></button>
         <button class="icon-btn-round admin-only" onclick="openDashboard()" title="Dashboard">📊</button>
         <button class="icon-btn-round member-only" onclick="openDashboard(session.memberId)" title="My dashboard">📊</button>
         <button class="icon-btn-round admin-only" onclick="openLabelManageModal()" title="Manage labels"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 12.42 21.58a2 2 0 0 1-2.83 0L2.42 14.4a2 2 0 0 1 0-2.83L10.58 3.4A2 2 0 0 1 12 2.83L21 3l.17 9a2 2 0 0 1-.58 1.41z"/><circle cx="16.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/></svg></button>
@@ -3455,12 +3517,44 @@
 
   function enterApp(){
     document.getElementById('authOverlay').classList.remove('open');
-    const root = document.getElementById('appRoot');
-    root.style.display = 'grid';
     document.querySelectorAll('.admin-only').forEach(el => el.classList.toggle('hidden-for-member', session.type !== 'admin'));
     document.querySelectorAll('.member-only').forEach(el => el.classList.toggle('show-for-member', session.type === 'member'));
     setSidebarSubtitle('Synced ' + timeNow());
     renderAll();
+    renderHomeIdentity();
+    showHomeScreen();
+  }
+
+  function renderHomeIdentity(){
+    const slot = document.getElementById('homeAvatarSlot');
+    const nameEl = document.getElementById('homeUserName');
+    if(!slot || !nameEl || !session) return;
+    const av = currentUserAvatarData();
+    const name = currentIdentityName() || 'Team Tasks';
+    if(av.photo){
+      slot.innerHTML = `<img src="${av.photo}" style="width:100%;height:100%;object-fit:cover;">`;
+      slot.style.background = 'transparent';
+    } else {
+      slot.innerHTML = av.label;
+      slot.style.background = 'rgba(0,0,0,0.12)';
+    }
+    nameEl.textContent = name;
+  }
+
+  function showHomeScreen(){
+    document.getElementById('homeScreen').style.display = 'flex';
+    document.getElementById('appRoot').style.display = 'none';
+  }
+  function goToTasks(){
+    document.getElementById('homeScreen').style.display = 'none';
+    document.getElementById('appRoot').style.display = 'grid';
+    renderAll();
+  }
+  function goToDashboardFromHome(){
+    openDashboard(session && session.type === 'member' ? session.memberId : null);
+  }
+  function goToInward(){
+    alert("Inward isn't set up yet — let me know what this section should show and I'll build it in.");
   }
 
   async function persistSession(s){
@@ -3493,6 +3587,7 @@
     activeStatusFilter = 'open';
     activeLabelFilter = null;
     document.getElementById('appRoot').style.display = 'none';
+    document.getElementById('homeScreen').style.display = 'none';
     authTab = 'member';
     document.getElementById('authOverlay').classList.add('open');
     renderAuthOverlay();
