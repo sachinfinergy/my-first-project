@@ -776,9 +776,10 @@
   /* ---------- Dashboard ---------- */
   .dashboard-overlay{
     position:fixed; inset:0; background:#f7f7f5; z-index:100;
-    display:none; flex-direction:column;
+    display:none; grid-template-columns: 68px 1fr;
   }
-  .dashboard-overlay.open{ display:flex; }
+  .dashboard-overlay.open{ display:grid; }
+  .dashboard-main{ display:flex; flex-direction:column; min-width:0; height:100%; }
   .dashboard-header{
     background: var(--wa-header); color: var(--wa-header-text); padding: 12px 18px;
     display:flex; align-items:center; gap:14px; flex-shrink:0;
@@ -851,6 +852,7 @@
   /* Mobile */
   @media (max-width: 820px){
     .app{ grid-template-columns: 1fr; }
+    .dashboard-overlay{ grid-template-columns: 1fr; }
     .icon-rail{ display:none; }
     .sidebar{ display:flex; }
     .chat-panel{ display:none; }
@@ -968,17 +970,37 @@
 
 <!-- Dashboard overlay -->
 <div class="dashboard-overlay" id="dashboardOverlay">
-  <div class="dashboard-header">
-    <button class="icon-btn-round" onclick="closeDashboard()" title="Back to board">←</button>
-    <div>
-      <div style="font-size:16px; font-weight:600;">Team Dashboard</div>
-      <div style="font-size:11.5px; opacity:0.85;" id="dashboardSubtitle"></div>
+  <div class="icon-rail" id="dashboardIconRail">
+    <div class="icon-rail-avatar-wrap" id="dashboardRailAvatarSlot" title="Team Tasks"></div>
+    <div class="icon-rail-group">
+      <button class="icon-btn-round rail-btn" onclick="showHomeScreen()" title="Home"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></button>
+      <button class="icon-btn-round rail-btn" onclick="closeDashboard(); goToTasks();" title="Tasks"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></button>
+      <button class="icon-btn-round rail-btn" onclick="closeDashboard(); goToInward();" title="Inward"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></button>
+      <button class="icon-btn-round rail-btn admin-only" onclick="openLabelManageModal()" title="Manage labels"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 12.42 21.58a2 2 0 0 1-2.83 0L2.42 14.4a2 2 0 0 1 0-2.83L10.58 3.4A2 2 0 0 1 12 2.83L21 3l.17 9a2 2 0 0 1-.58 1.41z"/><circle cx="16.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/></svg></button>
+      <button class="icon-btn-round rail-btn admin-only" onclick="exportToExcel()" title="Export to Excel"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+      <button class="icon-btn-round rail-btn admin-only" onclick="openBulkUploadModal()" title="Bulk upload tasks"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></button>
+      <button class="icon-btn-round rail-btn admin-only" onclick="openMemberModal()" title="Add team member"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg></button>
+      <button class="icon-btn-round rail-btn" onclick="closeDashboard(); openTaskModal();" title="New task"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
     </div>
-    <div style="flex:1;"></div>
-    <button class="icon-btn-round" onclick="renderDashboard()" title="Refresh"><svg class="refresh-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
+    <div class="icon-rail-spacer"></div>
+    <div class="icon-rail-group">
+      <button class="icon-btn-round rail-btn" onclick="manualRefresh()" title="Refresh"><svg class="refresh-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
+      <button class="icon-btn-round rail-btn" onclick="logout()" title="Log out"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+    </div>
   </div>
-  <div class="dash-filter-bar" id="dashFilterBar"></div>
-  <div class="dashboard-body" id="dashboardBody"></div>
+  <div class="dashboard-main">
+    <div class="dashboard-header">
+      <button class="icon-btn-round" onclick="closeDashboard()" title="Back to board">←</button>
+      <div>
+        <div style="font-size:16px; font-weight:600;">Team Dashboard</div>
+        <div style="font-size:11.5px; opacity:0.85;" id="dashboardSubtitle"></div>
+      </div>
+      <div style="flex:1;"></div>
+      <button class="icon-btn-round" onclick="renderDashboard()" title="Refresh"><svg class="refresh-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
+    </div>
+    <div class="dash-filter-bar" id="dashFilterBar"></div>
+    <div class="dashboard-body" id="dashboardBody"></div>
+  </div>
 </div>
 
 <!-- Image lightbox -->
@@ -1287,11 +1309,11 @@
   function renderHeaderIdentity(){
     const slot = document.getElementById('headerAvatarSlot');
     const nameEl = document.getElementById('headerUserName');
-    const railSlot = document.getElementById('railAvatarSlot');
+    const railSlots = [document.getElementById('railAvatarSlot'), document.getElementById('dashboardRailAvatarSlot')].filter(Boolean);
     if(!slot || !nameEl) return;
     if(!session){
       slot.innerHTML = '✓'; slot.style.background = 'rgba(0,0,0,0.12)'; nameEl.textContent = 'Team Tasks';
-      if(railSlot){ railSlot.innerHTML = '✓'; railSlot.title = 'Team Tasks'; }
+      railSlots.forEach(rs => { rs.innerHTML = '✓'; rs.title = 'Team Tasks'; });
       return;
     }
     const av = currentUserAvatarData();
@@ -1299,14 +1321,14 @@
     if(av.photo){
       slot.innerHTML = `<img src="${av.photo}" style="width:100%;height:100%;object-fit:cover;">`;
       slot.style.background = 'transparent';
-      if(railSlot) railSlot.innerHTML = `<img src="${av.photo}" style="width:100%;height:100%;object-fit:cover;">`;
+      railSlots.forEach(rs => { rs.innerHTML = `<img src="${av.photo}" style="width:100%;height:100%;object-fit:cover;">`; });
     } else {
       slot.innerHTML = av.label;
       slot.style.background = 'rgba(0,0,0,0.12)';
-      if(railSlot) railSlot.innerHTML = av.label;
+      railSlots.forEach(rs => { rs.innerHTML = av.label; });
     }
     nameEl.textContent = name;
-    if(railSlot) railSlot.title = name;
+    railSlots.forEach(rs => { rs.title = name; });
   }
 
   function migrateTaskStatuses(taskList){
