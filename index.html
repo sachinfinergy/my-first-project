@@ -3040,6 +3040,8 @@
     renderHeaderIdentity();
     renderChatPanel();
     renderSidebar();
+    if(document.getElementById('dashboardOverlay').classList.contains('open')) renderDashboard();
+    if(document.getElementById('inwardScreen').classList.contains('open')) renderInwardScreen();
   }
 
   // ---------- Task modal ----------
@@ -4237,7 +4239,7 @@
       customerName,
       customerMobile: document.getElementById('inwardCustomerMobileInput').value.trim(),
       productType: document.getElementById('inwardProductTypeInput').value.trim(),
-      grossPremium: premiumRaw !== '' ? Number(premiumRaw) : null,
+      grossPremium: (premiumRaw !== '' && !isNaN(Number(premiumRaw))) ? Number(premiumRaw) : null,
     };
     if(id){
       const e = inwardEntries.find(x => x.id === id);
