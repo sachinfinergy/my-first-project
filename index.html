@@ -1212,8 +1212,7 @@
     </div>
     <div class="field">
       <label>Agent</label>
-      <input type="text" id="inwardAgentInput" list="inwardAgentDatalist" placeholder="Optional">
-      <datalist id="inwardAgentDatalist"></datalist>
+      <select id="inwardAgentInput"></select>
     </div>
     <div class="field-row">
       <div class="field">
@@ -1361,8 +1360,7 @@
         <div class="field-row">
           <div class="field">
             <label>Agent name</label>
-            <input type="text" id="taskAgentNameInput" list="agentNameDatalist" placeholder="e.g. Suresh Kumar">
-            <datalist id="agentNameDatalist"></datalist>
+            <select id="taskAgentNameInput"></select>
           </div>
           <div class="field">
             <label>Relationship Manager</label>
@@ -3192,20 +3190,6 @@
     mobileList.innerHTML = mobileHtml;
   }
 
-  function populateTextFieldDatalist(datalistId, taskField){
-    const list = document.getElementById(datalistId);
-    if(!list) return;
-    const seen = new Set();
-    let html = '';
-    tasks.forEach(t => {
-      const val = t[taskField];
-      if(val && !seen.has(val.toLowerCase())){ seen.add(val.toLowerCase()); html += `<option value="${escapeHtml(val)}">`; }
-    });
-    list.innerHTML = html;
-  }
-  function populateNewFieldDatalists(){
-    populateTextFieldDatalist('agentNameDatalist', 'agentName');
-  }
   function selectPillToggle(groupId, hiddenInputId, btnEl){
     const hidden = document.getElementById(hiddenInputId);
     const isAlreadySelected = hidden.value === btnEl.dataset.value;
@@ -3222,6 +3206,25 @@
   }
 
   const DIRECT_RM_OPTIONS = ['Direct Panjim', 'Direct Vasco'];
+
+  const AGENT_NAME_OPTIONS = [
+    'JOHNY BASILIO DCRUZ','JYOTI B JOSHI','KEVIN CABRAL','MOHAN S GOVENKAR','NIKHIL ADPAIKAR',
+    'RABANI SHAIKH','VIDHESH V MADKAIKAR','AJIT BANDEKAR','ALPHONSO FERNANDES','ALSTON JASON VAZ',
+    'AMEY KORGAONKAR','CHANDRASHEKAR NAIK','DEVENDRA NAIK','HARSHITA SUNIL SHETTY','KISHORE G SHIRWAIKAR',
+    'KRISHNA POOJARI','MANISH RAO','NILESH V FONDEKAR','P PRASHANT','PRASAD ICICI',
+    'PRASHANT CHANDRAKANT DONGRE','PRATAPCHAND SAIL','PURVI PANKAR','SANDESH ARONDEKAR','SARVESH R PAIDARKAR',
+    'SAURABH KAMAT','SHERWIN P FERNANDES','SHRIDHAR SHET KANEKAR','SHRINIVAS PRAKASH KAMAT','SURENDRA S RAUT',
+    'TIKAM SINGH RANA','VICTOR FERNANDES','VINAYAK DESSAI','YESHWANT N ADKONKER','YOGESH S SHETGAONKAR',
+    'AMAR AJIT RANE','YASHIKA Y SAWANT','KISAN MANGESH MULE','AMRESH BHANUDAS TAMANKAR','ELICKSON RODRIGUES',
+    'NIKHIL LIC','TEJAS PAGI','DIRECT'
+  ];
+  function populateAgentNameSelect(prefix){
+    const id = prefix === 'task' ? 'taskAgentNameInput' : 'inwardAgentInput';
+    const sel = document.getElementById(id);
+    if(!sel) return;
+    sel.innerHTML = '<option value="">— Select —</option>' +
+      AGENT_NAME_OPTIONS.map(a => `<option value="${escapeHtml(a)}">${escapeHtml(a)}</option>`).join('');
+  }
 
   const PRODUCT_TYPE_DETAILS_MAP = {
     'MOTOR': ['4W-TAXI','GCCV-PUBLIC CARRIER','GCCV-PVT CARRIER','TAXI- SCHOOL BUS -OD','PVT CAR-COMP','PVT CAR - OD ONLY','TP-4W TAXI','TP-GCCV-PUBLIC CARRIER','TP-GCCV-PVT CARRIER','TP-PVT CAR','TP-TW','TP- TAXI-BUS','TP-TAXI- SCHOOL BUS','TP TW-TAXI','TP-MISCELLANEOUS','TW-COMP','TW - OD ONLY','TW-TAXI','MOTOR-MISCELLANEOUS','TAXI-BUS'],
@@ -3400,7 +3403,6 @@
     populateAssigneeSelect();
     populateAssignorSelect();
     populateCustomerDatalists();
-    populateNewFieldDatalists();
     populateRmSelect();
     document.getElementById('taskModalOverlay').classList.add('open');
     document.getElementById('customerMatchHint').classList.remove('show');
@@ -3419,6 +3421,7 @@
       document.getElementById('taskStatusInput').disabled = !canChangeStatus(t);
       document.getElementById('taskCustomerNameInput').value = t.customerName || '';
       document.getElementById('taskCustomerMobileInput').value = t.customerMobile || '';
+      populateAgentNameSelect('task');
       document.getElementById('taskAgentNameInput').value = t.agentName || '';
       document.getElementById('taskRmInput').value = t.relationshipManager || '';
       populateProductTypeOptions('task');
@@ -3444,6 +3447,7 @@
       document.getElementById('taskStatusInput').disabled = true;
       document.getElementById('taskCustomerNameInput').value = '';
       document.getElementById('taskCustomerMobileInput').value = '';
+      populateAgentNameSelect('task');
       document.getElementById('taskAgentNameInput').value = '';
       document.getElementById('taskRmInput').value = '';
       populateProductTypeOptions('task');
@@ -4300,16 +4304,14 @@
   }
   function populateInwardDatalists(){
     const companies = new Set(SEED_INSURANCE_COMPANIES);
-    const agents = new Set(), custNames = new Set(), custMobiles = new Set();
+    const custNames = new Set(), custMobiles = new Set();
     inwardEntries.forEach(e => {
       if(e.company) companies.add(e.company);
-      if(e.agent) agents.add(e.agent);
       if(e.customerName) custNames.add(e.customerName);
       if(e.customerMobile) custMobiles.add(e.customerMobile);
     });
     const fill = (id, set) => { document.getElementById(id).innerHTML = [...set].map(v => `<option value="${escapeHtml(v)}">`).join(''); };
     fill('inwardCompanyDatalist', companies);
-    fill('inwardAgentDatalist', agents);
     fill('inwardCustomerNameDatalist', custNames);
     fill('inwardCustomerMobileDatalist', custMobiles);
   }
@@ -4334,6 +4336,7 @@
     setPillToggleValue('inwardTypeToggle', 'inwardTypeInput', e ? e.type : '');
     document.getElementById('inwardCompanyInput').value = e ? (e.company || '') : '';
     document.getElementById('inwardRmInput').value = e ? (e.rm || '') : '';
+    populateAgentNameSelect('inward');
     document.getElementById('inwardAgentInput').value = e ? (e.agent || '') : '';
     document.getElementById('inwardCustomerNameInput').value = e ? (e.customerName || '') : '';
     document.getElementById('inwardCustomerMobileInput').value = e ? (e.customerMobile || '') : '';
@@ -4367,6 +4370,7 @@
     setPillToggleValue('inwardTypeToggle', 'inwardTypeInput', t.taskType || '');
     document.getElementById('inwardCompanyInput').value = '';
     document.getElementById('inwardRmInput').value = t.relationshipManager || '';
+    populateAgentNameSelect('inward');
     document.getElementById('inwardAgentInput').value = t.agentName || '';
     document.getElementById('inwardCustomerNameInput').value = t.customerName || '';
     document.getElementById('inwardCustomerMobileInput').value = t.customerMobile || '';
