@@ -869,6 +869,24 @@
     display:flex; align-items:center; gap:14px; flex-shrink:0;
   }
   .dashboard-body{ flex:1; overflow-y:auto; padding: 24px; max-width:1100px; margin:0 auto; width:100%; }
+
+  .inward-category-filter-row{ display:flex; gap:8px; padding: 12px 24px 0; flex-wrap:wrap; }
+  .inward-table-scroll{ flex:1; overflow:auto; padding: 16px 24px 24px; }
+  .inward-table{ width:100%; border-collapse:collapse; background:#fff; border-radius:8px; overflow:hidden; font-size:13px; min-width:1000px; }
+  .inward-table th{
+    text-align:left; padding:10px 12px; background:#f0f0ee; color: var(--wa-text-soft); font-weight:700;
+    font-size:11px; text-transform:uppercase; letter-spacing:.03em; white-space:nowrap; position:sticky; top:0;
+  }
+  .inward-table td{ padding:10px 12px; border-bottom:1px solid var(--wa-border); white-space:nowrap; color: var(--wa-text); }
+  .inward-table tbody tr{ cursor:pointer; }
+  .inward-table tbody tr:hover{ background: var(--wa-hover); }
+  .inward-cat-pill{
+    font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:9px; background:#e7f8f2; color: var(--wa-header);
+  }
+  .inward-premium{ font-weight:700; text-align:right; }
+  .inward-row-actions{ display:flex; gap:6px; }
+  .inward-empty{ text-align:center; color: var(--wa-text-soft); padding:30px !important; white-space:normal !important; }
+
   .dash-filter-bar{
     display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding: 10px 24px; background:#fff;
     border-bottom:1px solid var(--wa-border); max-width:1100px; margin:0 auto; width:100%; box-sizing:border-box;
@@ -989,8 +1007,8 @@
     <button class="home-fab-menu-item" onclick="closeHomeFabMenu(); openTaskModal();">
       <span class="home-fab-menu-icon">✅</span> New Task
     </button>
-    <button class="home-fab-menu-item" disabled title="Inward isn't set up yet">
-      <span class="home-fab-menu-icon">📥</span> New Inward <span class="coming-soon-tag">Coming soon</span>
+    <button class="home-fab-menu-item" onclick="closeHomeFabMenu(); openInwardModal();">
+      <span class="home-fab-menu-icon">📥</span> New Inward
     </button>
   </div>
 </div>
@@ -1096,6 +1114,122 @@
     </div>
     <div class="dash-filter-bar" id="dashFilterBar"></div>
     <div class="dashboard-body" id="dashboardBody"></div>
+  </div>
+</div>
+
+<!-- Inward screen -->
+<div class="dashboard-overlay" id="inwardScreen">
+  <div class="icon-rail" id="inwardIconRail">
+    <div class="icon-rail-avatar-wrap" id="inwardRailAvatarSlot" title="Team Tasks"></div>
+    <div class="icon-rail-group">
+      <button class="icon-btn-round rail-btn" onclick="closeInwardScreen(); showHomeScreen();" title="Home"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></button>
+      <button class="icon-btn-round rail-btn" onclick="closeInwardScreen(); goToTasks();" title="Tasks"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></button>
+      <button class="icon-btn-round rail-btn admin-only" onclick="closeInwardScreen(); openDashboard();" title="Dashboard">📊</button>
+      <button class="icon-btn-round rail-btn member-only" onclick="closeInwardScreen(); openDashboard(session.memberId);" title="My dashboard">📊</button>
+      <button class="icon-btn-round rail-btn" onclick="openInwardModal()" title="New inward entry"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+    </div>
+    <div class="icon-rail-spacer"></div>
+    <div class="icon-rail-group">
+      <button class="icon-btn-round rail-btn" onclick="manualRefresh()" title="Refresh"><svg class="refresh-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
+      <button class="icon-btn-round rail-btn" onclick="logout()" title="Log out"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+    </div>
+  </div>
+  <div class="dashboard-main">
+    <div class="dashboard-header">
+      <button class="icon-btn-round" onclick="closeInwardScreen()" title="Back">←</button>
+      <div>
+        <div style="font-size:16px; font-weight:600;">Inward Register</div>
+        <div style="font-size:11.5px; opacity:0.85;" id="inwardSubtitle"></div>
+      </div>
+      <div style="flex:1;"></div>
+      <button class="icon-btn-round" onclick="openInwardModal()" title="Add entry"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+    </div>
+    <div class="inward-category-filter-row" id="inwardCategoryFilterRow"></div>
+    <div class="inward-table-scroll">
+      <table class="inward-table">
+        <thead>
+          <tr>
+            <th>SLR</th><th>Issued Month</th><th>Inward Date</th><th>Category</th><th>Company</th>
+            <th>RM</th><th>Agent</th><th>Customer</th><th>Mobile</th><th>Product</th><th>Type</th><th>Gross Premium</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="inwardTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Inward Add/Edit Modal -->
+<div class="modal-overlay" id="inwardModalOverlay">
+  <div class="modal">
+    <h3 id="inwardModalTitle">New Inward Entry</h3>
+    <input type="hidden" id="inwardEntryId">
+    <div class="field-row">
+      <div class="field">
+        <label>Inward Date</label>
+        <input type="date" id="inwardDateInput">
+      </div>
+      <div class="field">
+        <label>Type</label>
+        <div class="pill-toggle-group" id="inwardTypeToggle">
+          <button type="button" class="pill-toggle-btn" data-value="New" onclick="selectPillToggle('inwardTypeToggle','inwardTypeInput',this)">New</button>
+          <button type="button" class="pill-toggle-btn" data-value="Renewal" onclick="selectPillToggle('inwardTypeToggle','inwardTypeInput',this)">Renewal</button>
+        </div>
+        <input type="hidden" id="inwardTypeInput" value="">
+      </div>
+    </div>
+    <div class="field">
+      <label>Category</label>
+      <div class="pill-toggle-group" id="inwardCategoryToggle">
+        <button type="button" class="pill-toggle-btn" data-value="GI" onclick="selectPillToggle('inwardCategoryToggle','inwardCategoryInput',this)">GI</button>
+        <button type="button" class="pill-toggle-btn" data-value="LI" onclick="selectPillToggle('inwardCategoryToggle','inwardCategoryInput',this)">LI</button>
+        <button type="button" class="pill-toggle-btn" data-value="Short Term" onclick="selectPillToggle('inwardCategoryToggle','inwardCategoryInput',this)">Short Term</button>
+      </div>
+      <input type="hidden" id="inwardCategoryInput" value="">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Company</label>
+        <input type="text" id="inwardCompanyInput" list="inwardCompanyDatalist" placeholder="e.g. TATA AIG">
+        <datalist id="inwardCompanyDatalist"></datalist>
+      </div>
+      <div class="field">
+        <label>RM (Relationship Manager)</label>
+        <select id="inwardRmInput"><option value="">— Select —</option></select>
+      </div>
+    </div>
+    <div class="field">
+      <label>Agent</label>
+      <input type="text" id="inwardAgentInput" list="inwardAgentDatalist" placeholder="Optional">
+      <datalist id="inwardAgentDatalist"></datalist>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Customer Name</label>
+        <input type="text" id="inwardCustomerNameInput" list="inwardCustomerNameDatalist" placeholder="e.g. Prabhakar Sawant">
+        <datalist id="inwardCustomerNameDatalist"></datalist>
+      </div>
+      <div class="field">
+        <label>Customer Mobile</label>
+        <input type="tel" id="inwardCustomerMobileInput" list="inwardCustomerMobileDatalist" placeholder="Optional">
+        <datalist id="inwardCustomerMobileDatalist"></datalist>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Product Type</label>
+        <input type="text" id="inwardProductTypeInput" list="inwardProductTypeDatalist" placeholder="Optional">
+        <datalist id="inwardProductTypeDatalist"></datalist>
+      </div>
+      <div class="field">
+        <label>Gross Premium</label>
+        <input type="number" id="inwardPremiumInput" placeholder="e.g. 428863" min="0" step="any">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeInwardModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveInwardEntry()">Save entry</button>
+    </div>
   </div>
 </div>
 
@@ -1365,6 +1499,8 @@
   let labels = [];
   let taskCounter = 1;
   let labelCounter = 1;
+  let inwardEntries = [];
+  let inwardCounter = 1;
   let selectedColor = COLORS[0];
   let selectedLabelColor = COLORS[0];
   let selectedMemberId = null;
@@ -1420,6 +1556,8 @@
       labelCounter: 3,
       adminPin: null,
       adminName: 'Super Admin',
+      inwardEntries: [],
+      inwardCounter: 1,
     };
   }
 
@@ -1438,7 +1576,7 @@
   function renderHeaderIdentity(){
     const slot = document.getElementById('headerAvatarSlot');
     const nameEl = document.getElementById('headerUserName');
-    const railSlots = [document.getElementById('railAvatarSlot'), document.getElementById('dashboardRailAvatarSlot')].filter(Boolean);
+    const railSlots = [document.getElementById('railAvatarSlot'), document.getElementById('dashboardRailAvatarSlot'), document.getElementById('inwardRailAvatarSlot')].filter(Boolean);
     if(!slot || !nameEl) return;
     if(!session){
       slot.innerHTML = '✓'; slot.style.background = 'rgba(0,0,0,0.12)'; nameEl.textContent = 'Team Tasks';
@@ -1485,15 +1623,18 @@
         adminPin = data.adminPin || null;
         adminName = data.adminName || 'Super Admin';
         adminPhoto = data.adminPhoto || null;
+        inwardEntries = data.inwardEntries || [];
+        inwardCounter = data.inwardCounter || (inwardEntries.length + 1);
         if(migrateTaskStatuses(tasks)) await saveBoard();
       } else {
         const seed = defaultBoard();
         members = seed.members; tasks = seed.tasks; labels = seed.labels;
         taskCounter = seed.taskCounter; labelCounter = seed.labelCounter;
         adminPin = seed.adminPin; adminName = seed.adminName; adminPhoto = null;
+        inwardEntries = seed.inwardEntries; inwardCounter = seed.inwardCounter;
         await saveBoard();
       }
-      lastSavedSnapshot = JSON.stringify({members, tasks, labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto});
+      lastSavedSnapshot = JSON.stringify({members, tasks, labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto, inwardEntries, inwardCounter});
       setSidebarSubtitle('Synced ' + timeNow());
     } catch(err){
       console.error('Load failed', err);
@@ -1502,6 +1643,7 @@
         members = seed.members; tasks = seed.tasks; labels = seed.labels;
         taskCounter = seed.taskCounter; labelCounter = seed.labelCounter;
         adminPin = seed.adminPin; adminName = seed.adminName; adminPhoto = null;
+        inwardEntries = seed.inwardEntries; inwardCounter = seed.inwardCounter;
       }
       setSidebarSubtitle('Offline — check your Firebase config');
     }
@@ -1563,6 +1705,21 @@
     }));
     memberRows.push({ 'Name': adminName || 'Super Admin', 'Reports To': '—', 'Has Login PIN': 'Yes' });
 
+    const inwardRows = inwardEntries.slice().sort((a,b) => (a.slrNo||0) - (b.slrNo||0)).map(e => ({
+      'SLR NO': e.slrNo || '',
+      'Issued Month': issuedMonthLabel(e.inwardDate),
+      'INWARD DATE': formatInwardDateDisplay(e.inwardDate),
+      'Category': e.category || '',
+      'Company': e.company || '',
+      'RM': e.rm || '',
+      'Agent': e.agent || '',
+      'CUSTOMER NAME': e.customerName || '',
+      'CUSTOMER NUMBER': e.customerMobile || '',
+      'PRODUCT TYPE': e.productType || '',
+      'TYPE': e.type || '',
+      'GROSS PREMIUM': (e.grossPremium !== null && e.grossPremium !== undefined) ? e.grossPremium : ''
+    }));
+
     const wb = XLSX.utils.book_new();
     const wsTasks = XLSX.utils.json_to_sheet(taskRows);
     wsTasks['!cols'] = [
@@ -1571,9 +1728,14 @@
     ];
     const wsUpdates = XLSX.utils.json_to_sheet(updateRows);
     const wsMembers = XLSX.utils.json_to_sheet(memberRows);
+    const wsInward = XLSX.utils.json_to_sheet(inwardRows);
+    wsInward['!cols'] = [
+      {wch:7},{wch:12},{wch:12},{wch:11},{wch:16},{wch:16},{wch:16},{wch:22},{wch:14},{wch:16},{wch:10},{wch:14}
+    ];
     XLSX.utils.book_append_sheet(wb, wsTasks, 'Tasks');
     XLSX.utils.book_append_sheet(wb, wsUpdates, 'Updates');
     XLSX.utils.book_append_sheet(wb, wsMembers, 'Team Members');
+    XLSX.utils.book_append_sheet(wb, wsInward, 'Inward');
 
     const dateStr = new Date().toISOString().slice(0,10);
     XLSX.writeFile(wb, `team-tasks-export-${dateStr}.xlsx`);
@@ -1834,7 +1996,7 @@
 
   async function saveBoard(retryCount){
     retryCount = retryCount || 0;
-    const localSnapshot = JSON.stringify({ members, tasks, labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto });
+    const localSnapshot = JSON.stringify({ members, tasks, labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto, inwardEntries, inwardCounter });
     if(localSnapshot === lastSavedSnapshot) return true;
 
     let mergedPayload = null;
@@ -1846,9 +2008,11 @@
         const freshTasks = freshData.tasks || [];
         const freshMembers = freshData.members || [];
         const freshLabels = freshData.labels || [];
+        const freshInwardEntries = freshData.inwardEntries || [];
 
         const localMemberIds = new Set(members.map(m => m.id));
         const localLabelIds = new Set(labels.map(l => l.id));
+        const localInwardIds = new Set(inwardEntries.map(e => e.id));
 
         // Task-level merge: reconcile every task ID seen on either side, not just the ones
         // missing locally — this is what protects a note someone else just added to a task
@@ -1875,7 +2039,8 @@
         // since our last sync — always keep it, never silently drop it.
         const newMembersFromOthers = freshMembers.filter(m => !localMemberIds.has(m.id));
         const newLabelsFromOthers = freshLabels.filter(l => !localLabelIds.has(l.id));
-        pulledInNewItems = pulledInNewTasks || newMembersFromOthers.length > 0 || newLabelsFromOthers.length > 0;
+        const newInwardFromOthers = freshInwardEntries.filter(e => !localInwardIds.has(e.id));
+        pulledInNewItems = pulledInNewTasks || newMembersFromOthers.length > 0 || newLabelsFromOthers.length > 0 || newInwardFromOthers.length > 0;
 
         mergedPayload = {
           members: [...newMembersFromOthers, ...members],
@@ -1883,7 +2048,9 @@
           labels: [...newLabelsFromOthers, ...labels],
           taskCounter: Math.max(taskCounter, freshData.taskCounter || 0),
           labelCounter: Math.max(labelCounter, freshData.labelCounter || 0),
-          adminPin, adminName, adminPhoto
+          adminPin, adminName, adminPhoto,
+          inwardEntries: [...newInwardFromOthers, ...inwardEntries],
+          inwardCounter: Math.max(inwardCounter, freshData.inwardCounter || 0),
         };
 
         const sizeKB = getPayloadSizeKB(mergedPayload);
@@ -1897,6 +2064,8 @@
       labels = mergedPayload.labels;
       taskCounter = mergedPayload.taskCounter;
       labelCounter = mergedPayload.labelCounter;
+      inwardEntries = mergedPayload.inwardEntries;
+      inwardCounter = mergedPayload.inwardCounter;
       lastSavedSnapshot = JSON.stringify(mergedPayload);
       setSidebarSubtitle('Synced ' + timeNow());
       if(pulledInNewItems && !anyModalOpen()) renderAll();
@@ -1948,7 +2117,9 @@
       adminPin = data.adminPin || adminPin;
       adminName = data.adminName || adminName;
       adminPhoto = data.adminPhoto !== undefined ? data.adminPhoto : adminPhoto;
-      lastSavedSnapshot = JSON.stringify({members, tasks, labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto});
+      inwardEntries = data.inwardEntries || [];
+      inwardCounter = data.inwardCounter || inwardCounter;
+      lastSavedSnapshot = JSON.stringify({members, tasks, labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto, inwardEntries, inwardCounter});
       if(anyModalOpen()){
         // Keep the underlying data current so any in-progress edit saves against fresh data,
         // but don't visually disturb whatever modal the person currently has open.
@@ -1980,7 +2151,9 @@
         adminPin = data.adminPin || adminPin;
         adminName = data.adminName || adminName;
         adminPhoto = data.adminPhoto !== undefined ? data.adminPhoto : adminPhoto;
-        lastSavedSnapshot = JSON.stringify({members, tasks, labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto});
+        inwardEntries = data.inwardEntries || [];
+        inwardCounter = data.inwardCounter || inwardCounter;
+        lastSavedSnapshot = JSON.stringify({members, tasks, labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto, inwardEntries, inwardCounter});
         renderAll();
       }
       setSidebarSubtitle('Synced ' + timeNow());
@@ -2371,6 +2544,10 @@
     }
     if(document.getElementById('dashboardOverlay').classList.contains('open')){
       document.getElementById('dashboardOverlay').classList.remove('open');
+      return;
+    }
+    if(document.getElementById('inwardScreen').classList.contains('open')){
+      document.getElementById('inwardScreen').classList.remove('open');
       return;
     }
     const appRootVisible = document.getElementById('appRoot').style.display !== 'none';
@@ -3930,8 +4107,154 @@
   function goToDashboardFromHome(){
     openDashboard(session && session.type === 'member' ? session.memberId : null);
   }
+  const INWARD_CATEGORIES = ['GI', 'LI', 'Short Term'];
+  const SEED_INSURANCE_COMPANIES = ['TATA AIG','BAJAJ GI','SBI','GO DIGIT','ORIENTAL','BAJAJ LIFE','LIC','GODIGIT LIFE','IFFCO','CHOLAMS','ICICI'];
+  let activeInwardCategoryFilter = '';
+
   function goToInward(){
-    alert("Inward isn't set up yet — let me know what this section should show and I'll build it in.");
+    if(!document.getElementById('inwardScreen').classList.contains('open')){
+      history.pushState({ navLevel: 'inward' }, '');
+    }
+    document.getElementById('inwardScreen').classList.add('open');
+    renderInwardScreen();
+  }
+  function closeInwardScreen(){
+    document.getElementById('inwardScreen').classList.remove('open');
+  }
+  function setInwardCategoryFilter(cat){
+    activeInwardCategoryFilter = cat;
+    renderInwardScreen();
+  }
+
+  function issuedMonthLabel(dateStr){
+    if(!dateStr) return '';
+    const d = new Date(dateStr + 'T00:00:00');
+    if(isNaN(d.getTime())) return '';
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return `${months[d.getMonth()]}-${String(d.getFullYear()).slice(2)}`;
+  }
+  function formatInwardDateDisplay(dateStr){
+    if(!dateStr) return '';
+    const d = new Date(dateStr + 'T00:00:00');
+    if(isNaN(d.getTime())) return dateStr;
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return `${String(d.getDate()).padStart(2,'0')}-${months[d.getMonth()]}-${String(d.getFullYear()).slice(2)}`;
+  }
+
+  function renderInwardScreen(){
+    document.getElementById('inwardSubtitle').textContent = inwardEntries.length + ' entr' + (inwardEntries.length===1?'y':'ies');
+
+    const catRow = document.getElementById('inwardCategoryFilterRow');
+    catRow.innerHTML = `<button class="category-filter-chip ${activeInwardCategoryFilter===''?'active':''}" onclick="setInwardCategoryFilter('')">All</button>` +
+      INWARD_CATEGORIES.map(c => `<button class="category-filter-chip ${activeInwardCategoryFilter===c?'active':''}" onclick="setInwardCategoryFilter('${c}')">${c}</button>`).join('');
+
+    let rows = activeInwardCategoryFilter ? inwardEntries.filter(e => e.category === activeInwardCategoryFilter) : inwardEntries.slice();
+    rows.sort((a,b) => (b.inwardDate||'').localeCompare(a.inwardDate||'') || (b.createdAt||0) - (a.createdAt||0));
+
+    const tbody = document.getElementById('inwardTableBody');
+    if(rows.length === 0){
+      tbody.innerHTML = `<tr><td colspan="13" class="inward-empty">No inward entries yet${activeInwardCategoryFilter?' in this category':''}. Tap + to add one.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = rows.map(e => `
+      <tr onclick="openInwardModal('${e.id}')">
+        <td>${e.slrNo||''}</td>
+        <td>${escapeHtml(issuedMonthLabel(e.inwardDate))}</td>
+        <td>${escapeHtml(formatInwardDateDisplay(e.inwardDate))}</td>
+        <td>${e.category ? `<span class="inward-cat-pill">${escapeHtml(e.category)}</span>` : ''}</td>
+        <td>${escapeHtml(e.company||'')}</td>
+        <td>${escapeHtml(e.rm||'')}</td>
+        <td>${escapeHtml(e.agent||'')}</td>
+        <td>${escapeHtml(e.customerName||'')}</td>
+        <td>${escapeHtml(e.customerMobile||'')}</td>
+        <td>${escapeHtml(e.productType||'')}</td>
+        <td>${escapeHtml(e.type||'')}</td>
+        <td class="inward-premium">${(e.grossPremium !== null && e.grossPremium !== undefined && e.grossPremium !== '') ? Number(e.grossPremium).toLocaleString('en-IN') : ''}</td>
+        <td class="inward-row-actions" onclick="event.stopPropagation()">
+          <button class="icon-only-btn" onclick="openInwardModal('${e.id}')" title="Edit"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+          <button class="icon-only-btn danger" onclick="deleteInwardEntry('${e.id}')" title="Delete"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+        </td>
+      </tr>`).join('');
+  }
+
+  function populateInwardRmSelect(){
+    const sel = document.getElementById('inwardRmInput');
+    sel.innerHTML = '<option value="">— Select —</option>' +
+      `<option value="${escapeHtml(adminName||'Super Admin')}">${escapeHtml(adminName||'Super Admin')} (Super Admin)</option>` +
+      members.map(m => `<option value="${escapeHtml(m.name)}">${escapeHtml(m.name)}</option>`).join('');
+  }
+  function populateInwardDatalists(){
+    const companies = new Set(SEED_INSURANCE_COMPANIES);
+    const agents = new Set(), custNames = new Set(), custMobiles = new Set(), products = new Set();
+    inwardEntries.forEach(e => {
+      if(e.company) companies.add(e.company);
+      if(e.agent) agents.add(e.agent);
+      if(e.customerName) custNames.add(e.customerName);
+      if(e.customerMobile) custMobiles.add(e.customerMobile);
+      if(e.productType) products.add(e.productType);
+    });
+    const fill = (id, set) => { document.getElementById(id).innerHTML = [...set].map(v => `<option value="${escapeHtml(v)}">`).join(''); };
+    fill('inwardCompanyDatalist', companies);
+    fill('inwardAgentDatalist', agents);
+    fill('inwardCustomerNameDatalist', custNames);
+    fill('inwardCustomerMobileDatalist', custMobiles);
+    fill('inwardProductTypeDatalist', products);
+  }
+
+  function openInwardModal(id){
+    populateInwardRmSelect();
+    populateInwardDatalists();
+    document.getElementById('inwardModalOverlay').classList.add('open');
+    const e = id ? inwardEntries.find(x => x.id === id) : null;
+    document.getElementById('inwardModalTitle').textContent = e ? 'Edit Inward Entry' : 'New Inward Entry';
+    document.getElementById('inwardEntryId').value = id || '';
+    document.getElementById('inwardDateInput').value = e ? (e.inwardDate || '') : new Date().toISOString().slice(0,10);
+    setPillToggleValue('inwardCategoryToggle', 'inwardCategoryInput', e ? e.category : '');
+    setPillToggleValue('inwardTypeToggle', 'inwardTypeInput', e ? e.type : '');
+    document.getElementById('inwardCompanyInput').value = e ? (e.company || '') : '';
+    document.getElementById('inwardRmInput').value = e ? (e.rm || '') : '';
+    document.getElementById('inwardAgentInput').value = e ? (e.agent || '') : '';
+    document.getElementById('inwardCustomerNameInput').value = e ? (e.customerName || '') : '';
+    document.getElementById('inwardCustomerMobileInput').value = e ? (e.customerMobile || '') : '';
+    document.getElementById('inwardProductTypeInput').value = e ? (e.productType || '') : '';
+    document.getElementById('inwardPremiumInput').value = (e && e.grossPremium !== null && e.grossPremium !== undefined) ? e.grossPremium : '';
+  }
+  function closeInwardModal(){
+    document.getElementById('inwardModalOverlay').classList.remove('open');
+  }
+  function saveInwardEntry(){
+    const id = document.getElementById('inwardEntryId').value;
+    const customerName = document.getElementById('inwardCustomerNameInput').value.trim();
+    if(!customerName){ alert('Customer name is required.'); return; }
+    const premiumRaw = document.getElementById('inwardPremiumInput').value;
+    const data = {
+      inwardDate: document.getElementById('inwardDateInput').value,
+      category: document.getElementById('inwardCategoryInput').value,
+      type: document.getElementById('inwardTypeInput').value,
+      company: document.getElementById('inwardCompanyInput').value.trim(),
+      rm: document.getElementById('inwardRmInput').value,
+      agent: document.getElementById('inwardAgentInput').value.trim(),
+      customerName,
+      customerMobile: document.getElementById('inwardCustomerMobileInput').value.trim(),
+      productType: document.getElementById('inwardProductTypeInput').value.trim(),
+      grossPremium: premiumRaw !== '' ? Number(premiumRaw) : null,
+    };
+    if(id){
+      const e = inwardEntries.find(x => x.id === id);
+      if(e) Object.assign(e, data);
+    } else {
+      const slrNo = inwardCounter++;
+      inwardEntries.push({ id: 'IN-' + String(slrNo).padStart(3,'0'), slrNo, createdAt: Date.now(), createdBy: currentIdentity(), ...data });
+    }
+    closeInwardModal();
+    if(document.getElementById('inwardScreen').classList.contains('open')) renderInwardScreen();
+    saveBoard();
+  }
+  function deleteInwardEntry(id){
+    if(!confirm('Delete this inward entry? This cannot be undone.')) return;
+    inwardEntries = inwardEntries.filter(e => e.id !== id);
+    renderInwardScreen();
+    saveBoard();
   }
 
   function toggleHomeFabMenu(event){
