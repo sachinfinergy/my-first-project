@@ -1222,13 +1222,16 @@
     <div class="field-row">
       <div class="field">
         <label>Product Type</label>
-        <input type="text" id="inwardProductTypeInput" list="inwardProductTypeDatalist" placeholder="Optional">
-        <datalist id="inwardProductTypeDatalist"></datalist>
+        <select id="inwardProductTypeInput" onchange="updateProductDetailsOptions('inward')"></select>
       </div>
       <div class="field">
-        <label>Gross Premium</label>
-        <input type="number" id="inwardPremiumInput" placeholder="e.g. 428863" min="0" step="any">
+        <label>Product Details</label>
+        <select id="inwardProductDetailsInput"><option value="">Select Product Type first</option></select>
       </div>
+    </div>
+    <div class="field">
+      <label>Gross Premium</label>
+      <input type="number" id="inwardPremiumInput" placeholder="e.g. 428863" min="0" step="any">
     </div>
     <div class="modal-actions">
       <button class="btn-ghost" onclick="closeInwardModal()">Cancel</button>
@@ -1358,10 +1361,15 @@
             <select id="taskRmInput"><option value="">— Select —</option></select>
           </div>
         </div>
-        <div class="field">
-          <label>Product type</label>
-          <input type="text" id="taskProductTypeInput" list="productTypeDatalist" placeholder="e.g. Term Insurance, Mutual Fund, Health Plan">
-          <datalist id="productTypeDatalist"></datalist>
+        <div class="field-row">
+          <div class="field">
+            <label>Product Type</label>
+            <select id="taskProductTypeInput" onchange="updateProductDetailsOptions('task')"></select>
+          </div>
+          <div class="field">
+            <label>Product Details</label>
+            <select id="taskProductDetailsInput"><option value="">Select Product Type first</option></select>
+          </div>
         </div>
       </div>
 
@@ -1680,6 +1688,7 @@
         'Agent Name': t.agentName || '',
         'Relationship Manager': t.relationshipManager || '',
         'Product Type': t.productType || '',
+        'Product Details': t.productDetails || '',
         'Type': t.taskType || '',
         'Category': t.category || '',
         'Line of Business': t.lineOfBusiness || '',
@@ -1720,6 +1729,7 @@
       'CUSTOMER NAME': e.customerName || '',
       'CUSTOMER NUMBER': e.customerMobile || '',
       'PRODUCT TYPE': e.productType || '',
+      'PRODUCT DETAILS': e.productDetails || '',
       'TYPE': e.type || '',
       'GROSS PREMIUM': (e.grossPremium !== null && e.grossPremium !== undefined) ? e.grossPremium : ''
     }));
@@ -1734,7 +1744,7 @@
     const wsMembers = XLSX.utils.json_to_sheet(memberRows);
     const wsInward = XLSX.utils.json_to_sheet(inwardRows);
     wsInward['!cols'] = [
-      {wch:7},{wch:12},{wch:12},{wch:11},{wch:16},{wch:16},{wch:16},{wch:22},{wch:14},{wch:16},{wch:10},{wch:14}
+      {wch:7},{wch:12},{wch:12},{wch:11},{wch:16},{wch:16},{wch:16},{wch:22},{wch:14},{wch:16},{wch:22},{wch:10},{wch:14}
     ];
     XLSX.utils.book_append_sheet(wb, wsTasks, 'Tasks');
     XLSX.utils.book_append_sheet(wb, wsUpdates, 'Updates');
@@ -1779,8 +1789,8 @@
     if(typeof XLSX === 'undefined'){ alert('The template tool failed to load — please check your internet connection and try again.'); return; }
     const sampleAssignee = members[0] ? members[0].name : 'Team Member Name';
     const sampleAssignor = adminName || 'Super Admin';
-    const headers = ['Title','Description','Assign To','Assigned By','Priority','Due Date','Customer Name','Customer Mobile','Agent Name','Relationship Manager','Product Type','Type','Line of Business','Category','Labels'];
-    const example = ['Send renewal reminder','Call client before policy lapses', sampleAssignee, sampleAssignor, 'Medium', '2026-09-30', 'Rohan Mehta', '9876543210', 'Suresh Kumar', 'Priya Nair', 'Term Insurance', 'Renewal', 'LI', 'Quote', ''];
+    const headers = ['Title','Description','Assign To','Assigned By','Priority','Due Date','Customer Name','Customer Mobile','Agent Name','Relationship Manager','Product Type','Product Details','Type','Line of Business','Category','Labels'];
+    const example = ['Send renewal reminder','Call client before policy lapses', sampleAssignee, sampleAssignor, 'Medium', '2026-09-30', 'Rohan Mehta', '9876543210', 'Suresh Kumar', 'Priya Nair', 'MOTOR', 'PVT CAR-COMP', 'Renewal', 'LI', 'Quote', ''];
     const ws = XLSX.utils.aoa_to_sheet([headers, example]);
     ws['!cols'] = headers.map(() => ({wch:20}));
     const wb = XLSX.utils.book_new();
@@ -1873,7 +1883,7 @@
         !rmRaw && !typeRaw && !lobRaw && !categoryRaw && !labelsRaw &&
         !String(row['Description']||'').trim() && !String(row['Customer Name']||'').trim() &&
         !String(row['Customer Mobile']||'').trim() && !String(row['Agent Name']||'').trim() &&
-        !String(row['Product Type']||'').trim();
+        !String(row['Product Type']||'').trim() && !String(row['Product Details']||'').trim();
       if(isEntirelyBlank){ skippedBlankRows++; return; }
 
       if(!title) errors.push(`Row ${rowNum}: Title is required.`);
@@ -1902,9 +1912,31 @@
 
       let rmName = '';
       if(rmRaw){
-        const rmId = resolvePersonIdByName(rmRaw);
-        if(!rmId) errors.push(`Row ${rowNum}: "Relationship Manager" — no member or Super Admin named "${rmRaw}" found.`);
-        else rmName = rmId === 'admin' ? (adminName||'Super Admin') : memberById(rmId).name;
+        if(DIRECT_RM_OPTIONS.some(v => v.toLowerCase() === rmRaw.toLowerCase())){
+          rmName = DIRECT_RM_OPTIONS.find(v => v.toLowerCase() === rmRaw.toLowerCase());
+        } else {
+          const rmId = resolvePersonIdByName(rmRaw);
+          if(!rmId) errors.push(`Row ${rowNum}: "Relationship Manager" — no member, Super Admin, or Direct location named "${rmRaw}" found.`);
+          else rmName = rmId === 'admin' ? (adminName||'Super Admin') : memberById(rmId).name;
+        }
+      }
+
+      const productTypeRaw = String(row['Product Type']||'').trim();
+      const productDetailsRaw = String(row['Product Details']||'').trim();
+      let productType = '', productDetails = '';
+      if(productTypeRaw){
+        const match = Object.keys(PRODUCT_TYPE_DETAILS_MAP).find(v => v.toLowerCase() === productTypeRaw.toLowerCase());
+        if(!match) errors.push(`Row ${rowNum}: Product Type "${productTypeRaw}" isn't valid — use ${Object.keys(PRODUCT_TYPE_DETAILS_MAP).join(', ')}.`);
+        else {
+          productType = match;
+          if(productDetailsRaw){
+            const detailMatch = PRODUCT_TYPE_DETAILS_MAP[match].find(v => v.toLowerCase() === productDetailsRaw.toLowerCase());
+            if(!detailMatch) errors.push(`Row ${rowNum}: Product Details "${productDetailsRaw}" isn't valid for Product Type "${match}".`);
+            else productDetails = detailMatch;
+          }
+        }
+      } else if(productDetailsRaw){
+        errors.push(`Row ${rowNum}: Product Details was given without a Product Type — please set Product Type first.`);
       }
 
       let taskType = '';
@@ -1947,7 +1979,7 @@
           customerMobile: String(row['Customer Mobile']||'').trim(),
           agentName: String(row['Agent Name']||'').trim(),
           relationshipManager: rmName,
-          productType: String(row['Product Type']||'').trim(),
+          productType, productDetails,
           taskType, category, lineOfBusiness,
           labels: labelIds
         });
@@ -2384,6 +2416,7 @@
         if(t.agentName && t.agentName.toLowerCase().includes(q)) return true;
         if(t.relationshipManager && t.relationshipManager.toLowerCase().includes(q)) return true;
         if(t.productType && t.productType.toLowerCase().includes(q)) return true;
+        if(t.productDetails && t.productDetails.toLowerCase().includes(q)) return true;
         if(t.taskType && t.taskType.toLowerCase().includes(q)) return true;
         if(t.category && t.category.toLowerCase().includes(q)) return true;
         if(t.lineOfBusiness && t.lineOfBusiness.toLowerCase().includes(q)) return true;
@@ -2647,7 +2680,7 @@
             ${t.category ? `<span><b>Category:</b> ${escapeHtml(t.category)}</span>` : ''}
             ${t.agentName ? `<span><b>Agent:</b> ${escapeHtml(t.agentName)}</span>` : ''}
             ${t.relationshipManager ? `<span><b>RM:</b> ${escapeHtml(t.relationshipManager)}</span>` : ''}
-            ${t.productType ? `<span><b>Product:</b> ${escapeHtml(t.productType)}</span>` : ''}
+            ${t.productType ? `<span><b>Product:</b> ${escapeHtml(t.productType)}${t.productDetails ? ' — ' + escapeHtml(t.productDetails) : ''}</span>` : ''}
           </div>` : ''}
         ${(t.labels && t.labels.length) ? `<div class="task-label-row">${t.labels.map(lid => { const l = labelById(lid); return l ? `<span class="task-label-pill" style="background:${l.color}">${escapeHtml(l.name)}</span>` : ''; }).join('')}</div>` : ''}
         ${t.desc ? `
@@ -3162,7 +3195,6 @@
   }
   function populateNewFieldDatalists(){
     populateTextFieldDatalist('agentNameDatalist', 'agentName');
-    populateTextFieldDatalist('productTypeDatalist', 'productType');
   }
   function selectPillToggle(groupId, hiddenInputId, btnEl){
     const hidden = document.getElementById(hiddenInputId);
@@ -3180,6 +3212,32 @@
   }
 
   const DIRECT_RM_OPTIONS = ['Direct Panjim', 'Direct Vasco'];
+
+  const PRODUCT_TYPE_DETAILS_MAP = {
+    'MOTOR': ['4W-TAXI','GCCV-PUBLIC CARRIER','GCCV-PVT CARRIER','TAXI- SCHOOL BUS -OD','PVT CAR-COMP','PVT CAR - OD ONLY','TP-4W TAXI','TP-GCCV-PUBLIC CARRIER','TP-GCCV-PVT CARRIER','TP-PVT CAR','TP-TW','TP- TAXI-BUS','TP-TAXI- SCHOOL BUS','TP TW-TAXI','TP-MISCELLANEOUS','TW-COMP','TW - OD ONLY','TW-TAXI','MOTOR-MISCELLANEOUS','TAXI-BUS'],
+    'TRAVEL': ['TRAVEL POLICY'],
+    'ENDORSEMENT': ['TRANSFER CASE-4W-TAXI','TRANSFER CASE-PVT CAR','TRANSFER CASE-TW-TAXI','TRANSFER CASE-GCCV-PVT CARRIER','TRANSFER CASE-TW','TRANSFER CASE-TP-GCCV-PVT CARRIER','NCB RECOVERY'],
+    'HEALTH': ['HEALTH INDIVIDUAL','HEALTH FAMILY','TOP UP INSURANCE','CRITICAL ILLNESS'],
+    'RETAIL NON MOTOR': ['INDIVIDUAL PA','FAMILY PA','HOME PACKAGE'],
+    'SME NON MOTOR': ['FIRE POLICY','BURGLARY','WC','ENGINEERING- CAR','ENGINEERING-EAR','ENGINEERING-MBD','BRI-MARINE','BRI EXTENSION','HULL H&M','MARINE SINGLE TRANSIT','OPEN TRANSIT'],
+    'LIFE': ['TERM PLAN','CHILD EDUCATION PLAN','RETIREMENT PLAN','MONEY BACK','ULIP']
+  };
+
+  function populateProductTypeOptions(prefix){
+    const sel = document.getElementById(prefix + 'ProductTypeInput');
+    if(!sel) return;
+    sel.innerHTML = '<option value="">— Select —</option>' +
+      Object.keys(PRODUCT_TYPE_DETAILS_MAP).map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
+  }
+  function updateProductDetailsOptions(prefix, keepValue){
+    const typeSel = document.getElementById(prefix + 'ProductTypeInput');
+    const detailsSel = document.getElementById(prefix + 'ProductDetailsInput');
+    if(!typeSel || !detailsSel) return;
+    const options = PRODUCT_TYPE_DETAILS_MAP[typeSel.value] || [];
+    detailsSel.innerHTML = (options.length ? '<option value="">— Select —</option>' : '<option value="">Select Product Type first</option>') +
+      options.map(d => `<option value="${escapeHtml(d)}" ${d===keepValue?'selected':''}>${escapeHtml(d)}</option>`).join('');
+    detailsSel.disabled = options.length === 0;
+  }
 
   function populateRmSelect(){
     const sel = document.getElementById('taskRmInput');
@@ -3353,7 +3411,9 @@
       document.getElementById('taskCustomerMobileInput').value = t.customerMobile || '';
       document.getElementById('taskAgentNameInput').value = t.agentName || '';
       document.getElementById('taskRmInput').value = t.relationshipManager || '';
+      populateProductTypeOptions('task');
       document.getElementById('taskProductTypeInput').value = t.productType || '';
+      updateProductDetailsOptions('task', t.productDetails || '');
       setPillToggleValue('taskTypeToggle', 'taskTypeInput', t.taskType);
       setPillToggleValue('taskCategoryToggle', 'taskCategoryInput', t.category);
       setPillToggleValue('taskLobToggle', 'taskLobInput', t.lineOfBusiness);
@@ -3376,7 +3436,9 @@
       document.getElementById('taskCustomerMobileInput').value = '';
       document.getElementById('taskAgentNameInput').value = '';
       document.getElementById('taskRmInput').value = '';
+      populateProductTypeOptions('task');
       document.getElementById('taskProductTypeInput').value = '';
+      updateProductDetailsOptions('task', '');
       setPillToggleValue('taskTypeToggle', 'taskTypeInput', '');
       setPillToggleValue('taskCategoryToggle', 'taskCategoryInput', '');
       setPillToggleValue('taskLobToggle', 'taskLobInput', '');
@@ -3407,6 +3469,7 @@
       agentName: document.getElementById('taskAgentNameInput').value.trim(),
       relationshipManager: document.getElementById('taskRmInput').value.trim(),
       productType: document.getElementById('taskProductTypeInput').value.trim(),
+      productDetails: document.getElementById('taskProductDetailsInput').value.trim(),
       taskType: document.getElementById('taskTypeInput').value,
       category: document.getElementById('taskCategoryInput').value,
       lineOfBusiness: document.getElementById('taskLobInput').value,
@@ -4193,7 +4256,7 @@
         <td>${escapeHtml(e.agent||'')}</td>
         <td>${escapeHtml(e.customerName||'')}</td>
         <td>${escapeHtml(e.customerMobile||'')}</td>
-        <td>${escapeHtml(e.productType||'')}</td>
+        <td>${escapeHtml(e.productType||'')}${e.productDetails ? ' — ' + escapeHtml(e.productDetails) : ''}</td>
         <td>${escapeHtml(e.type||'')}</td>
         <td class="inward-premium">${(e.grossPremium !== null && e.grossPremium !== undefined && e.grossPremium !== '') ? Number(e.grossPremium).toLocaleString('en-IN') : ''}</td>
         <td class="inward-row-actions" onclick="event.stopPropagation()">
@@ -4218,20 +4281,18 @@
   }
   function populateInwardDatalists(){
     const companies = new Set(SEED_INSURANCE_COMPANIES);
-    const agents = new Set(), custNames = new Set(), custMobiles = new Set(), products = new Set();
+    const agents = new Set(), custNames = new Set(), custMobiles = new Set();
     inwardEntries.forEach(e => {
       if(e.company) companies.add(e.company);
       if(e.agent) agents.add(e.agent);
       if(e.customerName) custNames.add(e.customerName);
       if(e.customerMobile) custMobiles.add(e.customerMobile);
-      if(e.productType) products.add(e.productType);
     });
     const fill = (id, set) => { document.getElementById(id).innerHTML = [...set].map(v => `<option value="${escapeHtml(v)}">`).join(''); };
     fill('inwardCompanyDatalist', companies);
     fill('inwardAgentDatalist', agents);
     fill('inwardCustomerNameDatalist', custNames);
     fill('inwardCustomerMobileDatalist', custMobiles);
-    fill('inwardProductTypeDatalist', products);
   }
 
   function openInwardModal(id){
@@ -4253,7 +4314,9 @@
     document.getElementById('inwardAgentInput').value = e ? (e.agent || '') : '';
     document.getElementById('inwardCustomerNameInput').value = e ? (e.customerName || '') : '';
     document.getElementById('inwardCustomerMobileInput').value = e ? (e.customerMobile || '') : '';
+    populateProductTypeOptions('inward');
     document.getElementById('inwardProductTypeInput').value = e ? (e.productType || '') : '';
+    updateProductDetailsOptions('inward', e ? (e.productDetails || '') : '');
     document.getElementById('inwardPremiumInput').value = (e && e.grossPremium !== null && e.grossPremium !== undefined) ? e.grossPremium : '';
   }
   function closeInwardModal(){
@@ -4287,6 +4350,7 @@
       customerName,
       customerMobile: document.getElementById('inwardCustomerMobileInput').value.trim(),
       productType: document.getElementById('inwardProductTypeInput').value.trim(),
+      productDetails: document.getElementById('inwardProductDetailsInput').value.trim(),
       grossPremium: (premiumRaw !== '' && !isNaN(Number(premiumRaw))) ? Number(premiumRaw) : null,
     };
     if(id){
@@ -4321,12 +4385,13 @@
       'CUSTOMER NAME': e.customerName || '',
       'CUSTOMER NUMBER': e.customerMobile || '',
       'PRODUCT TYPE': e.productType || '',
+      'PRODUCT DETAILS': e.productDetails || '',
       'TYPE': e.type || '',
       'GROSS PREMIUM': (e.grossPremium !== null && e.grossPremium !== undefined) ? e.grossPremium : ''
     }));
 
     const ws = XLSX.utils.json_to_sheet(exportRows);
-    ws['!cols'] = [{wch:7},{wch:12},{wch:12},{wch:11},{wch:16},{wch:16},{wch:16},{wch:22},{wch:14},{wch:16},{wch:10},{wch:14}];
+    ws['!cols'] = [{wch:7},{wch:12},{wch:12},{wch:11},{wch:16},{wch:16},{wch:16},{wch:22},{wch:14},{wch:16},{wch:22},{wch:10},{wch:14}];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Inward');
     const dateStr = new Date().toISOString().slice(0,10);
