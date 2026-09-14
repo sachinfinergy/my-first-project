@@ -182,20 +182,54 @@
   .direction-filter-chip:not(.active):hover{ background:#f5f5f3; }
 
   .label-filter-row{
-    display:flex; gap:8px; padding: 6px 12px 10px; overflow-x:auto; align-items:center;
+    display:flex; align-items:center; gap:8px; padding: 6px 12px 10px; position:relative;
   }
-  .label-filter-chip{
-    flex-shrink:0; display:flex; align-items:center; gap:5px; padding: 5px 12px 5px 10px;
-    border-radius:14px; border:1.5px dashed var(--wa-border); background:#fff; cursor:pointer;
-    font-size:12px; white-space:nowrap; color: var(--wa-text-soft); font-weight:500; font-style:italic;
+  .category-filter-scroll{
+    display:flex; gap:8px; overflow-x:auto; align-items:center; flex:1; min-width:0;
+    scrollbar-width:none;
   }
-  .label-filter-chip::before{ content:"#"; font-style:normal; font-weight:700; color: var(--wa-text-soft); margin-right:-2px; }
-  .label-filter-chip-all::before{ content:none; }
-  .label-filter-chip-all{ font-style:normal; font-weight:600; }
-  .label-filter-chip .dot{ width:7px; height:7px; border-radius:50%; flex-shrink:0; }
-  .label-filter-chip.active{ background: #e7f8f2; border-style:solid; border-color: var(--wa-header); color: var(--wa-header); font-weight:700; }
-  .label-filter-chip.active::before{ color: var(--wa-header); }
-  .label-filter-chip.manage-chip{ color: var(--wa-header); font-weight:700; }
+  .category-filter-scroll::-webkit-scrollbar{ display:none; }
+  .category-filter-chip{
+    flex-shrink:0; padding: 6px 14px; border-radius:14px; border:1.5px solid var(--wa-border);
+    background:#fff; cursor:pointer; font-size:12.5px; font-weight:600; white-space:nowrap; color: var(--wa-text-soft);
+  }
+  .category-filter-chip:hover{ background: var(--wa-hover); }
+  .category-filter-chip.active{ background: var(--wa-header); border-color: var(--wa-header); color: var(--wa-header-text); }
+
+  .filter-icon-btn{
+    position:relative; flex-shrink:0; width:34px; height:34px; border-radius:50%;
+    border:1.5px solid var(--wa-border); background:#fff; color: var(--wa-icon); cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .filter-icon-btn:hover{ background: var(--wa-hover); }
+  .filter-icon-btn.has-filters{ background: #e7f8f2; border-color: var(--wa-header); color: var(--wa-header); }
+  .filter-icon-badge{
+    position:absolute; top:-4px; right:-4px; background: var(--wa-rust); color:#fff; font-size:9.5px; font-weight:700;
+    min-width:15px; height:15px; border-radius:8px; display:flex; align-items:center; justify-content:center; padding:0 3px;
+  }
+
+  .more-filters-panel{
+    display:none; position:absolute; top:calc(100% - 2px); right:12px; background:#fff; border:1px solid var(--wa-border);
+    border-radius:10px; box-shadow:0 6px 20px rgba(0,0,0,0.15); padding:14px; z-index:20; width:240px;
+  }
+  .more-filters-panel.open{ display:block; }
+  .more-filters-section{ margin-bottom:12px; }
+  .more-filters-section:last-of-type{ margin-bottom:8px; }
+  .more-filters-label{ font-size:11px; font-weight:700; color: var(--wa-text-soft); text-transform:uppercase; letter-spacing:.03em; margin-bottom:8px; }
+  .mini-pill-group{ display:flex; flex-wrap:wrap; gap:6px; }
+  .mini-pill{
+    font-size:12px; font-weight:600; padding:5px 11px; border-radius:12px; border:1.5px solid var(--wa-border);
+    background:#fff; color: var(--wa-text-soft); cursor:pointer;
+  }
+  .mini-pill:hover{ background: var(--wa-hover); }
+  .mini-pill.active{ background: var(--wa-header); border-color: var(--wa-header); color: var(--wa-header-text); }
+  .clear-more-filters-btn{
+    width:100%; text-align:center; font-size:12px; font-weight:700; color: var(--wa-rust);
+    background:none; border:none; border-top:1px solid var(--wa-border); padding-top:10px; cursor:pointer;
+  }
+  @media (max-width:520px){
+    .more-filters-panel{ right:0; left:0; width:auto; margin:0 12px; }
+  }
 
 
   .task-label-row{ display:flex; gap:5px; flex-wrap:wrap; margin: 4px 0 6px; }
@@ -1277,7 +1311,9 @@
   let selectedTaskId = null;
   let expandedNotes = new Set();
   let searchQuery = '';
-  let activeLabelFilter = null; // labelId or null for "All"
+  let activeCategoryFilter = ''; // 'Quote' | 'Claims' | 'Policy Issuance' | 'Admin' | '' for All
+  let activeTypeFilter = ''; // 'New' | 'Renewal' | '' for Any
+  let activeLobFilter = ''; // 'GI' | 'LI' | 'Short term' | '' for Any
   let activeStatusFilter = 'open'; // 'open' | 'done' — no "All" option anymore
   let activeDirectionFilter = null; // 'given' | 'received' | null for "All" (member self-view only)
   let pendingTaskLabels = new Set(); // labels toggled while task modal is open
@@ -1938,31 +1974,89 @@
   }
   function setStatusFilter(status){
     activeStatusFilter = status;
-    if(activeStatusFilter === null) activeLabelFilter = null;
     renderAll();
   }
 
-  function renderLabelFilterRow(){
+  const CATEGORY_OPTIONS = ['Quote', 'Claims', 'Policy Issuance', 'Admin'];
+  const TYPE_OPTIONS = ['New', 'Renewal'];
+  const LOB_OPTIONS = ['GI', 'LI', 'Short term'];
+
+  function renderCategoryFilterRow(){
     const row = document.getElementById('labelFilterRow');
-    if(!activeStatusFilter || labels.length === 0){ row.innerHTML = ''; row.style.display = 'none'; return; }
+    if(!row) return;
     row.style.display = 'flex';
-    let html = `<div class="label-filter-chip label-filter-chip-all ${activeLabelFilter===null?'active':''}" onclick="setLabelFilter(null)">All tags</div>`;
-    html += labels.map(l => `
-      <div class="label-filter-chip ${activeLabelFilter===l.id?'active':''}" onclick="setLabelFilter('${l.id}')">
-        <span class="dot" style="background:${l.color}"></span>${escapeHtml(l.name)}
-      </div>`).join('');
+    const activeCount = (activeTypeFilter ? 1 : 0) + (activeLobFilter ? 1 : 0);
+    let html = `<div class="category-filter-scroll">`;
+    html += `<button class="category-filter-chip ${activeCategoryFilter===''?'active':''}" onclick="setCategoryFilter('')">All</button>`;
+    html += CATEGORY_OPTIONS.map(c => `<button class="category-filter-chip ${activeCategoryFilter===c?'active':''}" onclick="setCategoryFilter('${c}')">${c}</button>`).join('');
+    html += `</div>`;
+    html += `
+      <button class="filter-icon-btn ${activeCount>0?'has-filters':''}" onclick="toggleMoreFiltersPanel(event)" title="More filters">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        ${activeCount>0 ? `<span class="filter-icon-badge">${activeCount}</span>` : ''}
+      </button>
+      <div class="more-filters-panel" id="moreFiltersPanel">
+        <div class="more-filters-section">
+          <div class="more-filters-label">Type</div>
+          <div class="mini-pill-group">
+            <button class="mini-pill ${activeTypeFilter===''?'active':''}" onclick="setTypeFilter('')">Any</button>
+            ${TYPE_OPTIONS.map(v => `<button class="mini-pill ${activeTypeFilter===v?'active':''}" onclick="setTypeFilter('${v}')">${v}</button>`).join('')}
+          </div>
+        </div>
+        <div class="more-filters-section">
+          <div class="more-filters-label">Line of Business</div>
+          <div class="mini-pill-group">
+            <button class="mini-pill ${activeLobFilter===''?'active':''}" onclick="setLobFilter('')">Any</button>
+            ${LOB_OPTIONS.map(v => `<button class="mini-pill ${activeLobFilter===v?'active':''}" onclick="setLobFilter('${v}')">${v}</button>`).join('')}
+          </div>
+        </div>
+        ${activeCount>0 ? `<button class="clear-more-filters-btn" onclick="clearMoreFilters()">Clear these filters</button>` : ''}
+      </div>`;
     row.innerHTML = html;
   }
-  function setLabelFilter(id){
-    activeLabelFilter = id;
+  function setCategoryFilter(cat){
+    activeCategoryFilter = cat;
     renderAll();
   }
+  function setTypeFilter(val){
+    activeTypeFilter = val;
+    renderAll();
+    reopenMoreFiltersPanel();
+  }
+  function setLobFilter(val){
+    activeLobFilter = val;
+    renderAll();
+    reopenMoreFiltersPanel();
+  }
+  function clearMoreFilters(){
+    activeTypeFilter = '';
+    activeLobFilter = '';
+    renderAll();
+  }
+  function toggleMoreFiltersPanel(event){
+    event.stopPropagation();
+    const panel = document.getElementById('moreFiltersPanel');
+    const isOpen = panel.classList.contains('open');
+    panel.classList.toggle('open', !isOpen);
+  }
+  function reopenMoreFiltersPanel(){
+    // After renderAll() rebuilds the sidebar, re-open the panel so picking Type then LOB
+    // in one sitting doesn't require re-clicking the filter icon each time.
+    const panel = document.getElementById('moreFiltersPanel');
+    if(panel) panel.classList.add('open');
+  }
+  document.addEventListener('click', (e) => {
+    const panel = document.getElementById('moreFiltersPanel');
+    if(panel && panel.classList.contains('open') && !panel.contains(e.target) && !e.target.closest('.filter-icon-btn')){
+      panel.classList.remove('open');
+    }
+  });
 
   function renderSidebar(){
     const isMemberSession = session && session.type === 'member';
     renderDirectionFilterRow();
     renderStatusFilterRow();
-    renderLabelFilterRow();
+    renderCategoryFilterRow();
     const list = document.getElementById('chatList');
     const scopeMemberId = isMemberSession ? session.memberId : null;
     renderTaskList(list, scopeMemberId);
@@ -2050,7 +2144,9 @@
       });
     }
     if(activeStatusFilter) relevantTasks = relevantTasks.filter(t => t.status === activeStatusFilter);
-    if(activeLabelFilter) relevantTasks = relevantTasks.filter(t => (t.labels||[]).includes(activeLabelFilter));
+    if(activeCategoryFilter) relevantTasks = relevantTasks.filter(t => t.category === activeCategoryFilter);
+    if(activeTypeFilter) relevantTasks = relevantTasks.filter(t => t.taskType === activeTypeFilter);
+    if(activeLobFilter) relevantTasks = relevantTasks.filter(t => t.lineOfBusiness === activeLobFilter);
 
     const withActivity = relevantTasks.map(t => {
       let latest = t.created;
@@ -3347,7 +3443,6 @@
     if(!confirm('Delete this label? It will be removed from all tasks.')) return;
     labels = labels.filter(l=>l.id!==id);
     tasks.forEach(t => { if(t.labels) t.labels = t.labels.filter(lid=>lid!==id); });
-    if(activeLabelFilter === id) activeLabelFilter = null;
     renderLabelManageList();
     renderAll();
     saveBoard();
@@ -3792,7 +3887,9 @@
     selectedTaskId = null;
     activeDirectionFilter = null;
     activeStatusFilter = 'open';
-    activeLabelFilter = null;
+    activeCategoryFilter = '';
+    activeTypeFilter = '';
+    activeLobFilter = '';
     document.getElementById('appRoot').style.display = 'none';
     document.getElementById('homeScreen').style.display = 'none';
     authTab = 'member';
