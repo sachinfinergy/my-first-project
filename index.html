@@ -640,6 +640,14 @@
     color: var(--wa-header); margin-bottom:14px;
   }
 
+  .pill-toggle-group{ display:flex; flex-wrap:wrap; gap:8px; }
+  .pill-toggle-btn{
+    font-size:13px; font-weight:600; padding:8px 16px; border-radius:20px;
+    border:1.5px solid var(--wa-border); background:#fff; color: var(--wa-text-soft); cursor:pointer;
+  }
+  .pill-toggle-btn:hover{ background: var(--wa-hover); }
+  .pill-toggle-btn.active{ background: var(--wa-header); color: var(--wa-header-text); border-color: var(--wa-header); }
+
   @media (max-width: 820px){
     #taskModalOverlay{ padding:0; }
     #taskModalOverlay .modal{
@@ -1030,6 +1038,37 @@
       <input type="hidden" id="taskId">
 
       <div class="form-section">
+        <div class="form-section-title">Classification</div>
+        <div class="field">
+          <label>Type</label>
+          <div class="pill-toggle-group" id="taskTypeToggle">
+            <button type="button" class="pill-toggle-btn" data-value="New" onclick="selectPillToggle('taskTypeToggle','taskTypeInput',this)">New</button>
+            <button type="button" class="pill-toggle-btn" data-value="Renewal" onclick="selectPillToggle('taskTypeToggle','taskTypeInput',this)">Renewal</button>
+          </div>
+          <input type="hidden" id="taskTypeInput" value="">
+        </div>
+        <div class="field">
+          <label>Line of Business</label>
+          <div class="pill-toggle-group" id="taskLobToggle">
+            <button type="button" class="pill-toggle-btn" data-value="GI" onclick="selectPillToggle('taskLobToggle','taskLobInput',this)">GI</button>
+            <button type="button" class="pill-toggle-btn" data-value="LI" onclick="selectPillToggle('taskLobToggle','taskLobInput',this)">LI</button>
+            <button type="button" class="pill-toggle-btn" data-value="Short term" onclick="selectPillToggle('taskLobToggle','taskLobInput',this)">Short term</button>
+          </div>
+          <input type="hidden" id="taskLobInput" value="">
+        </div>
+        <div class="field">
+          <label>Category</label>
+          <div class="pill-toggle-group" id="taskCategoryToggle">
+            <button type="button" class="pill-toggle-btn" data-value="Quote" onclick="selectPillToggle('taskCategoryToggle','taskCategoryInput',this)">Quote</button>
+            <button type="button" class="pill-toggle-btn" data-value="Claims" onclick="selectPillToggle('taskCategoryToggle','taskCategoryInput',this)">Claims</button>
+            <button type="button" class="pill-toggle-btn" data-value="Policy Issuance" onclick="selectPillToggle('taskCategoryToggle','taskCategoryInput',this)">Policy Issuance</button>
+            <button type="button" class="pill-toggle-btn" data-value="Admin" onclick="selectPillToggle('taskCategoryToggle','taskCategoryInput',this)">Admin</button>
+          </div>
+          <input type="hidden" id="taskCategoryInput" value="">
+        </div>
+      </div>
+
+      <div class="form-section">
         <div class="form-section-title">Task details</div>
         <div class="field">
           <label>Title</label>
@@ -1108,24 +1147,6 @@
           <label>Product type</label>
           <input type="text" id="taskProductTypeInput" list="productTypeDatalist" placeholder="e.g. Term Insurance, Mutual Fund, Health Plan">
           <datalist id="productTypeDatalist"></datalist>
-        </div>
-        <div class="field-row">
-          <div class="field">
-            <label>Type</label>
-            <select id="taskTypeInput">
-              <option value="">— Select —</option>
-              <option value="New">New</option>
-              <option value="Renewal">Renewal</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>Category</label>
-            <select id="taskCategoryInput">
-              <option value="">— Select —</option>
-              <option value="Quote">Quote</option>
-              <option value="Won">Won</option>
-            </select>
-          </div>
         </div>
       </div>
 
@@ -1418,6 +1439,7 @@
         'Product Type': t.productType || '',
         'Type': t.taskType || '',
         'Category': t.category || '',
+        'Line of Business': t.lineOfBusiness || '',
         'Labels': (t.labels||[]).map(lid => { const l = labelById(lid); return l ? l.name : null; }).filter(Boolean).join(', '),
         'Updates Count': (t.notes||[]).length
       };
@@ -1448,7 +1470,7 @@
     const wsTasks = XLSX.utils.json_to_sheet(taskRows);
     wsTasks['!cols'] = [
       {wch:9},{wch:28},{wch:30},{wch:16},{wch:16},{wch:9},{wch:11},{wch:11},
-      {wch:17},{wch:17},{wch:18},{wch:15},{wch:16},{wch:20},{wch:10},{wch:10},{wch:16},{wch:20},{wch:12}
+      {wch:17},{wch:17},{wch:18},{wch:15},{wch:16},{wch:16},{wch:20},{wch:10},{wch:10},{wch:16},{wch:20},{wch:12}
     ];
     const wsUpdates = XLSX.utils.json_to_sheet(updateRows);
     const wsMembers = XLSX.utils.json_to_sheet(memberRows);
@@ -1494,8 +1516,8 @@
     if(typeof XLSX === 'undefined'){ alert('The template tool failed to load — please check your internet connection and try again.'); return; }
     const sampleAssignee = members[0] ? members[0].name : 'Team Member Name';
     const sampleAssignor = adminName || 'Super Admin';
-    const headers = ['Title','Description','Assign To','Assigned By','Priority','Due Date','Customer Name','Customer Mobile','Agent Name','Relationship Manager','Product Type','Type','Category','Labels'];
-    const example = ['Send renewal reminder','Call client before policy lapses', sampleAssignee, sampleAssignor, 'Medium', '2026-09-30', 'Rohan Mehta', '9876543210', 'Suresh Kumar', 'Priya Nair', 'Term Insurance', 'Renewal', 'Quote', ''];
+    const headers = ['Title','Description','Assign To','Assigned By','Priority','Due Date','Customer Name','Customer Mobile','Agent Name','Relationship Manager','Product Type','Type','Line of Business','Category','Labels'];
+    const example = ['Send renewal reminder','Call client before policy lapses', sampleAssignee, sampleAssignor, 'Medium', '2026-09-30', 'Rohan Mehta', '9876543210', 'Suresh Kumar', 'Priya Nair', 'Term Insurance', 'Renewal', 'LI', 'Quote', ''];
     const ws = XLSX.utils.aoa_to_sheet([headers, example]);
     ws['!cols'] = headers.map(() => ({wch:20}));
     const wb = XLSX.utils.book_new();
@@ -1579,12 +1601,13 @@
       const dueRaw = row['Due Date'];
       const rmRaw = String(row['Relationship Manager']||'').trim();
       const typeRaw = String(row['Type']||'').trim();
+      const lobRaw = String(row['Line of Business']||'').trim();
       const categoryRaw = String(row['Category']||'').trim();
       const labelsRaw = String(row['Labels']||'').trim();
 
       const isEntirelyBlank = !title && !assignToName && !assignedByName && !priorityRaw &&
         (dueRaw === '' || dueRaw === undefined || dueRaw === null) &&
-        !rmRaw && !typeRaw && !categoryRaw && !labelsRaw &&
+        !rmRaw && !typeRaw && !lobRaw && !categoryRaw && !labelsRaw &&
         !String(row['Description']||'').trim() && !String(row['Customer Name']||'').trim() &&
         !String(row['Customer Mobile']||'').trim() && !String(row['Agent Name']||'').trim() &&
         !String(row['Product Type']||'').trim();
@@ -1628,10 +1651,17 @@
         else taskType = match;
       }
 
+      let lineOfBusiness = '';
+      if(lobRaw){
+        const match = ['GI','LI','Short term'].find(v => v.toLowerCase() === lobRaw.toLowerCase());
+        if(!match) errors.push(`Row ${rowNum}: Line of Business "${lobRaw}" isn't valid — use GI, LI, or Short term.`);
+        else lineOfBusiness = match;
+      }
+
       let category = '';
       if(categoryRaw){
-        const match = ['Quote','Won'].find(v => v.toLowerCase() === categoryRaw.toLowerCase());
-        if(!match) errors.push(`Row ${rowNum}: Category "${categoryRaw}" isn't valid — use Quote or Won.`);
+        const match = ['Quote','Claims','Policy Issuance','Admin'].find(v => v.toLowerCase() === categoryRaw.toLowerCase());
+        if(!match) errors.push(`Row ${rowNum}: Category "${categoryRaw}" isn't valid — use Quote, Claims, Policy Issuance, or Admin.`);
         else category = match;
       }
 
@@ -1655,7 +1685,7 @@
           agentName: String(row['Agent Name']||'').trim(),
           relationshipManager: rmName,
           productType: String(row['Product Type']||'').trim(),
-          taskType, category,
+          taskType, category, lineOfBusiness,
           labels: labelIds
         });
       }
@@ -2011,6 +2041,7 @@
         if(t.productType && t.productType.toLowerCase().includes(q)) return true;
         if(t.taskType && t.taskType.toLowerCase().includes(q)) return true;
         if(t.category && t.category.toLowerCase().includes(q)) return true;
+        if(t.lineOfBusiness && t.lineOfBusiness.toLowerCase().includes(q)) return true;
         if((t.notes||[]).some(n => n.text.toLowerCase().includes(q))) return true;
         const assignor = assignorLabel(t);
         if(assignor && assignor.toLowerCase().includes(q)) return true;
@@ -2257,9 +2288,10 @@
             ${t.customerMobile ? `<a href="tel:${cleanMobile}" class="customer-action" title="Call">📞 ${escapeHtml(t.customerMobile)}</a>` : ''}
             ${t.customerMobile ? `<a href="https://wa.me/${cleanMobile.replace(/^\+/,'')}" target="_blank" rel="noopener" class="customer-action wa" title="Message on WhatsApp">💬</a>` : ''}
           </div>` : ''}
-        ${(t.agentName || t.relationshipManager || t.productType || t.taskType || t.category) ? `
+        ${(t.agentName || t.relationshipManager || t.productType || t.taskType || t.category || t.lineOfBusiness) ? `
           <div class="task-case-meta">
             ${t.taskType ? `<span><b>Type:</b> ${escapeHtml(t.taskType)}</span>` : ''}
+            ${t.lineOfBusiness ? `<span><b>LOB:</b> ${escapeHtml(t.lineOfBusiness)}</span>` : ''}
             ${t.category ? `<span><b>Category:</b> ${escapeHtml(t.category)}</span>` : ''}
             ${t.agentName ? `<span><b>Agent:</b> ${escapeHtml(t.agentName)}</span>` : ''}
             ${t.relationshipManager ? `<span><b>RM:</b> ${escapeHtml(t.relationshipManager)}</span>` : ''}
@@ -2778,6 +2810,21 @@
     populateTextFieldDatalist('agentNameDatalist', 'agentName');
     populateTextFieldDatalist('productTypeDatalist', 'productType');
   }
+  function selectPillToggle(groupId, hiddenInputId, btnEl){
+    const hidden = document.getElementById(hiddenInputId);
+    const isAlreadySelected = hidden.value === btnEl.dataset.value;
+    hidden.value = isAlreadySelected ? '' : btnEl.dataset.value;
+    document.getElementById(groupId).querySelectorAll('.pill-toggle-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.value === hidden.value);
+    });
+  }
+  function setPillToggleValue(groupId, hiddenInputId, value){
+    document.getElementById(hiddenInputId).value = value || '';
+    document.getElementById(groupId).querySelectorAll('.pill-toggle-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.value === (value || ''));
+    });
+  }
+
   function populateRmSelect(){
     const sel = document.getElementById('taskRmInput');
     if(!sel) return;
@@ -2950,8 +2997,9 @@
       document.getElementById('taskAgentNameInput').value = t.agentName || '';
       document.getElementById('taskRmInput').value = t.relationshipManager || '';
       document.getElementById('taskProductTypeInput').value = t.productType || '';
-      document.getElementById('taskTypeInput').value = t.taskType || '';
-      document.getElementById('taskCategoryInput').value = t.category || '';
+      setPillToggleValue('taskTypeToggle', 'taskTypeInput', t.taskType);
+      setPillToggleValue('taskCategoryToggle', 'taskCategoryInput', t.category);
+      setPillToggleValue('taskLobToggle', 'taskLobInput', t.lineOfBusiness);
       pendingTaskAttachments = getAttachments(t).slice();
       renderImagePreview();
       renderTaskLabelPicker(t.labels || []);
@@ -2972,8 +3020,9 @@
       document.getElementById('taskAgentNameInput').value = '';
       document.getElementById('taskRmInput').value = '';
       document.getElementById('taskProductTypeInput').value = '';
-      document.getElementById('taskTypeInput').value = '';
-      document.getElementById('taskCategoryInput').value = '';
+      setPillToggleValue('taskTypeToggle', 'taskTypeInput', '');
+      setPillToggleValue('taskCategoryToggle', 'taskCategoryInput', '');
+      setPillToggleValue('taskLobToggle', 'taskLobInput', '');
       pendingTaskAttachments = [];
       renderImagePreview();
       renderTaskLabelPicker([]);
@@ -3003,6 +3052,7 @@
       productType: document.getElementById('taskProductTypeInput').value.trim(),
       taskType: document.getElementById('taskTypeInput').value,
       category: document.getElementById('taskCategoryInput').value,
+      lineOfBusiness: document.getElementById('taskLobInput').value,
       image: null,
       pdfFile: null,
       attachments: pendingTaskAttachments.slice(),
