@@ -552,6 +552,13 @@
   .prio-medium{ background: var(--wa-amber); }
   .prio-high{ background: #e07a3f; }
   .prio-urgent{ background: var(--wa-rust); }
+  .converted-badge{
+    font-size:10.5px; font-weight:700; padding:2px 9px; border-radius:10px; background:#e7f8f2; color: var(--wa-header);
+  }
+  .convert-mode-notice{
+    background:#fff8e6; border:1px solid #f0dfa8; border-radius:8px; padding:9px 12px;
+    font-size:12px; color:#8a6d1f; margin-bottom:14px;
+  }
   .task-bubble-title-lg{ font-size:18px; font-weight:700; line-height:1.3; margin: 0 0 3px; color: var(--wa-text); }
   .due-label-sm{ display:block; font-size:11.5px; color: var(--wa-text-soft); margin-bottom:6px; }
   .due-label-sm.overdue{ color: var(--wa-rust); font-weight:700; }
@@ -1167,6 +1174,7 @@
 <div class="modal-overlay" id="inwardModalOverlay">
   <div class="modal">
     <h3 id="inwardModalTitle">New Inward Entry</h3>
+    <div id="convertModeNotice"></div>
     <input type="hidden" id="inwardEntryId">
     <div class="field-row">
       <div class="field">
@@ -2698,7 +2706,9 @@
             </select>
           </div>
           <span class="prio-pill prio-${t.priority.toLowerCase()}">${t.priority}</span>
+          ${t.convertedToInwardId ? `<span class="converted-badge" title="Converted to Inward entry ${escapeHtml(t.convertedToInwardId)}">✓ In Inward</span>` : ''}
           <div class="task-bottom-spacer"></div>
+          ${(!t.convertedToInwardId && canConvertTaskToInward(t)) ? `<button class="icon-only-btn" onclick="openConvertTaskModal('${t.id}')" title="Convert to Inward entry"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></button>` : ''}
           <button class="icon-only-btn" onclick="openTaskModal('${t.id}')" title="Edit"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
           <button class="icon-only-btn danger" onclick="deleteTask('${t.id}')" title="Delete"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>
         </div>
@@ -3783,6 +3793,14 @@
     return members.filter(m => m.reportsTo === memberId);
   }
 
+  function canConvertTaskToInward(t){
+    if(!session) return false;
+    if(session.type === 'admin') return true;
+    if(t.assignorId === session.memberId) return true;
+    if(getDirectReports(session.memberId).length > 0) return true; // any Team Leader
+    return false;
+  }
+
   function openDashboard(viewerMemberId){
     if(viewerMemberId){
       const reports = getDirectReports(viewerMemberId);
@@ -4260,6 +4278,7 @@
         <td>${escapeHtml(e.type||'')}</td>
         <td class="inward-premium">${(e.grossPremium !== null && e.grossPremium !== undefined && e.grossPremium !== '') ? Number(e.grossPremium).toLocaleString('en-IN') : ''}</td>
         <td class="inward-row-actions" onclick="event.stopPropagation()">
+          ${e.convertedBy ? `<button class="icon-only-btn" onclick="showConvertedByInfo('${e.id}')" title="Converted from a task"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></button>` : ''}
           <button class="icon-only-btn" onclick="openInwardModal('${e.id}')" title="Edit"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
           <button class="icon-only-btn danger" onclick="deleteInwardEntry('${e.id}')" title="Delete"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
         </td>
@@ -4295,12 +4314,16 @@
     fill('inwardCustomerMobileDatalist', custMobiles);
   }
 
+  let convertingTaskId = null; // set when the Inward modal is open in "convert from task" mode
+
   function openInwardModal(id){
     const e = id ? inwardEntries.find(x => x.id === id) : null;
     if(id && (!e || !canAccessInwardEntry(e))){
       alert("You don't have access to edit this entry — it belongs to someone outside your team.");
       return;
     }
+    convertingTaskId = null;
+    document.getElementById('convertModeNotice').innerHTML = '';
     populateInwardRmSelect();
     populateInwardDatalists();
     document.getElementById('inwardModalOverlay').classList.add('open');
@@ -4319,8 +4342,44 @@
     updateProductDetailsOptions('inward', e ? (e.productDetails || '') : '');
     document.getElementById('inwardPremiumInput').value = (e && e.grossPremium !== null && e.grossPremium !== undefined) ? e.grossPremium : '';
   }
+
+  function openConvertTaskModal(taskId){
+    const t = tasks.find(x => x.id === taskId);
+    if(!t) return;
+    if(!canConvertTaskToInward(t)){
+      alert("Only this task's assignor, a Team Leader, or Super Admin can convert it to an Inward entry.");
+      return;
+    }
+    if(t.convertedToInwardId){
+      const existing = inwardEntries.find(e => e.id === t.convertedToInwardId);
+      alert(`This task has already been converted to Inward entry ${t.convertedToInwardId}${existing ? ' (' + existing.customerName + ')' : ''}.`);
+      return;
+    }
+    convertingTaskId = taskId;
+    populateInwardRmSelect();
+    populateInwardDatalists();
+    document.getElementById('inwardModalOverlay').classList.add('open');
+    document.getElementById('inwardModalTitle').textContent = 'Convert Task to Inward Entry';
+    document.getElementById('convertModeNotice').innerHTML = `<div class="convert-mode-notice">⚠️ Converting "${escapeHtml(t.title)}" — every field below must be filled in before this can be saved.</div>`;
+    document.getElementById('inwardEntryId').value = '';
+    document.getElementById('inwardDateInput').value = new Date().toISOString().slice(0,10);
+    setPillToggleValue('inwardCategoryToggle', 'inwardCategoryInput', t.lineOfBusiness || '');
+    setPillToggleValue('inwardTypeToggle', 'inwardTypeInput', t.taskType || '');
+    document.getElementById('inwardCompanyInput').value = '';
+    document.getElementById('inwardRmInput').value = t.relationshipManager || '';
+    document.getElementById('inwardAgentInput').value = t.agentName || '';
+    document.getElementById('inwardCustomerNameInput').value = t.customerName || '';
+    document.getElementById('inwardCustomerMobileInput').value = t.customerMobile || '';
+    populateProductTypeOptions('inward');
+    document.getElementById('inwardProductTypeInput').value = t.productType || '';
+    updateProductDetailsOptions('inward', t.productDetails || '');
+    document.getElementById('inwardPremiumInput').value = '';
+  }
+
   function closeInwardModal(){
     document.getElementById('inwardModalOverlay').classList.remove('open');
+    convertingTaskId = null;
+    document.getElementById('convertModeNotice').innerHTML = '';
   }
   function saveInwardEntry(){
     const id = document.getElementById('inwardEntryId').value;
@@ -4339,23 +4398,55 @@
         return;
       }
     }
+    const inwardDate = document.getElementById('inwardDateInput').value;
+    const category = document.getElementById('inwardCategoryInput').value;
+    const type = document.getElementById('inwardTypeInput').value;
+    const company = document.getElementById('inwardCompanyInput').value.trim();
+    const agent = document.getElementById('inwardAgentInput').value.trim();
+    const customerMobile = document.getElementById('inwardCustomerMobileInput').value.trim();
+    const productType = document.getElementById('inwardProductTypeInput').value.trim();
+    const productDetails = document.getElementById('inwardProductDetailsInput').value.trim();
     const premiumRaw = document.getElementById('inwardPremiumInput').value;
+
+    if(convertingTaskId){
+      const missing = [];
+      if(!inwardDate) missing.push('Inward Date');
+      if(!category) missing.push('Category');
+      if(!company) missing.push('Company');
+      if(!rm) missing.push('RM');
+      if(!agent) missing.push('Agent');
+      if(!type) missing.push('Type');
+      if(!customerMobile) missing.push('Customer Mobile');
+      if(!productType) missing.push('Product Type');
+      if(!productDetails) missing.push('Product Details');
+      if(premiumRaw === '' || isNaN(Number(premiumRaw))) missing.push('Gross Premium');
+      if(missing.length > 0){
+        alert('To convert this task, every field must be filled in first. Still missing: ' + missing.join(', '));
+        return;
+      }
+    }
+
     const data = {
-      inwardDate: document.getElementById('inwardDateInput').value,
-      category: document.getElementById('inwardCategoryInput').value,
-      type: document.getElementById('inwardTypeInput').value,
-      company: document.getElementById('inwardCompanyInput').value.trim(),
-      rm,
-      agent: document.getElementById('inwardAgentInput').value.trim(),
-      customerName,
-      customerMobile: document.getElementById('inwardCustomerMobileInput').value.trim(),
-      productType: document.getElementById('inwardProductTypeInput').value.trim(),
-      productDetails: document.getElementById('inwardProductDetailsInput').value.trim(),
+      inwardDate, category, type, company, rm, agent, customerName, customerMobile,
+      productType, productDetails,
       grossPremium: (premiumRaw !== '' && !isNaN(Number(premiumRaw))) ? Number(premiumRaw) : null,
     };
     if(id){
       const e = inwardEntries.find(x => x.id === id);
       if(e) Object.assign(e, data);
+    } else if(convertingTaskId){
+      const slrNo = inwardCounter++;
+      const newEntry = { id: 'IN-' + String(slrNo).padStart(3,'0'), slrNo, createdAt: Date.now(), createdBy: currentIdentity(), convertedBy: currentIdentity(), convertedFromTaskId: convertingTaskId, ...data };
+      inwardEntries.push(newEntry);
+      const t = tasks.find(x => x.id === convertingTaskId);
+      if(t) t.convertedToInwardId = newEntry.id;
+      convertingTaskId = null;
+      closeInwardModal();
+      renderAll();
+      if(document.getElementById('inwardScreen').classList.contains('open')) renderInwardScreen();
+      saveBoard();
+      alert(`Task converted to Inward entry ${newEntry.id}.`);
+      return;
     } else {
       const slrNo = inwardCounter++;
       inwardEntries.push({ id: 'IN-' + String(slrNo).padStart(3,'0'), slrNo, createdAt: Date.now(), createdBy: currentIdentity(), ...data });
@@ -4396,6 +4487,15 @@
     XLSX.utils.book_append_sheet(wb, ws, 'Inward');
     const dateStr = new Date().toISOString().slice(0,10);
     XLSX.writeFile(wb, `inward-register-${dateStr}.xlsx`);
+  }
+
+  function showConvertedByInfo(entryId){
+    const e = inwardEntries.find(x => x.id === entryId);
+    if(!e || !e.convertedBy) return;
+    const personName = e.convertedBy === 'admin' ? (adminName||'Super Admin') : ((memberById(e.convertedBy)||{}).name || 'a former team member');
+    const dateStr = e.createdAt ? new Date(e.createdAt).toLocaleString('en-GB') : '';
+    const taskRef = e.convertedFromTaskId ? ` (from task ${e.convertedFromTaskId})` : '';
+    alert(`Converted from a task by ${personName}${dateStr ? ' on ' + dateStr : ''}${taskRef}.`);
   }
 
   function deleteInwardEntry(id){
