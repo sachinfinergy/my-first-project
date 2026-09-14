@@ -3179,12 +3179,15 @@
     });
   }
 
+  const DIRECT_RM_OPTIONS = ['Direct Panjim', 'Direct Vasco'];
+
   function populateRmSelect(){
     const sel = document.getElementById('taskRmInput');
     if(!sel) return;
     sel.innerHTML = '<option value="">— Select —</option>' +
       `<option value="${escapeHtml(adminName||'Super Admin')}">${escapeHtml(adminName||'Super Admin')} (Super Admin)</option>` +
-      members.map(m => `<option value="${escapeHtml(m.name)}">${escapeHtml(m.name)}</option>`).join('');
+      members.map(m => `<option value="${escapeHtml(m.name)}">${escapeHtml(m.name)}</option>`).join('') +
+      DIRECT_RM_OPTIONS.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
   }
 
   function onCustomerFieldInput(){
@@ -4210,6 +4213,7 @@
     } else {
       optionsHtml = scopeNames.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
     }
+    optionsHtml += DIRECT_RM_OPTIONS.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
     sel.innerHTML = '<option value="">— Select —</option>' + optionsHtml;
   }
   function populateInwardDatalists(){
@@ -4261,8 +4265,8 @@
     if(!customerName){ alert('Customer name is required.'); return; }
     const rm = document.getElementById('inwardRmInput').value;
     const scopeNames = getInwardScopeNames();
-    if(scopeNames !== null && rm && !scopeNames.includes(rm)){
-      alert("You can only log entries under your own name" + (scopeNames.length>1 ? " or your team's." : "."));
+    if(scopeNames !== null && rm && !scopeNames.includes(rm) && !DIRECT_RM_OPTIONS.includes(rm)){
+      alert("You can only log entries under your own name" + (scopeNames.length>1 ? ", your team's, or a Direct location." : ", or a Direct location."));
       return;
     }
     if(id){
