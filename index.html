@@ -84,6 +84,35 @@
     .home-tiles{ gap:16px; }
   }
 
+  .home-fab{
+    position:fixed; bottom:26px; right:26px; width:56px; height:56px; border-radius:50%;
+    background: var(--wa-header); color: var(--wa-header-text); border:none; cursor:pointer;
+    box-shadow:0 4px 14px rgba(0,0,0,0.25); display:flex; align-items:center; justify-content:center; z-index:10;
+  }
+  .home-fab:hover{ background: var(--wa-header-dark); }
+  .home-fab-menu{
+    position:fixed; bottom:92px; right:26px; background:#fff; border-radius:12px;
+    box-shadow:0 6px 20px rgba(0,0,0,0.2); display:none; flex-direction:column; overflow:hidden;
+    z-index:10; min-width:210px;
+  }
+  .home-fab-menu.open{ display:flex; }
+  .home-fab-menu-item{
+    display:flex; align-items:center; gap:10px; padding:13px 16px; border:none; background:#fff; cursor:pointer;
+    font-size:14px; font-weight:600; color: var(--wa-text); text-align:left; border-bottom:1px solid var(--wa-border);
+  }
+  .home-fab-menu-item:last-child{ border-bottom:none; }
+  .home-fab-menu-item:hover:not(:disabled){ background: var(--wa-hover); }
+  .home-fab-menu-item:disabled{ color: var(--wa-text-soft); cursor:not-allowed; }
+  .home-fab-menu-icon{ font-size:17px; flex-shrink:0; }
+  .coming-soon-tag{
+    margin-left:auto; font-size:9.5px; font-weight:700; background:#f0f0ee; color: var(--wa-text-soft);
+    padding:2px 7px; border-radius:8px; flex-shrink:0;
+  }
+  @media (max-width:520px){
+    .home-fab{ bottom:20px; right:20px; }
+    .home-fab-menu{ bottom:84px; right:20px; left:20px; min-width:0; }
+  }
+
   /* ---------- Icon rail ---------- */
   .icon-rail{
     background: #5B2C91; border-right: 1px solid #4a2277;
@@ -223,6 +252,9 @@
   }
   .mini-pill:hover{ background: var(--wa-hover); }
   .mini-pill.active{ background: var(--wa-header); border-color: var(--wa-header); color: var(--wa-header-text); }
+  .mini-pill-dot{ display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:5px; }
+  .mini-pill-group-scroll{ max-height:120px; overflow-y:auto; }
+  .mini-filters-empty{ font-size:12px; color: var(--wa-text-soft); }
   .clear-more-filters-btn{
     width:100%; text-align:center; font-size:12px; font-weight:700; color: var(--wa-rust);
     background:none; border:none; border-top:1px solid var(--wa-border); padding-top:10px; cursor:pointer;
@@ -950,6 +982,17 @@
       <div class="home-tile-label">Tasks</div>
     </div>
   </div>
+  <button class="home-fab" onclick="toggleHomeFabMenu(event)" title="Create new">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </button>
+  <div class="home-fab-menu" id="homeFabMenu">
+    <button class="home-fab-menu-item" onclick="closeHomeFabMenu(); openTaskModal();">
+      <span class="home-fab-menu-icon">✅</span> New Task
+    </button>
+    <button class="home-fab-menu-item" disabled title="Inward isn't set up yet">
+      <span class="home-fab-menu-icon">📥</span> New Inward <span class="coming-soon-tag">Coming soon</span>
+    </button>
+  </div>
 </div>
 
 <div class="app" id="appRoot" style="display:none;">
@@ -1292,6 +1335,23 @@
     messagingSenderId: "61782297790",
     appId: "1:61782297790:web:497a3dbb26ac9f5d8da2ef"
   };
+  if(typeof firebase === 'undefined'){
+    document.body.innerHTML = `
+      <div style="display:flex; align-items:center; justify-content:center; height:100vh; font-family:-apple-system,Segoe UI,Roboto,sans-serif; text-align:center; padding:24px; background:#f7f7f5;">
+        <div style="max-width:360px;">
+          <div style="font-size:40px; margin-bottom:12px;">⚠️</div>
+          <h2 style="margin:0 0 10px; font-size:18px; color:#111b21;">Could not load Team Tasks</h2>
+          <p style="font-size:14px; color:#667781; line-height:1.5; margin:0 0 20px;">
+            This usually means your internet connection dropped, or something is blocking Google's servers.
+            Check your connection and try again.
+          </p>
+          <button onclick="location.reload()" style="padding:11px 24px; font-size:14px; font-weight:600; background:#008069; color:#fff; border:none; border-radius:8px; cursor:pointer;">
+            Try Again
+          </button>
+        </div>
+      </div>`;
+    throw new Error('Firebase SDK failed to load — halting app initialization.');
+  }
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
   const boardDocRef = db.collection('boards').doc('main');
@@ -1312,6 +1372,7 @@
   let expandedNotes = new Set();
   let searchQuery = '';
   let activeCategoryFilter = ''; // 'Quote' | 'Claims' | 'Policy Issuance' | 'Admin' | '' for All
+  let activeLabelFilter = ''; // labelId or '' for Any
   let activeTypeFilter = ''; // 'New' | 'Renewal' | '' for Any
   let activeLobFilter = ''; // 'GI' | 'LI' | 'Short term' | '' for Any
   let activeStatusFilter = 'open'; // 'open' | 'done' — no "All" option anymore
@@ -1985,7 +2046,7 @@
     const row = document.getElementById('labelFilterRow');
     if(!row) return;
     row.style.display = 'flex';
-    const activeCount = (activeTypeFilter ? 1 : 0) + (activeLobFilter ? 1 : 0);
+    const activeCount = (activeTypeFilter ? 1 : 0) + (activeLobFilter ? 1 : 0) + (activeLabelFilter ? 1 : 0);
     let html = `<div class="category-filter-scroll">`;
     html += `<button class="category-filter-chip ${activeCategoryFilter===''?'active':''}" onclick="setCategoryFilter('')">All</button>`;
     html += CATEGORY_OPTIONS.map(c => `<button class="category-filter-chip ${activeCategoryFilter===c?'active':''}" onclick="setCategoryFilter('${c}')">${c}</button>`).join('');
@@ -2010,6 +2071,13 @@
             ${LOB_OPTIONS.map(v => `<button class="mini-pill ${activeLobFilter===v?'active':''}" onclick="setLobFilter('${v}')">${v}</button>`).join('')}
           </div>
         </div>
+        <div class="more-filters-section">
+          <div class="more-filters-label">Tags</div>
+          <div class="mini-pill-group mini-pill-group-scroll">
+            <button class="mini-pill ${activeLabelFilter===''?'active':''}" onclick="setLabelFilterOption('')">Any</button>
+            ${labels.length ? labels.map(l => `<button class="mini-pill ${activeLabelFilter===l.id?'active':''}" onclick="setLabelFilterOption('${l.id}')"><span class="mini-pill-dot" style="background:${l.color}"></span>${escapeHtml(l.name)}</button>`).join('') : `<span class="mini-filters-empty">No tags yet</span>`}
+          </div>
+        </div>
         ${activeCount>0 ? `<button class="clear-more-filters-btn" onclick="clearMoreFilters()">Clear these filters</button>` : ''}
       </div>`;
     row.innerHTML = html;
@@ -2028,9 +2096,15 @@
     renderAll();
     reopenMoreFiltersPanel();
   }
+  function setLabelFilterOption(id){
+    activeLabelFilter = id;
+    renderAll();
+    reopenMoreFiltersPanel();
+  }
   function clearMoreFilters(){
     activeTypeFilter = '';
     activeLobFilter = '';
+    activeLabelFilter = '';
     renderAll();
   }
   function toggleMoreFiltersPanel(event){
@@ -2147,6 +2221,7 @@
     if(activeCategoryFilter) relevantTasks = relevantTasks.filter(t => t.category === activeCategoryFilter);
     if(activeTypeFilter) relevantTasks = relevantTasks.filter(t => t.taskType === activeTypeFilter);
     if(activeLobFilter) relevantTasks = relevantTasks.filter(t => t.lineOfBusiness === activeLobFilter);
+    if(activeLabelFilter) relevantTasks = relevantTasks.filter(t => (t.labels||[]).includes(activeLabelFilter));
 
     const withActivity = relevantTasks.map(t => {
       let latest = t.created;
@@ -3859,6 +3934,21 @@
     alert("Inward isn't set up yet — let me know what this section should show and I'll build it in.");
   }
 
+  function toggleHomeFabMenu(event){
+    event.stopPropagation();
+    const menu = document.getElementById('homeFabMenu');
+    menu.classList.toggle('open');
+  }
+  function closeHomeFabMenu(){
+    document.getElementById('homeFabMenu').classList.remove('open');
+  }
+  document.addEventListener('click', (e) => {
+    const menu = document.getElementById('homeFabMenu');
+    if(menu && menu.classList.contains('open') && !menu.contains(e.target) && !e.target.closest('.home-fab')){
+      menu.classList.remove('open');
+    }
+  });
+
   async function persistSession(s){
     try{ localStorage.setItem(SESSION_KEY, JSON.stringify(s)); }
     catch(err){ console.error('Could not remember session', err); }
@@ -3890,6 +3980,7 @@
     activeCategoryFilter = '';
     activeTypeFilter = '';
     activeLobFilter = '';
+    activeLabelFilter = '';
     document.getElementById('appRoot').style.display = 'none';
     document.getElementById('homeScreen').style.display = 'none';
     authTab = 'member';
