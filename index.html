@@ -730,6 +730,7 @@
   .modal h3{ font-size:18px; font-weight:600; margin: 0 0 16px; color: var(--wa-text); }
   .field{ margin-bottom:14px; }
   .field label{ display:block; font-size:12px; color: var(--wa-text-soft); margin-bottom:5px; font-weight:600; }
+  .required-star{ color: var(--wa-rust); }
   .field input, .field textarea, .field select{
     width:100%; font-size:14px; padding: 9px 11px; border-radius:6px; border:1px solid var(--wa-border);
     background:#fafafa; color: var(--wa-text); font-family:inherit;
@@ -1178,11 +1179,11 @@
     <input type="hidden" id="inwardEntryId">
     <div class="field-row">
       <div class="field">
-        <label>Inward Date</label>
+        <label>Inward Date <span class="required-star">*</span></label>
         <input type="date" id="inwardDateInput">
       </div>
       <div class="field">
-        <label>Type</label>
+        <label>Type <span class="required-star">*</span></label>
         <div class="pill-toggle-group" id="inwardTypeToggle">
           <button type="button" class="pill-toggle-btn" data-value="New" onclick="selectPillToggle('inwardTypeToggle','inwardTypeInput',this)">New</button>
           <button type="button" class="pill-toggle-btn" data-value="Renewal" onclick="selectPillToggle('inwardTypeToggle','inwardTypeInput',this)">Renewal</button>
@@ -1191,7 +1192,7 @@
       </div>
     </div>
     <div class="field">
-      <label>Category</label>
+      <label>Category <span class="required-star">*</span></label>
       <div class="pill-toggle-group" id="inwardCategoryToggle">
         <button type="button" class="pill-toggle-btn" data-value="GI" onclick="selectPillToggle('inwardCategoryToggle','inwardCategoryInput',this)">GI</button>
         <button type="button" class="pill-toggle-btn" data-value="LI" onclick="selectPillToggle('inwardCategoryToggle','inwardCategoryInput',this)">LI</button>
@@ -1201,43 +1202,43 @@
     </div>
     <div class="field-row">
       <div class="field">
-        <label>Company</label>
+        <label>Company <span class="required-star">*</span></label>
         <input type="text" id="inwardCompanyInput" list="inwardCompanyDatalist" placeholder="e.g. TATA AIG">
         <datalist id="inwardCompanyDatalist"></datalist>
       </div>
       <div class="field">
-        <label>RM (Relationship Manager)</label>
+        <label>RM (Relationship Manager) <span class="required-star">*</span></label>
         <select id="inwardRmInput"><option value="">— Select —</option></select>
       </div>
     </div>
     <div class="field">
-      <label>Agent</label>
+      <label>Agent <span class="required-star">*</span></label>
       <select id="inwardAgentInput"></select>
     </div>
     <div class="field-row">
       <div class="field">
-        <label>Customer Name</label>
+        <label>Customer Name <span class="required-star">*</span></label>
         <input type="text" id="inwardCustomerNameInput" list="inwardCustomerNameDatalist" placeholder="e.g. Prabhakar Sawant">
         <datalist id="inwardCustomerNameDatalist"></datalist>
       </div>
       <div class="field">
-        <label>Customer Mobile</label>
-        <input type="tel" id="inwardCustomerMobileInput" list="inwardCustomerMobileDatalist" placeholder="Optional">
+        <label>Customer Mobile <span class="required-star">*</span></label>
+        <input type="tel" id="inwardCustomerMobileInput" list="inwardCustomerMobileDatalist" placeholder="e.g. 98765 43210">
         <datalist id="inwardCustomerMobileDatalist"></datalist>
       </div>
     </div>
     <div class="field-row">
       <div class="field">
-        <label>Product Type</label>
+        <label>Product Type <span class="required-star">*</span></label>
         <select id="inwardProductTypeInput" onchange="updateProductDetailsOptions('inward')"></select>
       </div>
       <div class="field">
-        <label>Product Details</label>
+        <label>Product Details <span class="required-star">*</span></label>
         <select id="inwardProductDetailsInput"><option value="">Select Product Type first</option></select>
       </div>
     </div>
     <div class="field">
-      <label>Gross Premium</label>
+      <label>Gross Premium <span class="required-star">*</span></label>
       <input type="number" id="inwardPremiumInput" placeholder="e.g. 428863" min="0" step="any">
     </div>
     <div class="modal-actions">
@@ -4388,7 +4389,6 @@
   function saveInwardEntry(){
     const id = document.getElementById('inwardEntryId').value;
     const customerName = document.getElementById('inwardCustomerNameInput').value.trim();
-    if(!customerName){ alert('Customer name is required.'); return; }
     const rm = document.getElementById('inwardRmInput').value;
     const scopeNames = getInwardScopeNames();
     if(scopeNames !== null && rm && !scopeNames.includes(rm) && !DIRECT_RM_OPTIONS.includes(rm)){
@@ -4412,22 +4412,21 @@
     const productDetails = document.getElementById('inwardProductDetailsInput').value.trim();
     const premiumRaw = document.getElementById('inwardPremiumInput').value;
 
-    if(convertingTaskId){
-      const missing = [];
-      if(!inwardDate) missing.push('Inward Date');
-      if(!category) missing.push('Category');
-      if(!company) missing.push('Company');
-      if(!rm) missing.push('RM');
-      if(!agent) missing.push('Agent');
-      if(!type) missing.push('Type');
-      if(!customerMobile) missing.push('Customer Mobile');
-      if(!productType) missing.push('Product Type');
-      if(!productDetails) missing.push('Product Details');
-      if(premiumRaw === '' || isNaN(Number(premiumRaw))) missing.push('Gross Premium');
-      if(missing.length > 0){
-        alert('To convert this task, every field must be filled in first. Still missing: ' + missing.join(', '));
-        return;
-      }
+    const missing = [];
+    if(!inwardDate) missing.push('Inward Date');
+    if(!category) missing.push('Category');
+    if(!company) missing.push('Company');
+    if(!rm) missing.push('RM');
+    if(!agent) missing.push('Agent');
+    if(!type) missing.push('Type');
+    if(!customerName) missing.push('Customer Name');
+    if(!customerMobile) missing.push('Customer Mobile');
+    if(!productType) missing.push('Product Type');
+    if(!productDetails) missing.push('Product Details');
+    if(premiumRaw === '' || isNaN(Number(premiumRaw))) missing.push('Gross Premium');
+    if(missing.length > 0){
+      alert('Every field is required before this entry can be saved. Still missing: ' + missing.join(', '));
+      return;
     }
 
     const data = {
