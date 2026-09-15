@@ -698,6 +698,10 @@
     padding: 16px 20px 14px; border-bottom:1px solid var(--wa-border);
   }
   .task-modal-topbar h3{ margin:0; }
+  .inward-progress-track{ width:200px; height:5px; background:var(--wa-border); border-radius:3px; overflow:hidden; margin-bottom:5px; }
+  .inward-progress-fill{ height:100%; width:0%; background: var(--wa-sage); transition: width .25s ease, background .25s ease; }
+  .inward-progress-fill.complete{ background: var(--wa-header); }
+  .inward-progress-label{ font-size:11px; color: var(--wa-text-soft); font-weight:600; }
   .task-modal-close{
     width:30px; height:30px; border-radius:50%; border:none; background:var(--wa-hover);
     color: var(--wa-text-soft); font-size:14px; cursor:pointer; flex-shrink:0;
@@ -1173,75 +1177,100 @@
 
 <!-- Inward Add/Edit Modal -->
 <div class="modal-overlay" id="inwardModalOverlay">
-  <div class="modal">
-    <h3 id="inwardModalTitle">New Inward Entry</h3>
-    <div id="convertModeNotice"></div>
-    <input type="hidden" id="inwardEntryId">
-    <div class="field-row">
-      <div class="field">
-        <label>Inward Date <span class="required-star">*</span></label>
-        <input type="date" id="inwardDateInput">
+  <div class="modal modal-wide task-modal-sheet">
+    <div class="task-modal-topbar">
+      <div>
+        <h3 id="inwardModalTitle" style="margin-bottom:6px;">New Inward Entry</h3>
+        <div class="inward-progress-track"><div class="inward-progress-fill" id="inwardProgressFill"></div></div>
+        <div class="inward-progress-label" id="inwardProgressLabel">0 of 11 required fields completed</div>
       </div>
-      <div class="field">
-        <label>Type <span class="required-star">*</span></label>
-        <div class="pill-toggle-group" id="inwardTypeToggle">
-          <button type="button" class="pill-toggle-btn" data-value="New" onclick="selectPillToggle('inwardTypeToggle','inwardTypeInput',this)">New</button>
-          <button type="button" class="pill-toggle-btn" data-value="Renewal" onclick="selectPillToggle('inwardTypeToggle','inwardTypeInput',this)">Renewal</button>
+      <button class="task-modal-close" onclick="closeInwardModal()" title="Close">✕</button>
+    </div>
+    <div class="task-modal-scroll">
+      <div id="convertModeNotice"></div>
+      <input type="hidden" id="inwardEntryId">
+
+      <div class="form-section">
+        <div class="form-section-title">When & Classification</div>
+        <div class="field-row">
+          <div class="field">
+            <label>Inward Date <span class="required-star">*</span></label>
+            <input type="date" id="inwardDateInput" oninput="updateInwardProgress()">
+          </div>
+          <div class="field">
+            <label>Type <span class="required-star">*</span></label>
+            <div class="pill-toggle-group" id="inwardTypeToggle">
+              <button type="button" class="pill-toggle-btn" data-value="New" onclick="selectPillToggle('inwardTypeToggle','inwardTypeInput',this); updateInwardProgress();">New</button>
+              <button type="button" class="pill-toggle-btn" data-value="Renewal" onclick="selectPillToggle('inwardTypeToggle','inwardTypeInput',this); updateInwardProgress();">Renewal</button>
+            </div>
+            <input type="hidden" id="inwardTypeInput" value="">
+          </div>
         </div>
-        <input type="hidden" id="inwardTypeInput" value="">
+        <div class="field">
+          <label>Category <span class="required-star">*</span></label>
+          <div class="pill-toggle-group" id="inwardCategoryToggle">
+            <button type="button" class="pill-toggle-btn" data-value="GI" onclick="selectPillToggle('inwardCategoryToggle','inwardCategoryInput',this); updateInwardProgress();">GI</button>
+            <button type="button" class="pill-toggle-btn" data-value="LI" onclick="selectPillToggle('inwardCategoryToggle','inwardCategoryInput',this); updateInwardProgress();">LI</button>
+            <button type="button" class="pill-toggle-btn" data-value="Short Term" onclick="selectPillToggle('inwardCategoryToggle','inwardCategoryInput',this); updateInwardProgress();">Short Term</button>
+          </div>
+          <input type="hidden" id="inwardCategoryInput" value="">
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Business Details</div>
+        <div class="field-row">
+          <div class="field">
+            <label>Company <span class="required-star">*</span></label>
+            <input type="text" id="inwardCompanyInput" list="inwardCompanyDatalist" placeholder="e.g. TATA AIG" oninput="updateInwardProgress()">
+            <datalist id="inwardCompanyDatalist"></datalist>
+          </div>
+          <div class="field">
+            <label>RM (Relationship Manager) <span class="required-star">*</span></label>
+            <select id="inwardRmInput" onchange="updateInwardProgress()"><option value="">— Select —</option></select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Agent <span class="required-star">*</span></label>
+          <select id="inwardAgentInput" onchange="updateInwardProgress()"></select>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Customer Details</div>
+        <div class="field-row">
+          <div class="field">
+            <label>Customer Name <span class="required-star">*</span></label>
+            <input type="text" id="inwardCustomerNameInput" list="inwardCustomerNameDatalist" placeholder="e.g. Prabhakar Sawant" oninput="updateInwardProgress()">
+            <datalist id="inwardCustomerNameDatalist"></datalist>
+          </div>
+          <div class="field">
+            <label>Customer Mobile <span class="required-star">*</span></label>
+            <input type="tel" id="inwardCustomerMobileInput" list="inwardCustomerMobileDatalist" placeholder="e.g. 98765 43210" oninput="updateInwardProgress()">
+            <datalist id="inwardCustomerMobileDatalist"></datalist>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Product & Value</div>
+        <div class="field-row">
+          <div class="field">
+            <label>Product Type <span class="required-star">*</span></label>
+            <select id="inwardProductTypeInput" onchange="updateProductDetailsOptions('inward'); updateInwardProgress();"></select>
+          </div>
+          <div class="field">
+            <label>Product Details <span class="required-star">*</span></label>
+            <select id="inwardProductDetailsInput" onchange="updateInwardProgress()"><option value="">Select Product Type first</option></select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Gross Premium <span class="required-star">*</span></label>
+          <input type="number" id="inwardPremiumInput" placeholder="e.g. 428863" min="0" step="any" oninput="updateInwardProgress()">
+        </div>
       </div>
     </div>
-    <div class="field">
-      <label>Category <span class="required-star">*</span></label>
-      <div class="pill-toggle-group" id="inwardCategoryToggle">
-        <button type="button" class="pill-toggle-btn" data-value="GI" onclick="selectPillToggle('inwardCategoryToggle','inwardCategoryInput',this)">GI</button>
-        <button type="button" class="pill-toggle-btn" data-value="LI" onclick="selectPillToggle('inwardCategoryToggle','inwardCategoryInput',this)">LI</button>
-        <button type="button" class="pill-toggle-btn" data-value="Short Term" onclick="selectPillToggle('inwardCategoryToggle','inwardCategoryInput',this)">Short Term</button>
-      </div>
-      <input type="hidden" id="inwardCategoryInput" value="">
-    </div>
-    <div class="field-row">
-      <div class="field">
-        <label>Company <span class="required-star">*</span></label>
-        <input type="text" id="inwardCompanyInput" list="inwardCompanyDatalist" placeholder="e.g. TATA AIG">
-        <datalist id="inwardCompanyDatalist"></datalist>
-      </div>
-      <div class="field">
-        <label>RM (Relationship Manager) <span class="required-star">*</span></label>
-        <select id="inwardRmInput"><option value="">— Select —</option></select>
-      </div>
-    </div>
-    <div class="field">
-      <label>Agent <span class="required-star">*</span></label>
-      <select id="inwardAgentInput"></select>
-    </div>
-    <div class="field-row">
-      <div class="field">
-        <label>Customer Name <span class="required-star">*</span></label>
-        <input type="text" id="inwardCustomerNameInput" list="inwardCustomerNameDatalist" placeholder="e.g. Prabhakar Sawant">
-        <datalist id="inwardCustomerNameDatalist"></datalist>
-      </div>
-      <div class="field">
-        <label>Customer Mobile <span class="required-star">*</span></label>
-        <input type="tel" id="inwardCustomerMobileInput" list="inwardCustomerMobileDatalist" placeholder="e.g. 98765 43210">
-        <datalist id="inwardCustomerMobileDatalist"></datalist>
-      </div>
-    </div>
-    <div class="field-row">
-      <div class="field">
-        <label>Product Type <span class="required-star">*</span></label>
-        <select id="inwardProductTypeInput" onchange="updateProductDetailsOptions('inward')"></select>
-      </div>
-      <div class="field">
-        <label>Product Details <span class="required-star">*</span></label>
-        <select id="inwardProductDetailsInput"><option value="">Select Product Type first</option></select>
-      </div>
-    </div>
-    <div class="field">
-      <label>Gross Premium <span class="required-star">*</span></label>
-      <input type="number" id="inwardPremiumInput" placeholder="e.g. 428863" min="0" step="any">
-    </div>
-    <div class="modal-actions">
+    <div class="modal-actions task-modal-actions">
       <button class="btn-ghost" onclick="closeInwardModal()">Cancel</button>
       <button class="btn-primary" onclick="saveInwardEntry()">Save entry</button>
     </div>
@@ -4345,6 +4374,7 @@
     document.getElementById('inwardProductTypeInput').value = e ? (e.productType || '') : '';
     updateProductDetailsOptions('inward', e ? (e.productDetails || '') : '');
     document.getElementById('inwardPremiumInput').value = (e && e.grossPremium !== null && e.grossPremium !== undefined) ? e.grossPremium : '';
+    updateInwardProgress();
   }
 
   function openConvertTaskModal(taskId){
@@ -4379,6 +4409,30 @@
     document.getElementById('inwardProductTypeInput').value = t.productType || '';
     updateProductDetailsOptions('inward', t.productDetails || '');
     document.getElementById('inwardPremiumInput').value = '';
+    updateInwardProgress();
+  }
+
+  function updateInwardProgress(){
+    const fields = [
+      document.getElementById('inwardDateInput').value,
+      document.getElementById('inwardTypeInput').value,
+      document.getElementById('inwardCategoryInput').value,
+      document.getElementById('inwardCompanyInput').value.trim(),
+      document.getElementById('inwardRmInput').value,
+      document.getElementById('inwardAgentInput').value,
+      document.getElementById('inwardCustomerNameInput').value.trim(),
+      document.getElementById('inwardCustomerMobileInput').value.trim(),
+      document.getElementById('inwardProductTypeInput').value,
+      document.getElementById('inwardProductDetailsInput').value,
+      document.getElementById('inwardPremiumInput').value,
+    ];
+    const filledCount = fields.filter(v => v !== '' && v !== null && v !== undefined).length;
+    const total = fields.length;
+    const pct = Math.round((filledCount / total) * 100);
+    const fill = document.getElementById('inwardProgressFill');
+    const label = document.getElementById('inwardProgressLabel');
+    if(fill){ fill.style.width = pct + '%'; fill.classList.toggle('complete', filledCount === total); }
+    if(label){ label.textContent = `${filledCount} of ${total} required fields completed`; }
   }
 
   function closeInwardModal(){
