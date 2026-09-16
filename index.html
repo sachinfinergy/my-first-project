@@ -1561,25 +1561,29 @@
   let knownTaskIds = null;
 
   function unlockAudioContext(){
-    if(audioUnlocked) return;
     try{
       if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       if(audioCtx.state === 'suspended') audioCtx.resume();
-      // Some browsers (notably iOS Safari) only fully unlock audio if actual playback
-      // happens synchronously within the gesture handler — creating/resuming the
-      // context alone isn't always enough. This near-silent tone satisfies that.
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.connect(gain); gain.connect(audioCtx.destination);
-      gain.gain.value = 0.00001;
-      osc.frequency.value = 440;
-      osc.start(audioCtx.currentTime);
-      osc.stop(audioCtx.currentTime + 0.01);
-      audioUnlocked = true;
+      if(!audioUnlocked){
+        // Some browsers (notably iOS Safari) only fully unlock audio if actual playback
+        // happens synchronously within the gesture handler — creating/resuming the
+        // context alone isn't always enough. This near-silent tone satisfies that.
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        gain.gain.value = 0.00001;
+        osc.frequency.value = 440;
+        osc.start(audioCtx.currentTime);
+        osc.stop(audioCtx.currentTime + 0.01);
+        audioUnlocked = true;
+      }
     } catch(err){ console.error('Audio unlock failed — notification sound will not play:', err); }
   }
-  document.addEventListener('click', unlockAudioContext, { once: true });
-  document.addEventListener('touchstart', unlockAudioContext, { once: true });
+  // Deliberately not { once: true } — mobile browsers can re-suspend audio after the tab is
+  // backgrounded, so every tap is a fresh chance to re-resume it, not just the very first one.
+  document.addEventListener('click', unlockAudioContext);
+  document.addEventListener('touchstart', unlockAudioContext);
+  document.addEventListener('visibilitychange', () => { if(!document.hidden) unlockAudioContext(); });
 
   function isSoundEnabled(){
     try{ return localStorage.getItem('notifSoundEnabled') !== 'false'; } catch(err){ return true; }
@@ -1604,22 +1608,31 @@
     if(!isSoundEnabled()) return;
     try{
       if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if(audioCtx.state === 'suspended') audioCtx.resume();
-      const now = audioCtx.currentTime;
-      const tone = (freq, start, dur, peak) => {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, now + start);
-        gain.gain.setValueAtTime(0.0001, now + start);
-        gain.gain.exponentialRampToValueAtTime(peak, now + start + 0.01);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + start + dur);
-        osc.start(now + start);
-        osc.stop(now + start + dur + 0.02);
+      const scheduleTones = () => {
+        const now = audioCtx.currentTime;
+        const tone = (freq, start, dur, peak) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.connect(gain); gain.connect(audioCtx.destination);
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + start);
+          gain.gain.setValueAtTime(0.0001, now + start);
+          gain.gain.exponentialRampToValueAtTime(peak, now + start + 0.01);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + start + dur);
+          osc.start(now + start);
+          osc.stop(now + start + dur + 0.02);
+        };
+        tone(880, 0, 0.22, 0.28);
+        tone(1200, 0.12, 0.28, 0.22);
       };
-      tone(880, 0, 0.22, 0.28);
-      tone(1200, 0.12, 0.28, 0.22);
+      if(audioCtx.state === 'suspended'){
+        // Wait for resume to actually finish before scheduling sound — on stricter mobile
+        // browsers, scheduling immediately while still technically "suspended" can silently
+        // produce no audible output even though no error is thrown.
+        audioCtx.resume().then(scheduleTones).catch(err => console.error('Could not resume audio for notification sound:', err));
+      } else {
+        scheduleTones();
+      }
     } catch(err){ console.error('Notification sound failed to play:', err); }
   }
 
