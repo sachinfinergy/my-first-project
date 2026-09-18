@@ -2220,10 +2220,24 @@
           const localT = localTaskById.get(id);
           if(freshT && localT){
             const noteKey = n => `${n.time}_${n.authorId}`;
-            const seen = new Set();
-            const mergedNotes = [...(freshT.notes||[]), ...(localT.notes||[])]
-              .filter(n => { const k = noteKey(n); if(seen.has(k)) return false; seen.add(k); return true; })
-              .sort((a,b) => a.time - b.time);
+            const freshNoteByKey = new Map((freshT.notes||[]).map(n => [noteKey(n), n]));
+            const localNoteByKey = new Map((localT.notes||[]).map(n => [noteKey(n), n]));
+            const allNoteKeys = new Set([...freshNoteByKey.keys(), ...localNoteByKey.keys()]);
+            const mergedNotes = Array.from(allNoteKeys).map(k => {
+              const freshN = freshNoteByKey.get(k);
+              const localN = localNoteByKey.get(k);
+              if(freshN && localN){
+                // The same note exists on both sides — this is the case that was silently
+                // dropping read receipts and reactions before: don't just pick one copy,
+                // merge the fields other people may have changed concurrently.
+                return {
+                  ...localN,
+                  readBy: [...new Set([...(freshN.readBy||[]), ...(localN.readBy||[])])],
+                  reactions: { ...(freshN.reactions||{}), ...(localN.reactions||{}) },
+                };
+              }
+              return localN || freshN;
+            }).sort((a,b) => a.time - b.time);
             return { ...localT, notes: mergedNotes };
           }
           return localT || freshT;
