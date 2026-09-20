@@ -4406,16 +4406,22 @@
     openDashboard(session && session.type === 'member' ? session.memberId : null);
   }
 
+  function getRenewalLabelIds(){
+    return labels.filter(l => l.name.trim().toLowerCase() === 'renewal').map(l => l.id);
+  }
+
   function getScopedRenewalTasks(){
     // Same visibility rule as the main Task list: a member sees tasks where they're
     // assignee or assignor; Super Admin sees everything. This is a pure filter over
     // the existing `tasks` array — no separate copy of the data is created or stored.
+    const renewalLabelIds = getRenewalLabelIds();
+    if(renewalLabelIds.length === 0) return [];
     const isMemberSession = session && session.type === 'member';
     const scoped = isMemberSession
       ? tasks.filter(t => t.assignee === session.memberId || t.assignorId === session.memberId)
       : tasks.slice();
     return scoped
-      .filter(t => t.taskType === 'Renewal' && t.status !== 'done')
+      .filter(t => t.status !== 'done' && (t.labels||[]).some(lid => renewalLabelIds.includes(lid)))
       .sort((a, b) => {
         if(a.due && b.due) return a.due.localeCompare(b.due);
         if(a.due) return -1;
@@ -4429,9 +4435,13 @@
     if(!container) return;
     const renewals = getScopedRenewalTasks();
     if(renewals.length === 0){
+      const tagExists = getRenewalLabelIds().length > 0;
+      const message = tagExists
+        ? 'No open tasks tagged "Renewal" right now.'
+        : 'No "Renewal" tag exists yet — create one under Manage Labels and tag tasks with it to see them here.';
       container.innerHTML = `
         <div class="home-section-header">🔄 Renewals</div>
-        <div class="home-renewals-empty">No open renewal tasks right now.</div>`;
+        <div class="home-renewals-empty">${message}</div>`;
       return;
     }
     container.innerHTML = `
