@@ -253,11 +253,10 @@
   .direction-filter-chip:not(.active):hover{ background:#f5f5f3; }
 
   .label-filter-row{
-    display:flex; align-items:center; gap:8px; padding: 6px 12px 10px; position:relative;
+    display:flex; align-items:flex-start; gap:8px; padding: 6px 12px 10px; position:relative;
   }
   .category-filter-scroll{
-    display:flex; gap:8px; overflow-x:auto; align-items:center; flex:1; min-width:0;
-    scrollbar-width:none;
+    display:flex; gap:8px; flex-wrap:wrap; align-items:center; flex:1; min-width:0;
   }
   .category-filter-scroll::-webkit-scrollbar{ display:none; }
   .category-filter-chip{
@@ -333,6 +332,13 @@
     background:none; border:none; color: var(--wa-text-soft); cursor:pointer; font-size:14px; padding:3px 6px;
   }
   .manage-label-row button:hover{ color: var(--wa-rust); }
+  .manage-label-row-editing{ flex-wrap:wrap; align-items:center; padding: 10px 0; }
+  .manage-label-row-editing input[type="text"]{
+    flex:1 1 100%; padding:7px 10px; border:1.5px solid var(--wa-border); border-radius:8px; font-size:13px; margin-bottom:6px;
+  }
+  .manage-label-row-editing .swatches{ flex:1; margin-top:0; }
+  .manage-label-row-editing .icon-only-btn{ color: var(--wa-header); }
+  .manage-label-row-editing .icon-only-btn:hover{ color: var(--wa-header); }
 
   .section-label{
     font-size:12.5px; font-weight:700; color: var(--wa-text-soft); text-transform:uppercase; letter-spacing:.03em;
@@ -1680,6 +1686,8 @@
 
   let selectedColor = COLORS[0];
   let selectedLabelColor = COLORS[0];
+  let editingLabelId = null;
+  let editingLabelColor = COLORS[0];
   let selectedMemberId = null;
   let selectedTaskId = null;
   let expandedNotes = new Set();
@@ -3900,7 +3908,10 @@
     sw.innerHTML = COLORS.map(c => `<div class="swatch ${c===selectedLabelColor?'selected':''}" style="background:${c}" onclick="pickLabelColor('${c}', this)"></div>`).join('');
     document.getElementById('newLabelNameInput').value = '';
   }
-  function closeLabelManageModal(){ document.getElementById('labelManageModalOverlay').classList.remove('open'); }
+  function closeLabelManageModal(){
+    document.getElementById('labelManageModalOverlay').classList.remove('open');
+    editingLabelId = null;
+  }
   function pickLabelColor(c, el){
     selectedLabelColor = c;
     el.parentElement.querySelectorAll('.swatch').forEach(s=>s.classList.remove('selected'));
@@ -3912,12 +3923,61 @@
       list.innerHTML = `<div class="label-picker-empty">No labels yet. Add your first one below.</div>`;
       return;
     }
-    list.innerHTML = labels.map(l => `
+    list.innerHTML = labels.map(l => {
+      if(editingLabelId === l.id){
+        return `
+        <div class="manage-label-row manage-label-row-editing">
+          <input type="text" id="editLabelNameInput" value="${escapeHtml(l.name)}" onkeydown="if(event.key==='Enter') saveEditLabel('${l.id}'); if(event.key==='Escape') cancelEditLabel();">
+          <div class="swatches" id="editLabelSwatches"></div>
+          <button class="icon-only-btn" onclick="saveEditLabel('${l.id}')" title="Save"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
+          <button onclick="cancelEditLabel()" title="Cancel">✕</button>
+        </div>`;
+      }
+      return `
       <div class="manage-label-row">
         <span class="dot" style="background:${l.color}"></span>
         <span class="name">${escapeHtml(l.name)}</span>
+        <button class="icon-only-btn" onclick="startEditLabel('${l.id}')" title="Edit label"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
         <button onclick="deleteLabel('${l.id}')" title="Delete label">✕</button>
-      </div>`).join('');
+      </div>`;
+    }).join('');
+    if(editingLabelId){
+      const sw = document.getElementById('editLabelSwatches');
+      if(sw){
+        sw.innerHTML = COLORS.map(c => `<div class="swatch ${c===editingLabelColor?'selected':''}" style="background:${c}" onclick="pickEditLabelColor('${c}', this)"></div>`).join('');
+      }
+      const input = document.getElementById('editLabelNameInput');
+      if(input){ input.focus(); input.select(); }
+    }
+  }
+  function startEditLabel(id){
+    const l = labels.find(x => x.id === id);
+    if(!l) return;
+    editingLabelId = id;
+    editingLabelColor = l.color;
+    renderLabelManageList();
+  }
+  function cancelEditLabel(){
+    editingLabelId = null;
+    renderLabelManageList();
+  }
+  function pickEditLabelColor(c, el){
+    editingLabelColor = c;
+    el.parentElement.querySelectorAll('.swatch').forEach(s=>s.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+  function saveEditLabel(id){
+    const input = document.getElementById('editLabelNameInput');
+    const name = input.value.trim();
+    if(!name){ alert('Label name cannot be empty.'); return; }
+    const l = labels.find(x => x.id === id);
+    if(!l) return;
+    l.name = name;
+    l.color = editingLabelColor;
+    editingLabelId = null;
+    renderLabelManageList();
+    renderAll();
+    saveBoard();
   }
   function addLabel(){
     const nameInput = document.getElementById('newLabelNameInput');
