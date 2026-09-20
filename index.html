@@ -949,6 +949,7 @@
   .inward-cat-pill{
     font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:9px; background:#e7f8f2; color: var(--wa-header);
   }
+  .inward-cat-pill.pending{ background:#fff3d6; color:#8a6d1f; }
   .inward-premium{ font-weight:700; text-align:right; }
   .inward-row-actions{ display:flex; gap:6px; }
   .inward-empty{ text-align:center; color: var(--wa-text-soft); padding:30px !important; white-space:normal !important; }
@@ -1232,7 +1233,8 @@
         <thead>
           <tr>
             <th>SLR</th><th>Issued Month</th><th>Inward Date</th><th>Category</th><th>Company</th>
-            <th>RM</th><th>Agent</th><th>Customer</th><th>Mobile</th><th>Product</th><th>Type</th><th>Gross Premium</th><th></th>
+            <th>RM</th><th>Agent</th><th>Customer</th><th>Mobile</th><th>Product</th><th>Type</th><th>Gross Premium</th>
+            <th>Policy No.</th><th>Policy Status</th><th></th>
           </tr>
         </thead>
         <tbody id="inwardTableBody"></tbody>
@@ -1248,7 +1250,7 @@
       <div>
         <h3 id="inwardModalTitle" style="margin-bottom:6px;">New Inward Entry</h3>
         <div class="inward-progress-track"><div class="inward-progress-fill" id="inwardProgressFill"></div></div>
-        <div class="inward-progress-label" id="inwardProgressLabel">0 of 11 required fields completed</div>
+        <div class="inward-progress-label" id="inwardProgressLabel">0 of 15 required fields completed</div>
       </div>
       <button class="task-modal-close" onclick="closeInwardModal()" title="Close">✕</button>
     </div>
@@ -1268,6 +1270,7 @@
             <div class="pill-toggle-group" id="inwardTypeToggle">
               <button type="button" class="pill-toggle-btn" data-value="New" onclick="selectPillToggle('inwardTypeToggle','inwardTypeInput',this); updateInwardProgress();">New</button>
               <button type="button" class="pill-toggle-btn" data-value="Renewal" onclick="selectPillToggle('inwardTypeToggle','inwardTypeInput',this); updateInwardProgress();">Renewal</button>
+              <button type="button" class="pill-toggle-btn" data-value="Endorsement" onclick="selectPillToggle('inwardTypeToggle','inwardTypeInput',this); updateInwardProgress();">Endorsement</button>
             </div>
             <input type="hidden" id="inwardTypeInput" value="">
           </div>
@@ -1280,6 +1283,22 @@
             <button type="button" class="pill-toggle-btn" data-value="Short Term" onclick="selectPillToggle('inwardCategoryToggle','inwardCategoryInput',this); updateInwardProgress();">Short Term</button>
           </div>
           <input type="hidden" id="inwardCategoryInput" value="">
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Customer Details</div>
+        <div class="field-row">
+          <div class="field">
+            <label>Customer Name <span class="required-star">*</span></label>
+            <input type="text" id="inwardCustomerNameInput" list="inwardCustomerNameDatalist" placeholder="e.g. Prabhakar Sawant" oninput="updateInwardProgress()">
+            <datalist id="inwardCustomerNameDatalist"></datalist>
+          </div>
+          <div class="field">
+            <label>Customer Mobile <span class="required-star">*</span></label>
+            <input type="tel" id="inwardCustomerMobileInput" list="inwardCustomerMobileDatalist" placeholder="e.g. 98765 43210" oninput="updateInwardProgress()">
+            <datalist id="inwardCustomerMobileDatalist"></datalist>
+          </div>
         </div>
       </div>
 
@@ -1303,22 +1322,6 @@
       </div>
 
       <div class="form-section">
-        <div class="form-section-title">Customer Details</div>
-        <div class="field-row">
-          <div class="field">
-            <label>Customer Name <span class="required-star">*</span></label>
-            <input type="text" id="inwardCustomerNameInput" list="inwardCustomerNameDatalist" placeholder="e.g. Prabhakar Sawant" oninput="updateInwardProgress()">
-            <datalist id="inwardCustomerNameDatalist"></datalist>
-          </div>
-          <div class="field">
-            <label>Customer Mobile <span class="required-star">*</span></label>
-            <input type="tel" id="inwardCustomerMobileInput" list="inwardCustomerMobileDatalist" placeholder="e.g. 98765 43210" oninput="updateInwardProgress()">
-            <datalist id="inwardCustomerMobileDatalist"></datalist>
-          </div>
-        </div>
-      </div>
-
-      <div class="form-section">
         <div class="form-section-title">Product & Value</div>
         <div class="field-row">
           <div class="field">
@@ -1331,8 +1334,61 @@
           </div>
         </div>
         <div class="field">
-          <label>Gross Premium <span class="required-star">*</span></label>
-          <input type="number" id="inwardPremiumInput" placeholder="e.g. 428863" min="0" step="any" oninput="updateInwardProgress()">
+          <label>Other Details</label>
+          <input type="text" id="inwardOtherDetailsInput" placeholder="Any other detail" oninput="updateInwardProgress()">
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Gross Premium <span class="required-star">*</span></label>
+            <input type="number" id="inwardPremiumInput" placeholder="e.g. 428863" min="0" step="any" oninput="updateInwardProgress()">
+          </div>
+          <div class="field">
+            <label>Net Premium</label>
+            <input type="number" id="inwardNetPremiumInput" placeholder="e.g. 400000" min="0" step="any" oninput="updateInwardProgress()">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Payout Premium</label>
+            <input type="number" id="inwardPayoutPremiumInput" placeholder="e.g. 60000" min="0" step="any" oninput="updateInwardProgress()">
+          </div>
+          <div class="field">
+            <label>Payment Mode <span class="required-star">*</span></label>
+            <select id="inwardPaymentModeInput" onchange="updateInwardProgress()">
+              <option value="">— Select —</option>
+              <option value="Online">Online</option>
+              <option value="Cheque">Cheque</option>
+              <option value="Cash">Cash</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Policy Detail</div>
+        <div class="field-row">
+          <div class="field">
+            <label>Policy No.</label>
+            <input type="text" id="inwardPolicyNoInput" placeholder="e.g. P-0012345" oninput="updateInwardProgress()">
+          </div>
+          <div class="field">
+            <label>Policy Status <span class="required-star">*</span></label>
+            <select id="inwardPolicyStatusInput" onchange="updateInwardProgress()">
+              <option value="">— Select —</option>
+              <option value="Issued">Issued</option>
+              <option value="Pending">Pending</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>RSD (Risk Start Date) <span class="required-star">*</span></label>
+            <input type="date" id="inwardRsdInput" oninput="updateInwardProgress()">
+          </div>
+          <div class="field">
+            <label>RED (Risk End Date) <span class="required-star">*</span></label>
+            <input type="date" id="inwardRedInput" oninput="updateInwardProgress()">
+          </div>
         </div>
       </div>
     </div>
@@ -1903,8 +1959,16 @@
       'CUSTOMER NUMBER': e.customerMobile || '',
       'PRODUCT TYPE': e.productType || '',
       'PRODUCT DETAILS': e.productDetails || '',
+      'OTHER DETAILS': e.otherDetails || '',
       'TYPE': e.type || '',
-      'GROSS PREMIUM': (e.grossPremium !== null && e.grossPremium !== undefined) ? e.grossPremium : ''
+      'GROSS PREMIUM': (e.grossPremium !== null && e.grossPremium !== undefined) ? e.grossPremium : '',
+      'NET PREMIUM': (e.netPremium !== null && e.netPremium !== undefined) ? e.netPremium : '',
+      'PAYOUT PREMIUM': (e.payoutPremium !== null && e.payoutPremium !== undefined) ? e.payoutPremium : '',
+      'PAYMENT MODE': e.paymentMode || '',
+      'POLICY NO': e.policyNo || '',
+      'POLICY STATUS': e.policyStatus || '',
+      'RSD': e.rsd || '',
+      'RED': e.red || ''
     }));
 
     const wb = XLSX.utils.book_new();
@@ -1917,7 +1981,8 @@
     const wsMembers = XLSX.utils.json_to_sheet(memberRows);
     const wsInward = XLSX.utils.json_to_sheet(inwardRows);
     wsInward['!cols'] = [
-      {wch:7},{wch:12},{wch:12},{wch:11},{wch:16},{wch:16},{wch:16},{wch:22},{wch:14},{wch:16},{wch:22},{wch:10},{wch:14}
+      {wch:7},{wch:12},{wch:12},{wch:11},{wch:16},{wch:16},{wch:16},{wch:22},{wch:14},{wch:16},{wch:22},{wch:20},
+      {wch:10},{wch:14},{wch:14},{wch:14},{wch:14},{wch:16},{wch:14},{wch:12},{wch:12}
     ];
     XLSX.utils.book_append_sheet(wb, wsTasks, 'Tasks');
     XLSX.utils.book_append_sheet(wb, wsUpdates, 'Updates');
@@ -4567,6 +4632,8 @@
         <td>${escapeHtml(e.productType||'')}${e.productDetails ? ' — ' + escapeHtml(e.productDetails) : ''}</td>
         <td>${escapeHtml(e.type||'')}</td>
         <td class="inward-premium">${(e.grossPremium !== null && e.grossPremium !== undefined && e.grossPremium !== '') ? Number(e.grossPremium).toLocaleString('en-IN') : ''}</td>
+        <td>${escapeHtml(e.policyNo||'')}</td>
+        <td>${e.policyStatus ? `<span class="inward-cat-pill ${e.policyStatus==='Pending'?'pending':''}">${escapeHtml(e.policyStatus)}</span>` : ''}</td>
         <td class="inward-row-actions" onclick="event.stopPropagation()">
           ${e.convertedBy ? `<button class="icon-only-btn" onclick="showConvertedByInfo('${e.id}')" title="Converted from a task"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></button>` : ''}
           <button class="icon-only-btn" onclick="openInwardModal('${e.id}')" title="Edit"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
@@ -4629,7 +4696,15 @@
     populateProductTypeOptions('inward');
     document.getElementById('inwardProductTypeInput').value = e ? (e.productType || '') : '';
     updateProductDetailsOptions('inward', e ? (e.productDetails || '') : '');
+    document.getElementById('inwardOtherDetailsInput').value = e ? (e.otherDetails || '') : '';
     document.getElementById('inwardPremiumInput').value = (e && e.grossPremium !== null && e.grossPremium !== undefined) ? e.grossPremium : '';
+    document.getElementById('inwardNetPremiumInput').value = (e && e.netPremium !== null && e.netPremium !== undefined) ? e.netPremium : '';
+    document.getElementById('inwardPayoutPremiumInput').value = (e && e.payoutPremium !== null && e.payoutPremium !== undefined) ? e.payoutPremium : '';
+    document.getElementById('inwardPaymentModeInput').value = e ? (e.paymentMode || '') : '';
+    document.getElementById('inwardPolicyNoInput').value = e ? (e.policyNo || '') : '';
+    document.getElementById('inwardPolicyStatusInput').value = e ? (e.policyStatus || '') : '';
+    document.getElementById('inwardRsdInput').value = e ? (e.rsd || '') : '';
+    document.getElementById('inwardRedInput').value = e ? (e.red || '') : '';
     updateInwardProgress();
   }
 
@@ -4664,7 +4739,15 @@
     populateProductTypeOptions('inward');
     document.getElementById('inwardProductTypeInput').value = t.productType || '';
     updateProductDetailsOptions('inward', t.productDetails || '');
+    document.getElementById('inwardOtherDetailsInput').value = '';
     document.getElementById('inwardPremiumInput').value = '';
+    document.getElementById('inwardNetPremiumInput').value = '';
+    document.getElementById('inwardPayoutPremiumInput').value = '';
+    document.getElementById('inwardPaymentModeInput').value = '';
+    document.getElementById('inwardPolicyNoInput').value = '';
+    document.getElementById('inwardPolicyStatusInput').value = '';
+    document.getElementById('inwardRsdInput').value = '';
+    document.getElementById('inwardRedInput').value = '';
     updateInwardProgress();
   }
 
@@ -4681,6 +4764,10 @@
       document.getElementById('inwardProductTypeInput').value,
       document.getElementById('inwardProductDetailsInput').value,
       document.getElementById('inwardPremiumInput').value,
+      document.getElementById('inwardPaymentModeInput').value,
+      document.getElementById('inwardPolicyStatusInput').value,
+      document.getElementById('inwardRsdInput').value,
+      document.getElementById('inwardRedInput').value,
     ];
     const filledCount = fields.filter(v => v !== '' && v !== null && v !== undefined).length;
     const total = fields.length;
@@ -4720,7 +4807,15 @@
     const customerMobile = document.getElementById('inwardCustomerMobileInput').value.trim();
     const productType = document.getElementById('inwardProductTypeInput').value.trim();
     const productDetails = document.getElementById('inwardProductDetailsInput').value.trim();
+    const otherDetails = document.getElementById('inwardOtherDetailsInput').value.trim();
     const premiumRaw = document.getElementById('inwardPremiumInput').value;
+    const netPremiumRaw = document.getElementById('inwardNetPremiumInput').value;
+    const payoutPremiumRaw = document.getElementById('inwardPayoutPremiumInput').value;
+    const paymentMode = document.getElementById('inwardPaymentModeInput').value;
+    const policyNo = document.getElementById('inwardPolicyNoInput').value.trim();
+    const policyStatus = document.getElementById('inwardPolicyStatusInput').value;
+    const rsd = document.getElementById('inwardRsdInput').value;
+    const red = document.getElementById('inwardRedInput').value;
 
     const missing = [];
     if(!inwardDate) missing.push('Inward Date');
@@ -4734,6 +4829,12 @@
     if(!productType) missing.push('Product Type');
     if(!productDetails) missing.push('Product Details');
     if(premiumRaw === '' || isNaN(Number(premiumRaw))) missing.push('Gross Premium');
+    if(netPremiumRaw !== '' && isNaN(Number(netPremiumRaw))) missing.push('Net Premium (invalid number)');
+    if(payoutPremiumRaw !== '' && isNaN(Number(payoutPremiumRaw))) missing.push('Payout Premium (invalid number)');
+    if(!paymentMode) missing.push('Payment Mode');
+    if(!policyStatus) missing.push('Policy Status');
+    if(!rsd) missing.push('RSD');
+    if(!red) missing.push('RED');
     if(missing.length > 0){
       alert('Every field is required before this entry can be saved. Still missing: ' + missing.join(', '));
       return;
@@ -4741,8 +4842,11 @@
 
     const data = {
       inwardDate, category, type, company, rm, agent, customerName, customerMobile,
-      productType, productDetails,
+      productType, productDetails, otherDetails,
       grossPremium: (premiumRaw !== '' && !isNaN(Number(premiumRaw))) ? Number(premiumRaw) : null,
+      netPremium: (netPremiumRaw !== '' && !isNaN(Number(netPremiumRaw))) ? Number(netPremiumRaw) : null,
+      payoutPremium: (payoutPremiumRaw !== '' && !isNaN(Number(payoutPremiumRaw))) ? Number(payoutPremiumRaw) : null,
+      paymentMode, policyNo, policyStatus, rsd, red,
     };
     if(id){
       const e = inwardEntries.find(x => x.id === id);
@@ -4790,12 +4894,23 @@
       'CUSTOMER NUMBER': e.customerMobile || '',
       'PRODUCT TYPE': e.productType || '',
       'PRODUCT DETAILS': e.productDetails || '',
+      'OTHER DETAILS': e.otherDetails || '',
       'TYPE': e.type || '',
-      'GROSS PREMIUM': (e.grossPremium !== null && e.grossPremium !== undefined) ? e.grossPremium : ''
+      'GROSS PREMIUM': (e.grossPremium !== null && e.grossPremium !== undefined) ? e.grossPremium : '',
+      'NET PREMIUM': (e.netPremium !== null && e.netPremium !== undefined) ? e.netPremium : '',
+      'PAYOUT PREMIUM': (e.payoutPremium !== null && e.payoutPremium !== undefined) ? e.payoutPremium : '',
+      'PAYMENT MODE': e.paymentMode || '',
+      'POLICY NO': e.policyNo || '',
+      'POLICY STATUS': e.policyStatus || '',
+      'RSD': e.rsd || '',
+      'RED': e.red || ''
     }));
 
     const ws = XLSX.utils.json_to_sheet(exportRows);
-    ws['!cols'] = [{wch:7},{wch:12},{wch:12},{wch:11},{wch:16},{wch:16},{wch:16},{wch:22},{wch:14},{wch:16},{wch:22},{wch:10},{wch:14}];
+    ws['!cols'] = [
+      {wch:7},{wch:12},{wch:12},{wch:11},{wch:16},{wch:16},{wch:16},{wch:22},{wch:14},{wch:16},{wch:22},{wch:20},
+      {wch:10},{wch:14},{wch:14},{wch:14},{wch:14},{wch:16},{wch:14},{wch:12},{wch:12}
+    ];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Inward');
     const dateStr = new Date().toISOString().slice(0,10);
