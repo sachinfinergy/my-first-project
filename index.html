@@ -86,6 +86,7 @@
   .home-tile-icon.dashboard{ background: var(--wa-header); }
   .home-tile-icon.tasks{ background: var(--wa-sage); }
   .home-tile-icon.add{ background: #5B2C91; }
+  .home-tile-icon.renewals{ background: var(--wa-rust); }
   .home-tile-label{ font-size:14.5px; font-weight:700; color: var(--wa-text); }
   @media (max-width:520px){
     .home-tile{ width:130px; height:130px; }
@@ -166,6 +167,11 @@
     display:flex; align-items:center; justify-content:space-between;
   }
   .sidebar-title{ display:flex; align-items:center; gap:10px; }
+  .renewals-mode-badge{
+    display:none; font-size:11px; font-weight:700; background: rgba(255,255,255,0.22); color: var(--wa-header-text);
+    padding:3px 10px; border-radius:10px; white-space:nowrap; margin-left:auto;
+  }
+  .renewals-mode-badge.show{ display:inline-block; }
   .sidebar-title .app-logo{
     width:34px; height:34px; border-radius:50%; background: rgba(0,0,0,0.12);
     display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700;
@@ -1043,6 +1049,10 @@
         <div class="home-tile-icon tasks"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
         <div class="home-tile-label">Tasks</div>
       </div>
+      <div class="home-tile" onclick="goToRenewals()">
+        <div class="home-tile-icon renewals"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></div>
+        <div class="home-tile-label">Renewals</div>
+      </div>
       <div class="home-tile" onclick="toggleHomeFabMenu(event)">
         <div class="home-tile-icon add"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
         <div class="home-tile-label">Add New</div>
@@ -1092,6 +1102,7 @@
           <h1 id="headerUserName">Team Tasks</h1>
           <div class="subtitle" id="sidebarSubtitle">Loading…</div>
         </div>
+        <span class="renewals-mode-badge" id="renewalsModeBadge"></span>
       </div>
       <div class="header-icons mobile-only-icons" id="mobileHeaderIcons">
         <button class="icon-btn-round" onclick="showHomeScreen()" title="Home"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></button>
@@ -2549,6 +2560,11 @@
     const list = document.getElementById('chatList');
     const scopeMemberId = isMemberSession ? session.memberId : null;
     renderTaskList(list, scopeMemberId);
+    const badge = document.getElementById('renewalsModeBadge');
+    if(badge){
+      badge.classList.toggle('show', renewalsViewMode);
+      badge.textContent = '🔄 Renewals';
+    }
   }
 
   function renderDirectionFilterRow(){
@@ -2638,6 +2654,10 @@
     if(activeTypeFilter) relevantTasks = relevantTasks.filter(t => t.taskType === activeTypeFilter);
     if(activeLobFilter) relevantTasks = relevantTasks.filter(t => t.lineOfBusiness === activeLobFilter);
     if(activeLabelFilter) relevantTasks = relevantTasks.filter(t => (t.labels||[]).includes(activeLabelFilter));
+    if(renewalsViewMode){
+      const renewalLabelIds = getRenewalLabelIds();
+      relevantTasks = relevantTasks.filter(t => (t.labels||[]).some(lid => renewalLabelIds.includes(lid)));
+    }
 
     const withActivity = relevantTasks.map(t => {
       let latest = t.created;
@@ -4393,7 +4413,10 @@
     document.getElementById('appRoot').classList.remove('chat-open');
     renderHomeRenewalsSection();
   }
-  function goToTasks(){
+  let renewalsViewMode = false;
+
+  function goToTasks(renewalsOnly){
+    renewalsViewMode = !!renewalsOnly;
     const wasOnHome = document.getElementById('homeScreen').style.display !== 'none';
     document.getElementById('homeScreen').style.display = 'none';
     document.getElementById('appRoot').style.display = 'grid';
@@ -4401,6 +4424,11 @@
       history.pushState({ navLevel: 'tasks' }, '');
     }
     renderAll();
+  }
+
+  function goToRenewals(){
+    activeStatusFilter = 'open'; // start on a clean, actionable view — user can still switch to Completed
+    goToTasks(true);
   }
   function goToDashboardFromHome(){
     openDashboard(session && session.type === 'member' ? session.memberId : null);
@@ -4850,6 +4878,7 @@
     activeTypeFilter = '';
     activeLobFilter = '';
     activeLabelFilter = '';
+    renewalsViewMode = false;
     document.getElementById('appRoot').style.display = 'none';
     document.getElementById('homeScreen').style.display = 'none';
     authTab = 'member';
