@@ -261,7 +261,7 @@
   }
   .category-filter-scroll::-webkit-scrollbar{ display:none; }
   .category-filter-chip{
-    flex-shrink:0; padding: 6px 14px; border-radius:14px; border:1.5px solid var(--wa-border);
+    flex-shrink:0; display:inline-flex; align-items:center; padding: 6px 14px; border-radius:14px; border:1.5px solid var(--wa-border);
     background:#fff; cursor:pointer; font-size:12.5px; font-weight:600; white-space:nowrap; color: var(--wa-text-soft);
   }
   .category-filter-chip:hover{ background: var(--wa-hover); }
@@ -1353,7 +1353,7 @@
       <input type="hidden" id="taskId">
 
       <div class="form-section">
-        <div class="form-section-title">Tags</div>
+        <div class="form-section-title">Tags <span class="required-star">*</span></div>
         <div class="label-picker" id="taskLabelPicker"></div>
       </div>
 
@@ -2431,14 +2431,14 @@
   const TYPE_OPTIONS = ['New', 'Renewal'];
   const LOB_OPTIONS = ['GI', 'LI', 'Short term'];
 
-  function renderCategoryFilterRow(){
+  function renderTagFilterRow(){
     const row = document.getElementById('labelFilterRow');
     if(!row) return;
     row.style.display = 'flex';
-    const activeCount = (activeTypeFilter ? 1 : 0) + (activeLobFilter ? 1 : 0) + (activeLabelFilter ? 1 : 0);
+    const activeCount = (activeTypeFilter ? 1 : 0) + (activeLobFilter ? 1 : 0) + (activeCategoryFilter ? 1 : 0);
     let html = `<div class="category-filter-scroll">`;
-    html += `<button class="category-filter-chip ${activeCategoryFilter===''?'active':''}" onclick="setCategoryFilter('')">All</button>`;
-    html += CATEGORY_OPTIONS.map(c => `<button class="category-filter-chip ${activeCategoryFilter===c?'active':''}" onclick="setCategoryFilter('${c}')">${c}</button>`).join('');
+    html += `<button class="category-filter-chip ${activeLabelFilter===''?'active':''}" onclick="setLabelFilterOption('')">All</button>`;
+    html += labels.map(l => `<button class="category-filter-chip ${activeLabelFilter===l.id?'active':''}" onclick="setLabelFilterOption('${l.id}')" style="${activeLabelFilter===l.id?`background:${l.color};border-color:${l.color};`:''}"><span class="mini-pill-dot" style="background:${l.color}"></span>${escapeHtml(l.name)}</button>`).join('');
     html += `</div>`;
     html += `
       <button class="filter-icon-btn ${activeCount>0?'has-filters':''}" onclick="toggleMoreFiltersPanel(event)" title="More filters">
@@ -2461,10 +2461,10 @@
           </div>
         </div>
         <div class="more-filters-section">
-          <div class="more-filters-label">Tags</div>
-          <div class="mini-pill-group mini-pill-group-scroll">
-            <button class="mini-pill ${activeLabelFilter===''?'active':''}" onclick="setLabelFilterOption('')">Any</button>
-            ${labels.length ? labels.map(l => `<button class="mini-pill ${activeLabelFilter===l.id?'active':''}" onclick="setLabelFilterOption('${l.id}')"><span class="mini-pill-dot" style="background:${l.color}"></span>${escapeHtml(l.name)}</button>`).join('') : `<span class="mini-filters-empty">No tags yet</span>`}
+          <div class="more-filters-label">Category</div>
+          <div class="mini-pill-group">
+            <button class="mini-pill ${activeCategoryFilter===''?'active':''}" onclick="setCategoryFilter('')">Any</button>
+            ${CATEGORY_OPTIONS.map(c => `<button class="mini-pill ${activeCategoryFilter===c?'active':''}" onclick="setCategoryFilter('${c}')">${c}</button>`).join('')}
           </div>
         </div>
         ${activeCount>0 ? `<button class="clear-more-filters-btn" onclick="clearMoreFilters()">Clear these filters</button>` : ''}
@@ -2474,6 +2474,7 @@
   function setCategoryFilter(cat){
     activeCategoryFilter = cat;
     renderAll();
+    reopenMoreFiltersPanel();
   }
   function setTypeFilter(val){
     activeTypeFilter = val;
@@ -2488,12 +2489,11 @@
   function setLabelFilterOption(id){
     activeLabelFilter = id;
     renderAll();
-    reopenMoreFiltersPanel();
   }
   function clearMoreFilters(){
     activeTypeFilter = '';
     activeLobFilter = '';
-    activeLabelFilter = '';
+    activeCategoryFilter = '';
     renderAll();
   }
   function toggleMoreFiltersPanel(event){
@@ -2519,7 +2519,7 @@
     const isMemberSession = session && session.type === 'member';
     renderDirectionFilterRow();
     renderStatusFilterRow();
-    renderCategoryFilterRow();
+    renderTagFilterRow();
     const list = document.getElementById('chatList');
     const scopeMemberId = isMemberSession ? session.memberId : null;
     renderTaskList(list, scopeMemberId);
@@ -3623,6 +3623,10 @@
   function saveTask(){
     const title = document.getElementById('taskTitleInput').value.trim();
     if(!title){ alert('Give the task a title.'); return; }
+    if(labels.length > 0 && pendingTaskLabels.size === 0){
+      alert('Please select at least one tag before saving this task.');
+      return;
+    }
     const id = document.getElementById('taskId').value;
     const data = {
       title,
