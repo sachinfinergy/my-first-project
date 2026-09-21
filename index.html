@@ -1006,6 +1006,8 @@
   }
   .inward-table td{ padding:10px 12px; border-bottom:1px solid var(--wa-border); white-space:nowrap; color: var(--wa-text); }
   .inward-table tbody tr{ cursor:pointer; }
+  .inward-table tbody tr.inward-row-readonly{ cursor:default; }
+  .inward-table tbody tr.inward-row-readonly:hover{ background:transparent; }
   .inward-table tbody tr:hover{ background: var(--wa-hover); }
   .inward-cat-pill{
     font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:9px; background:#e7f8f2; color: var(--wa-header);
@@ -1285,7 +1287,7 @@
         <div style="font-size:11.5px; opacity:0.85;" id="inwardSubtitle"></div>
       </div>
       <div style="flex:1;"></div>
-      <button class="icon-btn-round" onclick="exportInwardToExcel()" title="Export to Excel"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+      <button class="icon-btn-round" id="inwardExportBtn" onclick="exportInwardToExcel()" title="Export to Excel"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
       <button class="icon-btn-round" onclick="openInwardModal()" title="Add entry"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
     </div>
     <div class="inward-category-filter-row" id="inwardCategoryFilterRow"></div>
@@ -4730,25 +4732,51 @@
     return `${String(d.getDate()).padStart(2,'0')}-${months[d.getMonth()]}-${String(d.getFullYear()).slice(2)}`;
   }
 
-  function getInwardScopeNames(){
-    // null = no restriction (Super Admin sees everyone). Otherwise, the list of RM names
-    // (exact match against the "RM" field) this session is allowed to see/edit.
-    if(!session) return [];
-    if(session.type === 'admin') return null;
-    const myName = currentIdentityName();
-    const reports = getDirectReports(session.memberId);
-    return reports.length > 0 ? [myName, ...reports.map(r => r.name)] : [myName];
+  // Named exceptions to the default Inward permission rule. Matched case-insensitively
+  // against the person's display name. If your real team's names differ slightly from
+  // these (e.g. a surname is also on file), update the strings here to match exactly.
+  const INWARD_FULL_ACCESS_NAMES = ['Raksha'];
+  const INWARD_RM_VIEW_ONLY_NAMES = ['Preetham', 'Yogesh'];
+
+  function getInwardAccessTier(){
+    // 'full' = view + download everything, like Super Admin.
+    // 'rm-view-only' = view only entries where they're tagged as RM; no edit, no download.
+    // 'own-entries' = default for everyone else — view/edit/download only what they personally entered.
+    if(!session) return null;
+    if(session.type === 'admin') return 'full';
+    const myName = (currentIdentityName() || '').trim().toLowerCase();
+    if(INWARD_FULL_ACCESS_NAMES.some(n => n.toLowerCase() === myName)) return 'full';
+    if(INWARD_RM_VIEW_ONLY_NAMES.some(n => n.toLowerCase() === myName)) return 'rm-view-only';
+    return 'own-entries';
+  }
+  function canViewInwardEntry(entry){
+    const tier = getInwardAccessTier();
+    if(tier === 'full') return true;
+    if(tier === 'rm-view-only') return entry.rm === currentIdentityName();
+    if(tier === 'own-entries') return entry.createdBy === currentIdentity();
+    return false;
   }
   function canAccessInwardEntry(entry){
-    const scopeNames = getInwardScopeNames();
-    if(scopeNames === null) return true;
-    return scopeNames.includes(entry.rm);
+    // Edit/delete permission — stricter than view: rm-view-only can see but never edit.
+    const tier = getInwardAccessTier();
+    if(tier === 'full') return true;
+    if(tier === 'own-entries') return entry.createdBy === currentIdentity();
+    return false;
+  }
+  function canExportInward(){
+    return getInwardAccessTier() !== 'rm-view-only';
+  }
+  function getVisibleInwardEntries(){
+    return inwardEntries.filter(canViewInwardEntry);
   }
 
   function renderInwardScreen(){
-    const scopeNames = getInwardScopeNames();
-    const scopedEntries = scopeNames === null ? inwardEntries : inwardEntries.filter(e => scopeNames.includes(e.rm));
-    document.getElementById('inwardSubtitle').textContent = scopedEntries.length + ' entr' + (scopedEntries.length===1?'y':'ies') + (scopeNames === null ? '' : ' (yours' + (scopeNames.length>1?' + your team':'') + ')');
+    const tier = getInwardAccessTier();
+    const scopedEntries = getVisibleInwardEntries();
+    const scopeLabel = tier === 'full' ? '' : (tier === 'rm-view-only' ? ' (where you\'re RM — view only)' : ' (entries you\'ve entered)');
+    document.getElementById('inwardSubtitle').textContent = scopedEntries.length + ' entr' + (scopedEntries.length===1?'y':'ies') + scopeLabel;
+    const exportBtn = document.getElementById('inwardExportBtn');
+    if(exportBtn) exportBtn.style.display = canExportInward() ? '' : 'none';
 
     const catRow = document.getElementById('inwardCategoryFilterRow');
     catRow.innerHTML = `<button class="category-filter-chip ${activeInwardCategoryFilter===''?'active':''}" onclick="setInwardCategoryFilter('')">All</button>` +
@@ -4790,8 +4818,8 @@
       tbody.innerHTML = `<tr><td colspan="22" class="inward-empty">No inward entries yet${activeInwardCategoryFilter?' in this category':''}. Tap + to add one.</td></tr>`;
       return;
     }
-    tbody.innerHTML = rows.map(e => `
-      <tr onclick="openInwardModal('${e.id}')">
+    tbody.innerHTML = rows.map(e => { const editable = canAccessInwardEntry(e); return `
+      <tr ${editable ? `onclick="openInwardModal('${e.id}')"` : 'class="inward-row-readonly"'}>
         <td>${e.slrNo||''}</td>
         <td>${escapeHtml(issuedMonthLabel(e.inwardDate))}</td>
         <td>${escapeHtml(formatInwardDateDisplay(e.inwardDate))}</td>
@@ -4815,22 +4843,16 @@
         <td>${escapeHtml(formatInwardDateDisplay(e.red))}</td>
         <td class="inward-row-actions" onclick="event.stopPropagation()">
           ${e.convertedBy ? `<button class="icon-only-btn" onclick="showConvertedByInfo('${e.id}')" title="Converted from a task"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></button>` : ''}
-          <button class="icon-only-btn" onclick="openInwardModal('${e.id}')" title="Edit"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-          <button class="icon-only-btn danger" onclick="deleteInwardEntry('${e.id}')" title="Delete"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+          ${editable ? `<button class="icon-only-btn" onclick="openInwardModal('${e.id}')" title="Edit"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>` : ''}
+          ${editable ? `<button class="icon-only-btn danger" onclick="deleteInwardEntry('${e.id}')" title="Delete"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>` : ''}
         </td>
-      </tr>`).join('');
+      </tr>`; }).join('');
   }
 
   function populateInwardRmSelect(){
     const sel = document.getElementById('inwardRmInput');
-    const scopeNames = getInwardScopeNames();
-    let optionsHtml;
-    if(scopeNames === null){
-      optionsHtml = `<option value="${escapeHtml(adminName||'Super Admin')}">${escapeHtml(adminName||'Super Admin')} (Super Admin)</option>` +
-        members.map(m => `<option value="${escapeHtml(m.name)}">${escapeHtml(m.name)}</option>`).join('');
-    } else {
-      optionsHtml = scopeNames.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
-    }
+    let optionsHtml = `<option value="${escapeHtml(adminName||'Super Admin')}">${escapeHtml(adminName||'Super Admin')} (Super Admin)</option>` +
+      members.map(m => `<option value="${escapeHtml(m.name)}">${escapeHtml(m.name)}</option>`).join('');
     optionsHtml += DIRECT_RM_OPTIONS.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
     sel.innerHTML = '<option value="">— Select —</option>' + optionsHtml;
   }
@@ -4886,7 +4908,7 @@
   function openInwardModal(id){
     const e = id ? inwardEntries.find(x => x.id === id) : null;
     if(id && (!e || !canAccessInwardEntry(e))){
-      alert("You don't have access to edit this entry — it belongs to someone outside your team.");
+      alert("You don't have access to edit this entry.");
       return;
     }
     convertingTaskId = null;
@@ -5046,11 +5068,6 @@
     const id = document.getElementById('inwardEntryId').value;
     const customerName = document.getElementById('inwardCustomerNameInput').value.trim();
     const rm = document.getElementById('inwardRmInput').value;
-    const scopeNames = getInwardScopeNames();
-    if(scopeNames !== null && rm && !scopeNames.includes(rm) && !DIRECT_RM_OPTIONS.includes(rm)){
-      alert("You can only log entries under your own name" + (scopeNames.length>1 ? ", your team's, or a Direct location." : ", or a Direct location."));
-      return;
-    }
     if(id){
       const existing = inwardEntries.find(x => x.id === id);
       if(!existing || !canAccessInwardEntry(existing)){
@@ -5135,12 +5152,15 @@
     saveBoard();
   }
   function exportInwardToExcel(){
+    if(!canExportInward()){
+      alert("You don't have permission to download the Inward report.");
+      return;
+    }
     if(typeof XLSX === 'undefined'){
       alert('The export tool failed to load — please check your internet connection and try again.');
       return;
     }
-    const scopeNames = getInwardScopeNames();
-    let rows = scopeNames === null ? inwardEntries.slice() : inwardEntries.filter(e => scopeNames.includes(e.rm));
+    let rows = getVisibleInwardEntries();
     if(activeInwardCategoryFilter) rows = rows.filter(e => e.category === activeInwardCategoryFilter);
     rows.sort((a,b) => (a.slrNo||0) - (b.slrNo||0));
 
