@@ -784,6 +784,51 @@
     #taskModalOverlay .modal{
       width:100%; height:100%; max-width:none; max-height:none; border-radius:0; margin:0;
     }
+    #inwardModalOverlay{ padding:0; }
+    #inwardModalOverlay .modal{
+      width:100%; height:100%; max-width:none; max-height:none; border-radius:0; margin:0;
+    }
+  }
+
+  /* ---------- Inward stepper (scoped to Inward only — Task form shares .task-modal-sheet
+     but never carries these classes, so none of this affects it) ---------- */
+  .inward-stepper-modal{ max-width: 920px; max-height: 90vh; }
+  .inward-stepper-body{ display:flex; flex:1; min-height:0; }
+  .inward-stepper-sidebar{
+    width:230px; flex-shrink:0; background:#F7F7F5; border-right:1px solid var(--wa-border);
+    padding:18px 12px; overflow-y:auto;
+  }
+  .inward-stepper-content{ flex:1; min-width:0; overflow-y:auto; padding:22px 28px; }
+  .inward-step-item{
+    display:flex; align-items:center; gap:10px; padding:10px 8px; border-radius:8px; cursor:pointer; margin-bottom:2px;
+  }
+  .inward-step-item.active{ background:#fff; box-shadow:0 1px 4px rgba(0,0,0,0.08); }
+  .inward-step-item:hover:not(.active){ background:rgba(0,0,0,0.03); }
+  .inward-step-dot{
+    width:26px; height:26px; border-radius:50%; flex-shrink:0; display:flex; align-items:center;
+    justify-content:center; font-size:11px; font-weight:800;
+  }
+  .inward-step-title{ font-size:12.5px; font-weight:700; }
+  .inward-step-sub{ font-size:10.5px; margin-top:1px; }
+  .inward-incomplete-banner{
+    background:#FDEDEB; border:1px solid #F5C6C0; border-radius:8px; padding:10px 12px;
+    margin-bottom:12px; font-size:11.5px; color:#A33529; line-height:1.5;
+  }
+  .inward-money-card{ background:#F2F8F5; border:1px solid #CFE9DD; border-radius:12px; padding:16px; margin-top:4px; }
+  .inward-money-card-title{
+    font-size:11px; font-weight:800; color:var(--wa-header); text-transform:uppercase;
+    letter-spacing:0.04em; margin-bottom:14px;
+  }
+  .inward-step-dots-mobile{ display:none; }
+  @media (max-width: 820px){
+    .inward-stepper-body{ flex-direction:column; }
+    .inward-stepper-sidebar{
+      width:100%; border-right:none; border-bottom:1px solid var(--wa-border); padding:12px 16px;
+    }
+    .inward-step-item{ display:none; }
+    .inward-step-dots-mobile{ display:flex; align-items:center; gap:6px; }
+    .inward-step-dots-mobile .inward-step-dot{ width:24px; height:24px; font-size:10.5px; cursor:pointer; }
+    .inward-step-dots-mobile-bar{ flex:1; height:4px; border-radius:2px; }
   }
   .modal h3{ font-size:18px; font-weight:600; margin: 0 0 16px; color: var(--wa-text); }
   .field{ margin-bottom:14px; }
@@ -937,6 +982,22 @@
   .dashboard-body{ flex:1; min-height:0; overflow-y:auto; padding: 24px; max-width:1100px; margin:0 auto; width:100%; }
 
   .inward-category-filter-row{ display:flex; gap:8px; padding: 12px 24px 0; flex-wrap:wrap; }
+  .inward-extra-filter-row{
+    display:flex; align-items:center; gap:20px; flex-wrap:wrap; padding: 12px 24px 4px;
+  }
+  .inward-filter-group{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .inward-filter-group-label{
+    font-size:11px; font-weight:700; color: var(--wa-text-soft); text-transform:uppercase; letter-spacing:0.03em;
+  }
+  .inward-person-chip{
+    display:flex; align-items:center; gap:6px; padding:5px 12px 5px 5px; border-radius:16px;
+    border:1.5px solid var(--wa-border); background:#fff; cursor:pointer; font-size:12px; font-weight:600; color: var(--wa-text-soft);
+  }
+  .inward-person-chip.active{ background: var(--wa-header); border-color: var(--wa-header); color: var(--wa-header-text); }
+  .inward-person-chip-avatar{
+    width:20px; height:20px; border-radius:50%; color:#fff; font-size:9.5px; font-weight:800;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
   .inward-table-scroll{ flex:1; min-height:0; overflow:auto; padding: 16px 24px 24px; }
   .inward-table{ width:100%; border-collapse:collapse; background:#fff; border-radius:8px; overflow:hidden; font-size:13px; min-width:1000px; }
   .inward-table th{
@@ -1228,11 +1289,12 @@
       <button class="icon-btn-round" onclick="openInwardModal()" title="Add entry"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
     </div>
     <div class="inward-category-filter-row" id="inwardCategoryFilterRow"></div>
+    <div class="inward-extra-filter-row" id="inwardExtraFilterRow"></div>
     <div class="inward-table-scroll">
       <table class="inward-table">
         <thead>
           <tr>
-            <th>SLR</th><th>Issued Month</th><th>Inward Date</th><th>Category</th><th>Company</th>
+            <th>SLR</th><th>Issued Month</th><th>Inward Date</th><th>Category</th><th>Office</th><th>Company</th>
             <th>RM</th><th>Agent</th><th>Customer</th><th>Mobile</th><th>Product</th><th>Type</th><th>Gross Premium</th>
             <th>Policy No.</th><th>Policy Status</th><th></th>
           </tr>
@@ -1245,156 +1307,163 @@
 
 <!-- Inward Add/Edit Modal -->
 <div class="modal-overlay" id="inwardModalOverlay">
-  <div class="modal modal-wide task-modal-sheet">
+  <div class="modal inward-stepper-modal task-modal-sheet">
     <div class="task-modal-topbar">
-      <div>
-        <h3 id="inwardModalTitle" style="margin-bottom:6px;">New Inward Entry</h3>
-        <div class="inward-progress-track"><div class="inward-progress-fill" id="inwardProgressFill"></div></div>
-        <div class="inward-progress-label" id="inwardProgressLabel">0 of 15 required fields completed</div>
-      </div>
+      <h3 id="inwardModalTitle" style="margin:0;">New Inward Entry</h3>
       <button class="task-modal-close" onclick="closeInwardModal()" title="Close">✕</button>
     </div>
-    <div class="task-modal-scroll">
-      <div id="convertModeNotice"></div>
-      <input type="hidden" id="inwardEntryId">
+    <div class="inward-stepper-body">
+      <div class="inward-stepper-sidebar" id="inwardStepperSidebar"></div>
+      <div class="inward-stepper-content">
+        <div id="convertModeNotice"></div>
+        <input type="hidden" id="inwardEntryId">
 
-      <div class="form-section">
-        <div class="form-section-title">When & Classification</div>
-        <div class="field-row">
-          <div class="field">
-            <label>Inward Date <span class="required-star">*</span></label>
-            <input type="date" id="inwardDateInput" oninput="updateInwardProgress()">
-          </div>
-          <div class="field">
-            <label>Type <span class="required-star">*</span></label>
-            <div class="pill-toggle-group" id="inwardTypeToggle">
-              <button type="button" class="pill-toggle-btn" data-value="New" onclick="selectPillToggle('inwardTypeToggle','inwardTypeInput',this); updateInwardProgress();">New</button>
-              <button type="button" class="pill-toggle-btn" data-value="Renewal" onclick="selectPillToggle('inwardTypeToggle','inwardTypeInput',this); updateInwardProgress();">Renewal</button>
-              <button type="button" class="pill-toggle-btn" data-value="Endorsement" onclick="selectPillToggle('inwardTypeToggle','inwardTypeInput',this); updateInwardProgress();">Endorsement</button>
+        <div class="inward-step-panel" id="inwardStepPanel0">
+          <div class="field-row">
+            <div class="field">
+              <label>Inward Date <span class="required-star">*</span></label>
+              <input type="date" id="inwardDateInput" oninput="updateInwardProgress()">
             </div>
-            <input type="hidden" id="inwardTypeInput" value="">
+            <div class="field">
+              <label>Type <span class="required-star">*</span></label>
+              <div class="pill-toggle-group" id="inwardTypeToggle">
+                <button type="button" class="pill-toggle-btn" data-value="New" onclick="selectPillToggle('inwardTypeToggle','inwardTypeInput',this); updateInwardProgress();">New</button>
+                <button type="button" class="pill-toggle-btn" data-value="Renewal" onclick="selectPillToggle('inwardTypeToggle','inwardTypeInput',this); updateInwardProgress();">Renewal</button>
+                <button type="button" class="pill-toggle-btn" data-value="Endorsement" onclick="selectPillToggle('inwardTypeToggle','inwardTypeInput',this); updateInwardProgress();">Endorsement</button>
+              </div>
+              <input type="hidden" id="inwardTypeInput" value="">
+            </div>
+          </div>
+          <div class="field">
+            <label>Category <span class="required-star">*</span></label>
+            <div class="pill-toggle-group" id="inwardCategoryToggle">
+              <button type="button" class="pill-toggle-btn" data-value="GI" onclick="selectPillToggle('inwardCategoryToggle','inwardCategoryInput',this); updateInwardProgress();">GI</button>
+              <button type="button" class="pill-toggle-btn" data-value="LI" onclick="selectPillToggle('inwardCategoryToggle','inwardCategoryInput',this); updateInwardProgress();">LI</button>
+              <button type="button" class="pill-toggle-btn" data-value="Short Term" onclick="selectPillToggle('inwardCategoryToggle','inwardCategoryInput',this); updateInwardProgress();">Short Term</button>
+            </div>
+            <input type="hidden" id="inwardCategoryInput" value="">
+          </div>
+          <div class="field">
+            <label>Office <span class="required-star">*</span></label>
+            <div class="pill-toggle-group" id="inwardOfficeToggle">
+              <button type="button" class="pill-toggle-btn" data-value="Vasco" onclick="selectPillToggle('inwardOfficeToggle','inwardOfficeInput',this); updateInwardProgress();">Vasco</button>
+              <button type="button" class="pill-toggle-btn" data-value="Panjim" onclick="selectPillToggle('inwardOfficeToggle','inwardOfficeInput',this); updateInwardProgress();">Panjim</button>
+            </div>
+            <input type="hidden" id="inwardOfficeInput" value="">
           </div>
         </div>
-        <div class="field">
-          <label>Category <span class="required-star">*</span></label>
-          <div class="pill-toggle-group" id="inwardCategoryToggle">
-            <button type="button" class="pill-toggle-btn" data-value="GI" onclick="selectPillToggle('inwardCategoryToggle','inwardCategoryInput',this); updateInwardProgress();">GI</button>
-            <button type="button" class="pill-toggle-btn" data-value="LI" onclick="selectPillToggle('inwardCategoryToggle','inwardCategoryInput',this); updateInwardProgress();">LI</button>
-            <button type="button" class="pill-toggle-btn" data-value="Short Term" onclick="selectPillToggle('inwardCategoryToggle','inwardCategoryInput',this); updateInwardProgress();">Short Term</button>
-          </div>
-          <input type="hidden" id="inwardCategoryInput" value="">
-        </div>
-      </div>
 
-      <div class="form-section">
-        <div class="form-section-title">Customer Details</div>
-        <div class="field-row">
-          <div class="field">
-            <label>Customer Name <span class="required-star">*</span></label>
-            <input type="text" id="inwardCustomerNameInput" list="inwardCustomerNameDatalist" placeholder="e.g. Prabhakar Sawant" oninput="updateInwardProgress()">
-            <datalist id="inwardCustomerNameDatalist"></datalist>
-          </div>
-          <div class="field">
-            <label>Customer Mobile <span class="required-star">*</span></label>
-            <input type="tel" id="inwardCustomerMobileInput" list="inwardCustomerMobileDatalist" placeholder="e.g. 98765 43210" oninput="updateInwardProgress()">
-            <datalist id="inwardCustomerMobileDatalist"></datalist>
+        <div class="inward-step-panel" id="inwardStepPanel1" style="display:none;">
+          <div class="field-row">
+            <div class="field">
+              <label>Customer Name <span class="required-star">*</span></label>
+              <input type="text" id="inwardCustomerNameInput" list="inwardCustomerNameDatalist" placeholder="e.g. Prabhakar Sawant" oninput="updateInwardProgress()">
+              <datalist id="inwardCustomerNameDatalist"></datalist>
+            </div>
+            <div class="field">
+              <label>Customer Mobile <span class="required-star">*</span></label>
+              <input type="tel" id="inwardCustomerMobileInput" list="inwardCustomerMobileDatalist" placeholder="e.g. 98765 43210" oninput="updateInwardProgress()">
+              <datalist id="inwardCustomerMobileDatalist"></datalist>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="form-section">
-        <div class="form-section-title">Business Details</div>
-        <div class="field-row">
-          <div class="field">
-            <label>Company <span class="required-star">*</span></label>
-            <input type="text" id="inwardCompanyInput" list="inwardCompanyDatalist" placeholder="e.g. TATA AIG" oninput="updateInwardProgress()">
-            <datalist id="inwardCompanyDatalist"></datalist>
+        <div class="inward-step-panel" id="inwardStepPanel2" style="display:none;">
+          <div class="field-row">
+            <div class="field">
+              <label>Company <span class="required-star">*</span></label>
+              <input type="text" id="inwardCompanyInput" list="inwardCompanyDatalist" placeholder="e.g. TATA AIG" oninput="updateInwardProgress()">
+              <datalist id="inwardCompanyDatalist"></datalist>
+            </div>
+            <div class="field">
+              <label>RM (Relationship Manager) <span class="required-star">*</span></label>
+              <select id="inwardRmInput" onchange="updateInwardProgress()"><option value="">— Select —</option></select>
+            </div>
           </div>
           <div class="field">
-            <label>RM (Relationship Manager) <span class="required-star">*</span></label>
-            <select id="inwardRmInput" onchange="updateInwardProgress()"><option value="">— Select —</option></select>
+            <label>Agent <span class="required-star">*</span></label>
+            <select id="inwardAgentInput" onchange="updateInwardProgress()"></select>
           </div>
         </div>
-        <div class="field">
-          <label>Agent <span class="required-star">*</span></label>
-          <select id="inwardAgentInput" onchange="updateInwardProgress()"></select>
-        </div>
-      </div>
 
-      <div class="form-section">
-        <div class="form-section-title">Product & Value</div>
-        <div class="field-row">
-          <div class="field">
-            <label>Product Type <span class="required-star">*</span></label>
-            <select id="inwardProductTypeInput" onchange="updateProductDetailsOptions('inward'); updateInwardProgress();"></select>
+        <div class="inward-step-panel" id="inwardStepPanel3" style="display:none;">
+          <div class="field-row">
+            <div class="field">
+              <label>Product Type <span class="required-star">*</span></label>
+              <select id="inwardProductTypeInput" onchange="updateProductDetailsOptions('inward'); updateInwardProgress();"></select>
+            </div>
+            <div class="field">
+              <label>Product Details <span class="required-star">*</span></label>
+              <select id="inwardProductDetailsInput" onchange="updateInwardProgress()"><option value="">Select Product Type first</option></select>
+            </div>
           </div>
           <div class="field">
-            <label>Product Details <span class="required-star">*</span></label>
-            <select id="inwardProductDetailsInput" onchange="updateInwardProgress()"><option value="">Select Product Type first</option></select>
+            <label>Other Details</label>
+            <input type="text" id="inwardOtherDetailsInput" placeholder="Any other detail" oninput="updateInwardProgress()">
+          </div>
+          <div class="inward-money-card">
+            <div class="inward-money-card-title">Premium & payout</div>
+            <div class="field-row">
+              <div class="field">
+                <label>Gross Premium <span class="required-star">*</span></label>
+                <input type="number" id="inwardPremiumInput" placeholder="e.g. 428863" min="0" step="any" oninput="updateInwardProgress()">
+              </div>
+              <div class="field">
+                <label>Net Premium</label>
+                <input type="number" id="inwardNetPremiumInput" placeholder="e.g. 400000" min="0" step="any" oninput="updateInwardProgress()">
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label>Payout Premium</label>
+                <input type="number" id="inwardPayoutPremiumInput" placeholder="e.g. 60000" min="0" step="any" oninput="updateInwardProgress()">
+              </div>
+              <div class="field">
+                <label>Payment Mode <span class="required-star">*</span></label>
+                <select id="inwardPaymentModeInput" onchange="updateInwardProgress()">
+                  <option value="">— Select —</option>
+                  <option value="Online">Online</option>
+                  <option value="Cheque">Cheque</option>
+                  <option value="Cash">Cash</option>
+                </select>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="field">
-          <label>Other Details</label>
-          <input type="text" id="inwardOtherDetailsInput" placeholder="Any other detail" oninput="updateInwardProgress()">
-        </div>
-        <div class="field-row">
-          <div class="field">
-            <label>Gross Premium <span class="required-star">*</span></label>
-            <input type="number" id="inwardPremiumInput" placeholder="e.g. 428863" min="0" step="any" oninput="updateInwardProgress()">
-          </div>
-          <div class="field">
-            <label>Net Premium</label>
-            <input type="number" id="inwardNetPremiumInput" placeholder="e.g. 400000" min="0" step="any" oninput="updateInwardProgress()">
-          </div>
-        </div>
-        <div class="field-row">
-          <div class="field">
-            <label>Payout Premium</label>
-            <input type="number" id="inwardPayoutPremiumInput" placeholder="e.g. 60000" min="0" step="any" oninput="updateInwardProgress()">
-          </div>
-          <div class="field">
-            <label>Payment Mode <span class="required-star">*</span></label>
-            <select id="inwardPaymentModeInput" onchange="updateInwardProgress()">
-              <option value="">— Select —</option>
-              <option value="Online">Online</option>
-              <option value="Cheque">Cheque</option>
-              <option value="Cash">Cash</option>
-            </select>
-          </div>
-        </div>
-      </div>
 
-      <div class="form-section">
-        <div class="form-section-title">Policy Detail</div>
-        <div class="field-row">
-          <div class="field">
-            <label>Policy No.</label>
-            <input type="text" id="inwardPolicyNoInput" placeholder="e.g. P-0012345" oninput="updateInwardProgress()">
+        <div class="inward-step-panel" id="inwardStepPanel4" style="display:none;">
+          <div class="field-row">
+            <div class="field">
+              <label>Policy No.</label>
+              <input type="text" id="inwardPolicyNoInput" placeholder="e.g. P-0012345" oninput="updateInwardProgress()">
+            </div>
+            <div class="field">
+              <label>Policy Status <span class="required-star">*</span></label>
+              <select id="inwardPolicyStatusInput" onchange="updateInwardProgress()">
+                <option value="">— Select —</option>
+                <option value="Issued">Issued</option>
+                <option value="Pending">Pending</option>
+              </select>
+            </div>
           </div>
-          <div class="field">
-            <label>Policy Status <span class="required-star">*</span></label>
-            <select id="inwardPolicyStatusInput" onchange="updateInwardProgress()">
-              <option value="">— Select —</option>
-              <option value="Issued">Issued</option>
-              <option value="Pending">Pending</option>
-            </select>
-          </div>
-        </div>
-        <div class="field-row">
-          <div class="field">
-            <label>RSD (Risk Start Date) <span class="required-star">*</span></label>
-            <input type="date" id="inwardRsdInput" oninput="updateInwardProgress()">
-          </div>
-          <div class="field">
-            <label>RED (Risk End Date) <span class="required-star">*</span></label>
-            <input type="date" id="inwardRedInput" oninput="updateInwardProgress()">
+          <div class="field-row">
+            <div class="field">
+              <label>RSD (Risk Start Date) <span class="required-star">*</span></label>
+              <input type="date" id="inwardRsdInput" oninput="updateInwardProgress()">
+            </div>
+            <div class="field">
+              <label>RED (Risk End Date) <span class="required-star">*</span></label>
+              <input type="date" id="inwardRedInput" oninput="updateInwardProgress()">
+            </div>
           </div>
         </div>
       </div>
     </div>
     <div class="modal-actions task-modal-actions">
+      <button class="btn-ghost" id="inwardBackBtn" onclick="inwardGoPrevStep()">Back</button>
+      <div style="flex:1;"></div>
       <button class="btn-ghost" onclick="closeInwardModal()">Cancel</button>
-      <button class="btn-primary" onclick="saveInwardEntry()">Save entry</button>
+      <button class="btn-primary" id="inwardPrimaryBtn" onclick="inwardPrimaryAction()">Continue</button>
     </div>
   </div>
 </div>
@@ -1961,6 +2030,7 @@
       'Issued Month': issuedMonthLabel(e.inwardDate),
       'INWARD DATE': formatInwardDateDisplay(e.inwardDate),
       'Category': e.category || '',
+      'Office': e.office || '',
       'Company': e.company || '',
       'RM': e.rm || '',
       'Agent': e.agent || '',
@@ -1990,7 +2060,7 @@
     const wsMembers = XLSX.utils.json_to_sheet(memberRows);
     const wsInward = XLSX.utils.json_to_sheet(inwardRows);
     wsInward['!cols'] = [
-      {wch:7},{wch:12},{wch:12},{wch:11},{wch:16},{wch:16},{wch:16},{wch:22},{wch:14},{wch:16},{wch:22},{wch:20},
+      {wch:7},{wch:12},{wch:12},{wch:11},{wch:14},{wch:16},{wch:16},{wch:16},{wch:22},{wch:14},{wch:16},{wch:22},{wch:20},
       {wch:10},{wch:14},{wch:14},{wch:14},{wch:14},{wch:16},{wch:14},{wch:12},{wch:12}
     ];
     XLSX.utils.book_append_sheet(wb, wsTasks, 'Tasks');
@@ -2680,6 +2750,11 @@
   }
   function adminAvatarData(){
     return { color: 'var(--wa-header)', label: initials(adminName || 'Super Admin'), photo: adminPhoto };
+  }
+  function avatarDataForIdentity(id){
+    if(id === 'admin') return adminAvatarData();
+    const m = memberById(id);
+    return m ? memberAvatarData(m) : { color: '#999', label: '?', photo: null };
   }
 
   function renderTaskList(list, scopeMemberId){
@@ -4598,6 +4673,8 @@
   const INWARD_CATEGORIES = ['GI', 'LI', 'Short Term'];
   const SEED_INSURANCE_COMPANIES = ['TATA AIG','BAJAJ GI','SBI','GO DIGIT','ORIENTAL','BAJAJ LIFE','LIC','GODIGIT LIFE','IFFCO','CHOLAMS','ICICI'];
   let activeInwardCategoryFilter = '';
+  let activeInwardPersonFilter = ''; // '' = All, else a createdBy identity ('admin' or memberId)
+  let activeInwardDateRange = 'all'; // 'all' | 'today' | 'week' | 'month'
 
   function goToInward(){
     if(!document.getElementById('inwardScreen').classList.contains('open')){
@@ -4612,6 +4689,29 @@
   function setInwardCategoryFilter(cat){
     activeInwardCategoryFilter = cat;
     renderInwardScreen();
+  }
+  function setInwardPersonFilter(id){
+    activeInwardPersonFilter = id;
+    renderInwardScreen();
+  }
+  function setInwardDateRange(range){
+    activeInwardDateRange = range;
+    renderInwardScreen();
+  }
+  function inwardMatchesDateRange(e, range){
+    if(!e.createdAt) return false;
+    const now = new Date();
+    const entryDate = new Date(e.createdAt);
+    if(range === 'today') return entryDate.toDateString() === now.toDateString();
+    if(range === 'week'){
+      const weekAgo = new Date(now); weekAgo.setDate(weekAgo.getDate() - 7);
+      return entryDate >= weekAgo;
+    }
+    if(range === 'month'){
+      const monthAgo = new Date(now); monthAgo.setMonth(monthAgo.getMonth() - 1);
+      return entryDate >= monthAgo;
+    }
+    return true;
   }
 
   function issuedMonthLabel(dateStr){
@@ -4653,7 +4753,35 @@
     catRow.innerHTML = `<button class="category-filter-chip ${activeInwardCategoryFilter===''?'active':''}" onclick="setInwardCategoryFilter('')">All</button>` +
       INWARD_CATEGORIES.map(c => `<button class="category-filter-chip ${activeInwardCategoryFilter===c?'active':''}" onclick="setInwardCategoryFilter('${c}')">${c}</button>`).join('');
 
+    // Entered By options: unique creators among the entries this session can see.
+    const creatorSeen = new Map();
+    scopedEntries.forEach(e => {
+      if(!e.createdBy || creatorSeen.has(e.createdBy)) return;
+      const name = e.createdBy === 'admin' ? (adminName || 'Super Admin') : ((memberById(e.createdBy)||{}).name || 'Unknown');
+      creatorSeen.set(e.createdBy, name);
+    });
+    const creatorOptions = Array.from(creatorSeen.entries()).map(([id,name]) => ({id, name}));
+
+    const extraRow = document.getElementById('inwardExtraFilterRow');
+    if(extraRow){
+      const personChips = `<button class="inward-person-chip ${activeInwardPersonFilter===''?'active':''}" onclick="setInwardPersonFilter('')">All</button>` +
+        creatorOptions.map(p => {
+          const av = avatarDataForIdentity(p.id);
+          return `<button class="inward-person-chip ${activeInwardPersonFilter===p.id?'active':''}" onclick="setInwardPersonFilter('${p.id}')">
+            <span class="inward-person-chip-avatar" style="background:${av.color};">${escapeHtml(av.label)}</span>${escapeHtml(p.name)}
+          </button>`;
+        }).join('');
+      const dateRanges = [['all','All time'],['today','Today'],['week','This Week'],['month','This Month']];
+      const dateChips = dateRanges.map(([val,label]) =>
+        `<button class="inward-person-chip ${activeInwardDateRange===val?'active':''}" onclick="setInwardDateRange('${val}')">${label}</button>`).join('');
+      extraRow.innerHTML = `
+        <div class="inward-filter-group"><span class="inward-filter-group-label">Entered by</span>${personChips}</div>
+        <div class="inward-filter-group"><span class="inward-filter-group-label">Date</span>${dateChips}</div>`;
+    }
+
     let rows = activeInwardCategoryFilter ? scopedEntries.filter(e => e.category === activeInwardCategoryFilter) : scopedEntries.slice();
+    if(activeInwardPersonFilter) rows = rows.filter(e => e.createdBy === activeInwardPersonFilter);
+    if(activeInwardDateRange !== 'all') rows = rows.filter(e => inwardMatchesDateRange(e, activeInwardDateRange));
     rows.sort((a,b) => (b.inwardDate||'').localeCompare(a.inwardDate||'') || (b.createdAt||0) - (a.createdAt||0));
 
     const tbody = document.getElementById('inwardTableBody');
@@ -4667,6 +4795,7 @@
         <td>${escapeHtml(issuedMonthLabel(e.inwardDate))}</td>
         <td>${escapeHtml(formatInwardDateDisplay(e.inwardDate))}</td>
         <td>${e.category ? `<span class="inward-cat-pill">${escapeHtml(e.category)}</span>` : ''}</td>
+        <td>${escapeHtml(e.office||'')}</td>
         <td>${escapeHtml(e.company||'')}</td>
         <td>${escapeHtml(e.rm||'')}</td>
         <td>${escapeHtml(e.agent||'')}</td>
@@ -4713,6 +4842,39 @@
   }
 
   let convertingTaskId = null; // set when the Inward modal is open in "convert from task" mode
+  let inwardActiveStep = 0;
+  const INWARD_STEPS = [
+    { title: 'When & Classification', sub: 'Date, type, category', fields: [
+      ['inwardDateInput','value'], ['inwardTypeInput','value'], ['inwardCategoryInput','value'], ['inwardOfficeInput','value'] ] },
+    { title: 'Customer Details', sub: 'Name & mobile', fields: [
+      ['inwardCustomerNameInput','trim'], ['inwardCustomerMobileInput','trim'] ] },
+    { title: 'Business Details', sub: 'Company, RM, agent', fields: [
+      ['inwardCompanyInput','trim'], ['inwardRmInput','value'], ['inwardAgentInput','value'] ] },
+    { title: 'Product & Value', sub: 'Product & premiums', fields: [
+      ['inwardProductTypeInput','value'], ['inwardProductDetailsInput','value'], ['inwardPremiumInput','value'], ['inwardPaymentModeInput','value'] ] },
+    { title: 'Policy Detail', sub: 'Policy no. & dates', fields: [
+      ['inwardPolicyStatusInput','value'], ['inwardRsdInput','value'], ['inwardRedInput','value'] ] },
+  ];
+  function isInwardFieldFilled(spec){
+    const el = document.getElementById(spec[0]);
+    if(!el) return false;
+    const v = spec[1] === 'trim' ? el.value.trim() : el.value;
+    return v !== '';
+  }
+  function getInwardStepStatus(stepIndex){
+    const step = INWARD_STEPS[stepIndex];
+    const filledCount = step.fields.filter(isInwardFieldFilled).length;
+    if(filledCount === step.fields.length) return 'done';
+    if(filledCount === 0) return 'untouched';
+    return 'needsAttention';
+  }
+  function findFirstIncompleteInwardStep(){
+    for(let i=0; i<INWARD_STEPS.length; i++){
+      if(getInwardStepStatus(i) !== 'done') return i;
+    }
+    return 0;
+  }
+
 
   function openInwardModal(id){
     const e = id ? inwardEntries.find(x => x.id === id) : null;
@@ -4730,6 +4892,7 @@
     document.getElementById('inwardDateInput').value = e ? (e.inwardDate || '') : new Date().toISOString().slice(0,10);
     setPillToggleValue('inwardCategoryToggle', 'inwardCategoryInput', e ? e.category : '');
     setPillToggleValue('inwardTypeToggle', 'inwardTypeInput', e ? e.type : '');
+    setPillToggleValue('inwardOfficeToggle', 'inwardOfficeInput', e ? e.office : '');
     document.getElementById('inwardCompanyInput').value = e ? (e.company || '') : '';
     document.getElementById('inwardRmInput').value = e ? (e.rm || '') : '';
     populateAgentNameSelect('inward');
@@ -4748,7 +4911,7 @@
     document.getElementById('inwardPolicyStatusInput').value = e ? (e.policyStatus || '') : '';
     document.getElementById('inwardRsdInput').value = e ? (e.rsd || '') : '';
     document.getElementById('inwardRedInput').value = e ? (e.red || '') : '';
-    updateInwardProgress();
+    showInwardStep(e ? findFirstIncompleteInwardStep() : 0);
   }
 
   function openConvertTaskModal(taskId){
@@ -4773,6 +4936,7 @@
     document.getElementById('inwardDateInput').value = new Date().toISOString().slice(0,10);
     setPillToggleValue('inwardCategoryToggle', 'inwardCategoryInput', t.lineOfBusiness || '');
     setPillToggleValue('inwardTypeToggle', 'inwardTypeInput', t.taskType || '');
+    setPillToggleValue('inwardOfficeToggle', 'inwardOfficeInput', '');
     document.getElementById('inwardCompanyInput').value = '';
     document.getElementById('inwardRmInput').value = t.relationshipManager || '';
     populateAgentNameSelect('inward');
@@ -4791,39 +4955,84 @@
     document.getElementById('inwardPolicyStatusInput').value = '';
     document.getElementById('inwardRsdInput').value = '';
     document.getElementById('inwardRedInput').value = '';
-    updateInwardProgress();
+    showInwardStep(findFirstIncompleteInwardStep());
   }
 
   function updateInwardProgress(){
-    const fields = [
-      document.getElementById('inwardDateInput').value,
-      document.getElementById('inwardTypeInput').value,
-      document.getElementById('inwardCategoryInput').value,
-      document.getElementById('inwardCompanyInput').value.trim(),
-      document.getElementById('inwardRmInput').value,
-      document.getElementById('inwardAgentInput').value,
-      document.getElementById('inwardCustomerNameInput').value.trim(),
-      document.getElementById('inwardCustomerMobileInput').value.trim(),
-      document.getElementById('inwardProductTypeInput').value,
-      document.getElementById('inwardProductDetailsInput').value,
-      document.getElementById('inwardPremiumInput').value,
-      document.getElementById('inwardPaymentModeInput').value,
-      document.getElementById('inwardPolicyStatusInput').value,
-      document.getElementById('inwardRsdInput').value,
-      document.getElementById('inwardRedInput').value,
-    ];
-    const filledCount = fields.filter(v => v !== '' && v !== null && v !== undefined).length;
-    const total = fields.length;
-    const pct = Math.round((filledCount / total) * 100);
-    const fill = document.getElementById('inwardProgressFill');
-    const label = document.getElementById('inwardProgressLabel');
-    if(fill){ fill.style.width = pct + '%'; fill.classList.toggle('complete', filledCount === total); }
-    if(label){ label.textContent = `${filledCount} of ${total} required fields completed`; }
+    renderInwardStepperSidebar();
+  }
+  function renderInwardStepperSidebar(){
+    const sidebar = document.getElementById('inwardStepperSidebar');
+    if(!sidebar) return;
+    const statuses = INWARD_STEPS.map((s, i) => getInwardStepStatus(i));
+    const incompleteIndices = statuses.map((s, i) => s === 'needsAttention' ? i : -1).filter(i => i >= 0);
+    const hasIncomplete = incompleteIndices.length > 0;
+
+    let bannerHtml = '';
+    if(hasIncomplete){
+      const names = incompleteIndices.map(i => INWARD_STEPS[i].title).join(', ');
+      bannerHtml = `<div class="inward-incomplete-banner">⚠️ ${incompleteIndices.length} section${incompleteIndices.length>1?'s':''} need${incompleteIndices.length===1?'s':''} attention: ${escapeHtml(names)}</div>`;
+    }
+
+    const desktopItemsHtml = INWARD_STEPS.map((s, i) => {
+      const status = statuses[i];
+      const isActive = i === inwardActiveStep;
+      let dotBg = '#E5E4E0', dotColor = '#8A9088', icon = String(i+1);
+      if(status === 'done'){ dotBg = '#DFF5E7'; dotColor = '#008069'; icon = '✓'; }
+      else if(status === 'needsAttention'){ dotBg = isActive ? '#EF6156' : '#D2483A'; dotColor = '#fff'; icon = '!'; }
+      else if(isActive){ dotBg = 'var(--wa-header)'; dotColor = '#fff'; }
+      const titleColor = (status === 'needsAttention' && !isActive) ? '#A33529' : 'var(--wa-text)';
+      return `
+        <div class="inward-step-item ${isActive?'active':''}" onclick="showInwardStep(${i})">
+          <div class="inward-step-dot" style="background:${dotBg}; color:${dotColor};">${icon}</div>
+          <div>
+            <div class="inward-step-title" style="color:${titleColor};">${escapeHtml(s.title)}</div>
+            <div class="inward-step-sub">${escapeHtml(s.sub)}</div>
+          </div>
+        </div>`;
+    }).join('');
+
+    const mobileDotsHtml = INWARD_STEPS.map((s, i) => {
+      const status = statuses[i];
+      const isActive = i === inwardActiveStep;
+      let dotBg = '#E5E4E0', dotColor = '#8A9088', icon = String(i+1), barBg = '#E5E4E0';
+      if(status === 'done'){ dotBg = '#34C97A'; dotColor = '#fff'; icon = '✓'; barBg = 'var(--wa-header)'; }
+      else if(status === 'needsAttention'){ dotBg = '#D2483A'; dotColor = '#fff'; icon = '!'; barBg = '#D2483A'; }
+      else if(isActive){ dotBg = 'var(--wa-header)'; dotColor = '#fff'; barBg = 'var(--wa-header)'; }
+      return `<div class="inward-step-dots-mobile-bar" style="background:${barBg};"></div><div class="inward-step-dot" style="background:${dotBg}; color:${dotColor};" onclick="showInwardStep(${i})" title="${escapeHtml(s.title)}">${icon}</div>`;
+    }).join('');
+
+    sidebar.innerHTML = bannerHtml + desktopItemsHtml + `<div class="inward-step-dots-mobile">${mobileDotsHtml}</div>`;
+  }
+  function showInwardStep(n){
+    inwardActiveStep = n;
+    for(let i=0; i<INWARD_STEPS.length; i++){
+      const panel = document.getElementById('inwardStepPanel'+i);
+      if(panel) panel.style.display = (i===n) ? 'block' : 'none';
+    }
+    const backBtn = document.getElementById('inwardBackBtn');
+    const primaryBtn = document.getElementById('inwardPrimaryBtn');
+    if(backBtn) backBtn.style.visibility = (n===0) ? 'hidden' : 'visible';
+    if(primaryBtn) primaryBtn.textContent = (n === INWARD_STEPS.length-1) ? 'Save entry' : 'Continue';
+    renderInwardStepperSidebar();
+    const content = document.querySelector('.inward-stepper-content');
+    if(content) content.scrollTop = 0;
+  }
+  function inwardGoPrevStep(){
+    if(inwardActiveStep > 0) showInwardStep(inwardActiveStep - 1);
+  }
+  function inwardPrimaryAction(){
+    if(inwardActiveStep < INWARD_STEPS.length - 1){
+      showInwardStep(inwardActiveStep + 1);
+    } else {
+      saveInwardEntry();
+    }
   }
 
   function closeInwardModal(){
     document.getElementById('inwardModalOverlay').classList.remove('open');
     convertingTaskId = null;
+    inwardActiveStep = 0;
     document.getElementById('convertModeNotice').innerHTML = '';
   }
   function saveInwardEntry(){
@@ -4845,6 +5054,7 @@
     const inwardDate = document.getElementById('inwardDateInput').value;
     const category = document.getElementById('inwardCategoryInput').value;
     const type = document.getElementById('inwardTypeInput').value;
+    const office = document.getElementById('inwardOfficeInput').value;
     const company = document.getElementById('inwardCompanyInput').value.trim();
     const agent = document.getElementById('inwardAgentInput').value.trim();
     const customerMobile = document.getElementById('inwardCustomerMobileInput').value.trim();
@@ -4863,6 +5073,7 @@
     const missing = [];
     if(!inwardDate) missing.push('Inward Date');
     if(!category) missing.push('Category');
+    if(!office) missing.push('Office');
     if(!company) missing.push('Company');
     if(!rm) missing.push('RM');
     if(!agent) missing.push('Agent');
@@ -4879,12 +5090,13 @@
     if(!rsd) missing.push('RSD');
     if(!red) missing.push('RED');
     if(missing.length > 0){
+      showInwardStep(findFirstIncompleteInwardStep());
       alert('Every field is required before this entry can be saved. Still missing: ' + missing.join(', '));
       return;
     }
 
     const data = {
-      inwardDate, category, type, company, rm, agent, customerName, customerMobile,
+      inwardDate, category, type, office, company, rm, agent, customerName, customerMobile,
       productType, productDetails, otherDetails,
       grossPremium: (premiumRaw !== '' && !isNaN(Number(premiumRaw))) ? Number(premiumRaw) : null,
       netPremium: (netPremiumRaw !== '' && !isNaN(Number(netPremiumRaw))) ? Number(netPremiumRaw) : null,
@@ -4930,6 +5142,7 @@
       'Issued Month': issuedMonthLabel(e.inwardDate),
       'INWARD DATE': formatInwardDateDisplay(e.inwardDate),
       'Category': e.category || '',
+      'Office': e.office || '',
       'Company': e.company || '',
       'RM': e.rm || '',
       'Agent': e.agent || '',
@@ -4951,7 +5164,7 @@
 
     const ws = XLSX.utils.json_to_sheet(exportRows);
     ws['!cols'] = [
-      {wch:7},{wch:12},{wch:12},{wch:11},{wch:16},{wch:16},{wch:16},{wch:22},{wch:14},{wch:16},{wch:22},{wch:20},
+      {wch:7},{wch:12},{wch:12},{wch:11},{wch:14},{wch:16},{wch:16},{wch:16},{wch:22},{wch:14},{wch:16},{wch:22},{wch:20},
       {wch:10},{wch:14},{wch:14},{wch:14},{wch:14},{wch:16},{wch:14},{wch:12},{wch:12}
     ];
     const wb = XLSX.utils.book_new();
@@ -5029,6 +5242,9 @@
     activeLobFilter = '';
     activeLabelFilter = '';
     renewalsViewMode = false;
+    activeInwardCategoryFilter = '';
+    activeInwardPersonFilter = '';
+    activeInwardDateRange = 'all';
     document.getElementById('appRoot').style.display = 'none';
     document.getElementById('homeScreen').style.display = 'none';
     authTab = 'member';
