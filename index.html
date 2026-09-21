@@ -1621,6 +1621,9 @@
   let labelCounter = 1;
   let inwardEntries = [];
   let inwardCounter = 1;
+  let deletedTaskIds = []; // tombstones — IDs explicitly deleted, so a stale client's save can't resurrect them
+  let deletedLabelIds = [];
+  const MAX_TOMBSTONES = 1000; // cap so this can't grow the document unboundedly over years of use
 
   // ---------- Notification sound ----------
   let audioCtx = null;
@@ -1799,6 +1802,8 @@
       adminName: 'Super Admin',
       inwardEntries: [],
       inwardCounter: 1,
+      deletedTaskIds: [],
+      deletedLabelIds: [],
     };
   }
 
@@ -1866,6 +1871,8 @@
         adminPhoto = data.adminPhoto || null;
         inwardEntries = data.inwardEntries || [];
         inwardCounter = data.inwardCounter || (inwardEntries.length + 1);
+        deletedTaskIds = data.deletedTaskIds || [];
+        deletedLabelIds = data.deletedLabelIds || [];
         if(migrateTaskStatuses(tasks)) await saveBoard();
       } else {
         const seed = defaultBoard();
@@ -1873,9 +1880,10 @@
         taskCounter = seed.taskCounter; labelCounter = seed.labelCounter;
         adminPin = seed.adminPin; adminName = seed.adminName; adminPhoto = null;
         inwardEntries = seed.inwardEntries; inwardCounter = seed.inwardCounter;
+        deletedTaskIds = seed.deletedTaskIds; deletedLabelIds = seed.deletedLabelIds;
         await saveBoard();
       }
-      lastSavedSnapshot = JSON.stringify({members, tasks, labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto, inwardEntries, inwardCounter});
+      lastSavedSnapshot = JSON.stringify({members, tasks, labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto, inwardEntries, inwardCounter, deletedTaskIds, deletedLabelIds});
       setSidebarSubtitle('Synced ' + timeNow());
     } catch(err){
       console.error('Load failed', err);
@@ -1885,6 +1893,7 @@
         taskCounter = seed.taskCounter; labelCounter = seed.labelCounter;
         adminPin = seed.adminPin; adminName = seed.adminName; adminPhoto = null;
         inwardEntries = seed.inwardEntries; inwardCounter = seed.inwardCounter;
+        deletedTaskIds = seed.deletedTaskIds; deletedLabelIds = seed.deletedLabelIds;
       }
       setSidebarSubtitle('Offline — check your Firebase config');
     }
@@ -2270,7 +2279,7 @@
 
   async function saveBoard(retryCount){
     retryCount = retryCount || 0;
-    const localSnapshot = JSON.stringify({ members, tasks, labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto, inwardEntries, inwardCounter });
+    const localSnapshot = JSON.stringify({ members, tasks, labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto, inwardEntries, inwardCounter, deletedTaskIds, deletedLabelIds });
     if(localSnapshot === lastSavedSnapshot) return true;
 
     let mergedPayload = null;
@@ -2288,13 +2297,23 @@
         const localLabelIds = new Set(labels.map(l => l.id));
         const localInwardIds = new Set(inwardEntries.map(e => e.id));
 
+        // Tombstones: union deleted IDs from both sides first, capped so this can't grow
+        // forever. A deletion is remembered explicitly rather than inferred from "missing
+        // locally" — that inference is what let a stale client's save resurrect something
+        // another client had already deleted moments earlier.
+        const mergedDeletedTaskIds = [...new Set([...(freshData.deletedTaskIds||[]), ...deletedTaskIds])].slice(-MAX_TOMBSTONES);
+        const mergedDeletedLabelIds = [...new Set([...(freshData.deletedLabelIds||[]), ...deletedLabelIds])].slice(-MAX_TOMBSTONES);
+        const deletedTaskIdSet = new Set(mergedDeletedTaskIds);
+        const deletedLabelIdSet = new Set(mergedDeletedLabelIds);
+
         // Task-level merge: reconcile every task ID seen on either side, not just the ones
         // missing locally — this is what protects a note someone else just added to a task
-        // we also happen to be saving at the same moment.
+        // we also happen to be saving at the same moment. Tombstoned IDs are excluded
+        // outright, regardless of which side still has them.
         const freshTaskById = new Map(freshTasks.map(t => [t.id, t]));
         const localTaskById = new Map(tasks.map(t => [t.id, t]));
         const allTaskIds = new Set([...freshTaskById.keys(), ...localTaskById.keys()]);
-        const mergedTasks = Array.from(allTaskIds).map(id => {
+        const mergedTasks = Array.from(allTaskIds).filter(id => !deletedTaskIdSet.has(id)).map(id => {
           const freshT = freshTaskById.get(id);
           const localT = localTaskById.get(id);
           if(freshT && localT){
@@ -2321,24 +2340,27 @@
           }
           return localT || freshT;
         }).sort((a,b) => (a.created||0) - (b.created||0));
-        const pulledInNewTasks = freshTasks.some(t => !localTaskById.has(t.id));
+        const pulledInNewTasks = freshTasks.some(t => !localTaskById.has(t.id) && !deletedTaskIdSet.has(t.id));
 
         // Anything on the server that we don't have locally was added by someone else
-        // since our last sync — always keep it, never silently drop it.
+        // since our last sync — always keep it, never silently drop it. Unless it's been
+        // explicitly deleted, in which case it stays gone regardless of which side has it.
         const newMembersFromOthers = freshMembers.filter(m => !localMemberIds.has(m.id));
-        const newLabelsFromOthers = freshLabels.filter(l => !localLabelIds.has(l.id));
+        const newLabelsFromOthers = freshLabels.filter(l => !localLabelIds.has(l.id) && !deletedLabelIdSet.has(l.id));
         const newInwardFromOthers = freshInwardEntries.filter(e => !localInwardIds.has(e.id));
         pulledInNewItems = pulledInNewTasks || newMembersFromOthers.length > 0 || newLabelsFromOthers.length > 0 || newInwardFromOthers.length > 0;
 
         mergedPayload = {
           members: [...newMembersFromOthers, ...members],
           tasks: mergedTasks,
-          labels: [...newLabelsFromOthers, ...labels],
+          labels: [...newLabelsFromOthers, ...labels].filter(l => !deletedLabelIdSet.has(l.id)),
           taskCounter: Math.max(taskCounter, freshData.taskCounter || 0),
           labelCounter: Math.max(labelCounter, freshData.labelCounter || 0),
           adminPin, adminName, adminPhoto,
           inwardEntries: [...newInwardFromOthers, ...inwardEntries],
           inwardCounter: Math.max(inwardCounter, freshData.inwardCounter || 0),
+          deletedTaskIds: mergedDeletedTaskIds,
+          deletedLabelIds: mergedDeletedLabelIds,
         };
 
         const sizeKB = getPayloadSizeKB(mergedPayload);
@@ -2349,6 +2371,8 @@
       // The transaction succeeded — reflect the merged, now-authoritative result locally.
       tasks = mergedPayload.tasks;
       members = mergedPayload.members;
+      deletedTaskIds = mergedPayload.deletedTaskIds;
+      deletedLabelIds = mergedPayload.deletedLabelIds;
       labels = mergedPayload.labels;
       taskCounter = mergedPayload.taskCounter;
       labelCounter = mergedPayload.labelCounter;
@@ -2408,7 +2432,9 @@
       adminPhoto = data.adminPhoto !== undefined ? data.adminPhoto : adminPhoto;
       inwardEntries = data.inwardEntries || [];
       inwardCounter = data.inwardCounter || inwardCounter;
-      lastSavedSnapshot = JSON.stringify({members, tasks, labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto, inwardEntries, inwardCounter});
+      deletedTaskIds = data.deletedTaskIds || deletedTaskIds;
+      deletedLabelIds = data.deletedLabelIds || deletedLabelIds;
+      lastSavedSnapshot = JSON.stringify({members, tasks, labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto, inwardEntries, inwardCounter, deletedTaskIds, deletedLabelIds});
       if(anyModalOpen()){
         // Keep the underlying data current so any in-progress edit saves against fresh data,
         // but don't visually disturb whatever modal the person currently has open.
@@ -2442,7 +2468,9 @@
         adminPhoto = data.adminPhoto !== undefined ? data.adminPhoto : adminPhoto;
         inwardEntries = data.inwardEntries || [];
         inwardCounter = data.inwardCounter || inwardCounter;
-        lastSavedSnapshot = JSON.stringify({members, tasks, labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto, inwardEntries, inwardCounter});
+        deletedTaskIds = data.deletedTaskIds || deletedTaskIds;
+        deletedLabelIds = data.deletedLabelIds || deletedLabelIds;
+        lastSavedSnapshot = JSON.stringify({members, tasks, labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto, inwardEntries, inwardCounter, deletedTaskIds, deletedLabelIds});
         renderAll();
       }
       setSidebarSubtitle('Synced ' + timeNow());
@@ -2963,7 +2991,7 @@
           <div class="task-bottom-spacer"></div>
           ${(!t.convertedToInwardId && canConvertTaskToInward(t)) ? `<button class="pill-toggle-btn convert-to-inward-pill" onclick="openConvertTaskModal('${t.id}')" title="Convert to Inward entry"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg> Inward This</button>` : ''}
           <button class="icon-only-btn" onclick="openTaskModal('${t.id}')" title="Edit"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-          <button class="icon-only-btn danger" onclick="deleteTask('${t.id}')" title="Delete"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>
+          ${canDeleteTask(t) ? `<button class="icon-only-btn danger" onclick="deleteTask('${t.id}')" title="Delete"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>` : ''}
         </div>
       </div>`;
   }
@@ -3329,8 +3357,15 @@
   }
 
   function deleteTask(id){
+    const t = tasks.find(x => x.id === id);
+    if(!t || !canDeleteTask(t)){
+      alert("Only this task's creator or Super Admin can delete it.");
+      return;
+    }
     if(!confirm('Delete this task?')) return;
     tasks = tasks.filter(t=>t.id!==id);
+    deletedTaskIds.push(id);
+    if(deletedTaskIds.length > MAX_TOMBSTONES) deletedTaskIds = deletedTaskIds.slice(-MAX_TOMBSTONES);
     expandedNotes.delete(id);
     renderAll();
     saveBoard();
@@ -4058,6 +4093,8 @@
     if(!confirm('Delete this label? It will be removed from all tasks.')) return;
     labels = labels.filter(l=>l.id!==id);
     tasks.forEach(t => { if(t.labels) t.labels = t.labels.filter(lid=>lid!==id); });
+    deletedLabelIds.push(id);
+    if(deletedLabelIds.length > MAX_TOMBSTONES) deletedLabelIds = deletedLabelIds.slice(-MAX_TOMBSTONES);
     renderLabelManageList();
     renderAll();
     saveBoard();
@@ -4080,6 +4117,12 @@
     if(t.assignorId === session.memberId) return true;
     if(getDirectReports(session.memberId).length > 0) return true; // any Team Leader
     return false;
+  }
+
+  function canDeleteTask(t){
+    if(!session) return false;
+    if(session.type === 'admin') return true;
+    return t.assignorId === session.memberId; // the task's creator
   }
 
   function openDashboard(viewerMemberId){
