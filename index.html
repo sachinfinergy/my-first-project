@@ -3432,6 +3432,11 @@
       renderAll();
       return;
     }
+    if(status === 'inward' && t.status !== 'inward'){
+      alert('A task only moves to "Inward" status by actually converting it. Use the "Inward This" button on the task to do that.');
+      renderAll();
+      return;
+    }
     t.status = status;
     t.completedAt = status === 'done' ? Date.now() : null;
     syncCompletedLabel(t);
@@ -3839,6 +3844,10 @@
     if(id){
       t = tasks.find(t=>t.id===id);
       if(!canChangeStatus(t)) data.status = t.status;
+      if(data.status === 'inward' && t.status !== 'inward'){
+        data.status = t.status;
+        alert('A task only moves to "Inward" status by actually converting it. Use the "Inward This" button on the task to do that.');
+      }
       if(data.status !== t.status){ data.completedAt = data.status === 'done' ? Date.now() : null; }
       Object.assign(t, data);
     } else {
@@ -5140,7 +5149,11 @@
       const newEntry = { id: 'IN-' + String(slrNo).padStart(3,'0'), slrNo, createdAt: Date.now(), createdBy: currentIdentity(), convertedBy: currentIdentity(), convertedFromTaskId: convertingTaskId, ...data };
       inwardEntries.push(newEntry);
       const t = tasks.find(x => x.id === convertingTaskId);
-      if(t) t.convertedToInwardId = newEntry.id;
+      if(t){
+        t.convertedToInwardId = newEntry.id;
+        t.status = 'inward';
+        syncCompletedLabel(t);
+      }
       convertingTaskId = null;
       closeInwardModal();
       renderAll();
