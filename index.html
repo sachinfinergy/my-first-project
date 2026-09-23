@@ -1266,6 +1266,36 @@
   </div>
 </div>
 
+<!-- Inward Dashboard -->
+<div class="dashboard-overlay" id="inwardDashboardOverlay">
+  <div class="icon-rail" id="inwardDashboardIconRail">
+    <div class="icon-rail-avatar-wrap" id="inwardDashboardRailAvatarSlot" title="Team Tasks"></div>
+    <div class="icon-rail-group">
+      <button class="icon-btn-round rail-btn" onclick="closeInwardDashboard(); showHomeScreen();" title="Home"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></button>
+      <button class="icon-btn-round rail-btn" onclick="closeInwardDashboard(); goToTasks();" title="Tasks"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></button>
+      <button class="icon-btn-round rail-btn" onclick="closeInwardDashboard(); goToInward();" title="Inward register"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></button>
+    </div>
+    <div class="icon-rail-spacer"></div>
+    <div class="icon-rail-group">
+      <button class="icon-btn-round rail-btn" onclick="renderInwardDashboard()" title="Refresh"><svg class="refresh-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
+      <button class="icon-btn-round rail-btn" onclick="logout()" title="Log out"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg></button>
+    </div>
+  </div>
+  <div class="dashboard-main">
+    <div class="dashboard-header">
+      <button class="icon-btn-round" onclick="closeInwardDashboard()" title="Back">←</button>
+      <div>
+        <div style="font-size:16px; font-weight:600;">Inward Dashboard</div>
+        <div style="font-size:11.5px; opacity:0.85;" id="inwardDashboardSubtitle"></div>
+      </div>
+      <div style="flex:1;"></div>
+      <button class="icon-btn-round" onclick="renderInwardDashboard()" title="Refresh"><svg class="refresh-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
+    </div>
+    <div class="dash-filter-bar" id="inwardDashFilterBar"></div>
+    <div class="dashboard-body" id="inwardDashboardBody"></div>
+  </div>
+</div>
+
 <!-- Inward screen -->
 <div class="dashboard-overlay" id="inwardScreen">
   <div class="icon-rail" id="inwardIconRail">
@@ -1275,6 +1305,7 @@
       <button class="icon-btn-round rail-btn" onclick="closeInwardScreen(); goToTasks();" title="Tasks"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></button>
       <button class="icon-btn-round rail-btn admin-only" onclick="closeInwardScreen(); openDashboard();" title="Dashboard">📊</button>
       <button class="icon-btn-round rail-btn member-only" onclick="closeInwardScreen(); openDashboard(session.memberId);" title="My dashboard">📊</button>
+      <button class="icon-btn-round rail-btn" onclick="closeInwardScreen(); openInwardDashboard();" title="Inward dashboard"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></button>
       <button class="icon-btn-round rail-btn" onclick="openInwardModal()" title="New inward entry"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
     </div>
     <div class="icon-rail-spacer"></div>
@@ -1719,6 +1750,7 @@
   let deletedLabelIds = [];
   let deletedInwardIds = []; // permanently removed (admin hard-delete, or permanent-delete from the archive)
   let archivedInwardEntries = []; // soft-deleted by a non-admin — held here for Super Admin review
+  let deletedNoteKeys = []; // tombstones for deleted messages, keyed "taskId::time_authorId"
   const MAX_TOMBSTONES = 1000; // cap so this can't grow the document unboundedly over years of use
 
   // ---------- Notification sound ----------
@@ -1871,6 +1903,23 @@
   function initials(name){ return name.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase(); }
   function memberById(id){ return members.find(m=>m.id===id); }
   function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  function linkifyText(escapedText){
+    // Takes text that has ALREADY been through escapeHtml — operating on raw unescaped
+    // text here would let a malicious message inject real HTML via the link markup itself.
+    return (escapedText||'').replace(/((?:https?:\/\/|www\.)[^\s<]+)/gi, (match) => {
+      let display = match;
+      let trailing = '';
+      const trailingMatch = display.match(/[.,!?;:)\]]+$/);
+      if(trailingMatch){
+        trailing = trailingMatch[0];
+        display = display.slice(0, -trailing.length);
+      }
+      const href = display.toLowerCase().startsWith('http') ? display : 'https://' + display;
+      return `<a href="${href}" target="_blank" rel="noopener noreferrer" style="color:#1a73e8; text-decoration:underline; word-break:break-all;">${display}</a>${trailing}`;
+    });
+  }
+
   function priorityRank(p){ return {Urgent:0, High:1, Medium:2, Low:3}[p] ?? 4; }
 
   function defaultBoard(){
@@ -1902,6 +1951,7 @@
       deletedLabelIds: [],
       deletedInwardIds: [],
       archivedInwardEntries: [],
+      deletedNoteKeys: [],
     };
   }
 
@@ -1920,7 +1970,7 @@
   function renderHeaderIdentity(){
     const slot = document.getElementById('headerAvatarSlot');
     const nameEl = document.getElementById('headerUserName');
-    const railSlots = [document.getElementById('railAvatarSlot'), document.getElementById('dashboardRailAvatarSlot'), document.getElementById('inwardRailAvatarSlot')].filter(Boolean);
+    const railSlots = [document.getElementById('railAvatarSlot'), document.getElementById('dashboardRailAvatarSlot'), document.getElementById('inwardRailAvatarSlot'), document.getElementById('inwardDashboardRailAvatarSlot')].filter(Boolean);
     if(!slot || !nameEl) return;
     if(!session){
       slot.innerHTML = '✓'; slot.style.background = 'rgba(0,0,0,0.12)'; nameEl.textContent = 'Team Tasks';
@@ -1973,6 +2023,7 @@
         deletedLabelIds = data.deletedLabelIds || [];
         deletedInwardIds = data.deletedInwardIds || [];
         archivedInwardEntries = data.archivedInwardEntries || [];
+        deletedNoteKeys = data.deletedNoteKeys || [];
         if(migrateTaskStatuses(tasks)) await saveBoard();
       } else {
         const seed = defaultBoard();
@@ -1982,9 +2033,10 @@
         inwardEntries = seed.inwardEntries; inwardCounter = seed.inwardCounter;
         deletedTaskIds = seed.deletedTaskIds; deletedLabelIds = seed.deletedLabelIds;
         deletedInwardIds = seed.deletedInwardIds; archivedInwardEntries = seed.archivedInwardEntries;
+        deletedNoteKeys = seed.deletedNoteKeys;
         await saveBoard();
       }
-      lastSavedSnapshot = JSON.stringify({members, tasks, labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto, inwardEntries, inwardCounter, deletedTaskIds, deletedLabelIds, deletedInwardIds, archivedInwardEntries});
+      lastSavedSnapshot = JSON.stringify({members, tasks, labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto, inwardEntries, inwardCounter, deletedTaskIds, deletedLabelIds, deletedInwardIds, archivedInwardEntries, deletedNoteKeys});
       setSidebarSubtitle('Synced ' + timeNow());
     } catch(err){
       console.error('Load failed', err);
@@ -1996,6 +2048,7 @@
         inwardEntries = seed.inwardEntries; inwardCounter = seed.inwardCounter;
         deletedTaskIds = seed.deletedTaskIds; deletedLabelIds = seed.deletedLabelIds;
         deletedInwardIds = seed.deletedInwardIds; archivedInwardEntries = seed.archivedInwardEntries;
+        deletedNoteKeys = seed.deletedNoteKeys;
       }
       setSidebarSubtitle('Offline — check your Firebase config');
     }
@@ -2382,7 +2435,7 @@
 
   async function saveBoard(retryCount){
     retryCount = retryCount || 0;
-    const localSnapshot = JSON.stringify({ members, tasks, labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto, inwardEntries, inwardCounter, deletedTaskIds, deletedLabelIds, deletedInwardIds, archivedInwardEntries });
+    const localSnapshot = JSON.stringify({ members, tasks, labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto, inwardEntries, inwardCounter, deletedTaskIds, deletedLabelIds, deletedInwardIds, archivedInwardEntries, deletedNoteKeys });
     if(localSnapshot === lastSavedSnapshot) return true;
 
     let mergedPayload = null;
@@ -2408,9 +2461,11 @@
         const mergedDeletedTaskIds = [...new Set([...(freshData.deletedTaskIds||[]), ...deletedTaskIds])].slice(-MAX_TOMBSTONES);
         const mergedDeletedLabelIds = [...new Set([...(freshData.deletedLabelIds||[]), ...deletedLabelIds])].slice(-MAX_TOMBSTONES);
         const mergedDeletedInwardIds = [...new Set([...(freshData.deletedInwardIds||[]), ...deletedInwardIds])].slice(-MAX_TOMBSTONES);
+        const mergedDeletedNoteKeys = [...new Set([...(freshData.deletedNoteKeys||[]), ...deletedNoteKeys])].slice(-MAX_TOMBSTONES);
         const deletedTaskIdSet = new Set(mergedDeletedTaskIds);
         const deletedLabelIdSet = new Set(mergedDeletedLabelIds);
         const deletedInwardIdSet = new Set(mergedDeletedInwardIds);
+        const deletedNoteKeySet = new Set(mergedDeletedNoteKeys);
 
         // Archived Inward entries: union by ID (an archived entry isn't meant to be edited
         // further, so a simple union is enough — no field-level merge needed like tasks/notes).
@@ -2434,11 +2489,11 @@
           const freshT = freshTaskById.get(id);
           const localT = localTaskById.get(id);
           if(freshT && localT){
-            const noteKey = n => `${n.time}_${n.authorId}`;
+            const noteKey = n => `${id}::${n.time}_${n.authorId}`;
             const freshNoteByKey = new Map((freshT.notes||[]).map(n => [noteKey(n), n]));
             const localNoteByKey = new Map((localT.notes||[]).map(n => [noteKey(n), n]));
             const allNoteKeys = new Set([...freshNoteByKey.keys(), ...localNoteByKey.keys()]);
-            const mergedNotes = Array.from(allNoteKeys).map(k => {
+            const mergedNotes = Array.from(allNoteKeys).filter(k => !deletedNoteKeySet.has(k)).map(k => {
               const freshN = freshNoteByKey.get(k);
               const localN = localNoteByKey.get(k);
               if(freshN && localN){
@@ -2481,6 +2536,7 @@
           deletedLabelIds: mergedDeletedLabelIds,
           deletedInwardIds: mergedDeletedInwardIds,
           archivedInwardEntries: mergedArchivedInward,
+          deletedNoteKeys: mergedDeletedNoteKeys,
         };
 
         const sizeKB = getPayloadSizeKB(mergedPayload);
@@ -2500,6 +2556,7 @@
       inwardCounter = mergedPayload.inwardCounter;
       deletedInwardIds = mergedPayload.deletedInwardIds;
       archivedInwardEntries = mergedPayload.archivedInwardEntries;
+      deletedNoteKeys = mergedPayload.deletedNoteKeys;
       lastSavedSnapshot = JSON.stringify(mergedPayload);
       setSidebarSubtitle('Synced ' + timeNow());
       if(pulledInNewItems && !anyModalOpen()) renderAll();
@@ -2558,7 +2615,8 @@
       deletedLabelIds = data.deletedLabelIds || deletedLabelIds;
       deletedInwardIds = data.deletedInwardIds || deletedInwardIds;
       archivedInwardEntries = data.archivedInwardEntries || archivedInwardEntries;
-      lastSavedSnapshot = JSON.stringify({members, tasks, labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto, inwardEntries, inwardCounter, deletedTaskIds, deletedLabelIds, deletedInwardIds, archivedInwardEntries});
+      deletedNoteKeys = data.deletedNoteKeys || deletedNoteKeys;
+      lastSavedSnapshot = JSON.stringify({members, tasks, labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto, inwardEntries, inwardCounter, deletedTaskIds, deletedLabelIds, deletedInwardIds, archivedInwardEntries, deletedNoteKeys});
       if(anyModalOpen()){
         // Keep the underlying data current so any in-progress edit saves against fresh data,
         // but don't visually disturb whatever modal the person currently has open.
@@ -2596,7 +2654,8 @@
         deletedLabelIds = data.deletedLabelIds || deletedLabelIds;
         deletedInwardIds = data.deletedInwardIds || deletedInwardIds;
         archivedInwardEntries = data.archivedInwardEntries || archivedInwardEntries;
-        lastSavedSnapshot = JSON.stringify({members, tasks, labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto, inwardEntries, inwardCounter, deletedTaskIds, deletedLabelIds, deletedInwardIds, archivedInwardEntries});
+        deletedNoteKeys = data.deletedNoteKeys || deletedNoteKeys;
+        lastSavedSnapshot = JSON.stringify({members, tasks, labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto, inwardEntries, inwardCounter, deletedTaskIds, deletedLabelIds, deletedInwardIds, archivedInwardEntries, deletedNoteKeys});
         renderAll();
       }
       setSidebarSubtitle('Synced ' + timeNow());
@@ -3005,6 +3064,10 @@
       document.getElementById('dashboardOverlay').classList.remove('open');
       return;
     }
+    if(document.getElementById('inwardDashboardOverlay').classList.contains('open')){
+      document.getElementById('inwardDashboardOverlay').classList.remove('open');
+      return;
+    }
     if(document.getElementById('inwardScreen').classList.contains('open')){
       document.getElementById('inwardScreen').classList.remove('open');
       return;
@@ -3213,7 +3276,7 @@
               ${starBadge}
               ${replyBlock}
               ${attachmentGalleryHtml(getAttachments(n), 'Update')}
-              ${n.text ? escapeHtml(n.text) : ''}
+              ${n.text ? linkifyText(escapeHtml(n.text)) : ''}
               <span class="bubble-time">${clockTime(n.time)}${ticks}</span>
             </div>
             ${reactionRow}
@@ -3339,7 +3402,16 @@
   function deleteNote(taskId, noteIndex){
     const t = tasks.find(t => t.id === taskId);
     if(!t || !t.notes || !t.notes[noteIndex]) return;
+    const note = t.notes[noteIndex];
+    const isAdmin = session && session.type === 'admin';
+    const isAuthor = note.authorId === currentIdentity();
+    if(!isAdmin && !isAuthor){
+      alert('Only the person who wrote this message, or Super Admin, can delete it.');
+      return;
+    }
     if(!confirm('Delete this update? This cannot be undone.')) return;
+    deletedNoteKeys.push(`${taskId}::${note.time}_${note.authorId}`);
+    if(deletedNoteKeys.length > MAX_TOMBSTONES) deletedNoteKeys = deletedNoteKeys.slice(-MAX_TOMBSTONES);
     t.notes.splice(noteIndex, 1);
     renderAll();
     saveBoard();
@@ -3515,6 +3587,7 @@
     renderChatPanel();
     renderSidebar();
     if(document.getElementById('dashboardOverlay').classList.contains('open')) renderDashboard();
+    if(document.getElementById('inwardDashboardOverlay').classList.contains('open')) renderInwardDashboard();
     if(document.getElementById('inwardScreen').classList.contains('open')) renderInwardScreen();
     if(document.getElementById('homeScreen').style.display !== 'none') renderHomeRenewalsSection();
   }
@@ -4838,6 +4911,108 @@
   }
   function getVisibleInwardEntries(){
     return inwardEntries.filter(canViewInwardEntry);
+  }
+
+  function openInwardDashboard(){
+    if(!document.getElementById('inwardDashboardOverlay').classList.contains('open')){
+      history.pushState({ navLevel: 'inwardDashboard' }, '');
+    }
+    document.getElementById('inwardDashboardOverlay').classList.add('open');
+    renderInwardDashboard();
+  }
+  function closeInwardDashboard(){
+    document.getElementById('inwardDashboardOverlay').classList.remove('open');
+  }
+
+  function renderInwardDashboard(){
+    const entries = getVisibleInwardEntries();
+    const tier = getInwardAccessTier();
+    const scopeLabel = tier === 'full' ? 'All entries' : (tier === 'rm-view-only' ? 'Entries where you\'re RM' : 'Entries you\'ve entered');
+    document.getElementById('inwardDashboardSubtitle').textContent = scopeLabel + ' · As of ' + timeNow();
+
+    const fmtINR = (n) => '₹' + Math.round(n||0).toLocaleString('en-IN');
+    const total = entries.length;
+    const sumOf = (field) => entries.reduce((s,e) => s + (Number(e[field])||0), 0);
+    const totalGross = sumOf('grossPremium');
+    const totalNet = sumOf('netPremium');
+    const totalPayout = sumOf('payoutPremium');
+    const avgGross = total ? totalGross / total : 0;
+
+    const now = new Date();
+    const thisMonthCount = entries.filter(e => {
+      if(!e.createdAt) return false;
+      const d = new Date(e.createdAt);
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    }).length;
+
+    const pendingCount = entries.filter(e => e.policyStatus === 'Pending').length;
+
+    const kpiHtml = `
+      <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-value">${total}</div><div class="kpi-label">Total entries</div></div>
+        <div class="kpi-card"><div class="kpi-value">${fmtINR(totalGross)}</div><div class="kpi-label">Total Gross Premium</div></div>
+        <div class="kpi-card"><div class="kpi-value">${fmtINR(totalNet)}</div><div class="kpi-label">Total Net Premium</div></div>
+        <div class="kpi-card"><div class="kpi-value">${fmtINR(totalPayout)}</div><div class="kpi-label">Total Payout Premium</div></div>
+        <div class="kpi-card"><div class="kpi-value">${fmtINR(avgGross)}</div><div class="kpi-label">Avg. Gross Premium</div></div>
+        <div class="kpi-card"><div class="kpi-value ${pendingCount?'warn':''}">${pendingCount}</div><div class="kpi-label">Policy Pending</div></div>
+        <div class="kpi-card"><div class="kpi-value">${thisMonthCount}</div><div class="kpi-label">This month</div></div>
+      </div>`;
+
+    function breakdownBars(values, counter, colorFor){
+      const counts = {};
+      values.forEach(v => counts[v] = 0);
+      counter(counts);
+      const max = Math.max(1, ...Object.values(counts));
+      return Object.keys(counts).map(k => barRow(k, counts[k], max, colorFor(k))).join('');
+    }
+
+    const catHtml = breakdownBars(INWARD_CATEGORIES, (counts) => {
+      entries.forEach(e => { if(e.category && counts[e.category] !== undefined) counts[e.category]++; });
+    }, (k) => ({'GI':'var(--wa-header)','LI':'#5B2C91','Short Term':'var(--wa-amber)'}[k] || 'var(--wa-header)'));
+
+    const officeHtml = breakdownBars(['Vasco','Panjim'], (counts) => {
+      entries.forEach(e => { if(e.office && counts[e.office] !== undefined) counts[e.office]++; });
+    }, () => 'var(--wa-sage)');
+
+    const typeHtml = breakdownBars(['New','Renewal','Endorsement'], (counts) => {
+      entries.forEach(e => { if(e.type && counts[e.type] !== undefined) counts[e.type]++; });
+    }, () => 'var(--wa-amber)');
+
+    const statusHtml = breakdownBars(['Issued','Pending'], (counts) => {
+      entries.forEach(e => { if(e.policyStatus && counts[e.policyStatus] !== undefined) counts[e.policyStatus]++; });
+    }, (k) => k === 'Pending' ? 'var(--wa-rust)' : 'var(--wa-sage)');
+
+    const rmPremium = {};
+    entries.forEach(e => { if(e.rm) rmPremium[e.rm] = (rmPremium[e.rm]||0) + (Number(e.grossPremium)||0); });
+    const rmSorted = Object.entries(rmPremium).sort((a,b) => b[1]-a[1]).slice(0,8);
+    const rmMax = rmSorted.length ? rmSorted[0][1] : 1;
+    const rmHtml = rmSorted.length
+      ? rmSorted.map(([name,val]) => barRow(name, val, rmMax, 'var(--wa-header)', fmtINR(val))).join('')
+      : `<div class="dash-empty">No data yet.</div>`;
+
+    const recent = entries.slice().sort((a,b) => (b.createdAt||0) - (a.createdAt||0)).slice(0,8);
+    const recentHtml = recent.length
+      ? recent.map(e => `
+          <div class="activity-item">
+            <div class="activity-item-text">
+              <div class="activity-item-title">${escapeHtml(e.customerName||'(no name)')}${e.company ? ' — ' + escapeHtml(e.company) : ''}</div>
+              <div class="activity-item-meta">${escapeHtml(e.category||'')}${e.rm ? ' · RM: ' + escapeHtml(e.rm) : ''} · ${fmtINR(e.grossPremium)}</div>
+            </div>
+            <div class="activity-time">${e.createdAt ? relativeTime(e.createdAt) : ''}</div>
+          </div>`).join('')
+      : `<div class="dash-empty">No entries yet.</div>`;
+
+    document.getElementById('inwardDashboardBody').innerHTML = `
+      ${kpiHtml}
+      <div class="dash-grid-2">
+        <div class="dash-section"><h3>By Category</h3>${catHtml}</div>
+        <div class="dash-section"><h3>By Office</h3>${officeHtml}</div>
+        <div class="dash-section"><h3>By Type</h3>${typeHtml}</div>
+        <div class="dash-section"><h3>Policy Status</h3>${statusHtml}</div>
+      </div>
+      <div class="dash-section"><h3>Top RMs by Gross Premium</h3>${rmHtml}</div>
+      <div class="dash-section"><h3>Recent entries</h3>${recentHtml}</div>
+    `;
   }
 
   function renderInwardScreen(){
