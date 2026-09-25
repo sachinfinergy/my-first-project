@@ -991,7 +991,8 @@
     padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer; opacity:0.85;
   }
   .dash-tab-btn.active{ background:#fff; color:var(--wa-header); opacity:1; }
-  .dashboard-pane-head{ padding:14px 24px 0; max-width:1100px; margin:0 auto; width:100%; }
+  .dashboard-tab-pane{ display:flex; flex-direction:column; flex:1; min-height:0; }
+  .dashboard-pane-head{ padding:14px 24px 0; max-width:1100px; margin:0 auto; width:100%; flex-shrink:0; }
   .dashboard-pane-head .pane-title{ font-size:15px; font-weight:700; color:var(--wa-text); }
   .dashboard-pane-head .pane-subtitle{ font-size:11.5px; color:var(--wa-text-soft); margin-top:2px; }
 
@@ -1270,7 +1271,7 @@
       <div style="flex:1;"></div>
       <button class="icon-btn-round" onclick="refreshActiveDashboardTab()" title="Refresh"><svg class="refresh-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
     </div>
-    <div id="dashboardTaskPane">
+    <div id="dashboardTaskPane" class="dashboard-tab-pane">
       <div class="dashboard-pane-head">
         <div class="pane-title" id="dashboardHeaderTitle">Team Dashboard</div>
         <div class="pane-subtitle" id="dashboardSubtitle"></div>
@@ -1278,7 +1279,7 @@
       <div class="dash-filter-bar" id="dashFilterBar"></div>
       <div class="dashboard-body" id="dashboardBody"></div>
     </div>
-    <div id="dashboardInwardPane" style="display:none;">
+    <div id="dashboardInwardPane" class="dashboard-tab-pane" style="display:none;">
       <div class="dashboard-pane-head">
         <div class="pane-title">Inward Dashboard</div>
         <div class="pane-subtitle" id="inwardDashboardSubtitle"></div>
@@ -4391,8 +4392,8 @@
     activeDashboardTab = tab;
     document.getElementById('dashTabBtn-task').classList.toggle('active', tab === 'task');
     document.getElementById('dashTabBtn-inward').classList.toggle('active', tab === 'inward');
-    document.getElementById('dashboardTaskPane').style.display = tab === 'task' ? '' : 'none';
-    document.getElementById('dashboardInwardPane').style.display = tab === 'inward' ? '' : 'none';
+    document.getElementById('dashboardTaskPane').style.display = tab === 'task' ? 'flex' : 'none';
+    document.getElementById('dashboardInwardPane').style.display = tab === 'inward' ? 'flex' : 'none';
     refreshActiveDashboardTab();
   }
   function refreshActiveDashboardTab(){
