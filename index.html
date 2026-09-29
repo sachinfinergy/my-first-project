@@ -303,6 +303,18 @@
   @media (max-width:520px){
     .more-filters-panel{ right:0; left:0; width:auto; margin:0 12px; }
   }
+  .member-filter-panel{ width:220px; padding:10px; }
+  .member-filter-list{ max-height:280px; overflow-y:auto; display:flex; flex-direction:column; gap:2px; }
+  .member-filter-item{
+    display:flex; align-items:center; gap:9px; width:100%; text-align:left; padding:7px 8px; border-radius:8px;
+    border:none; background:none; cursor:pointer; font-size:13px; font-weight:600; color: var(--wa-text);
+  }
+  .member-filter-item:hover{ background: var(--wa-hover); }
+  .member-filter-item.active{ background:#e7f8f2; color: var(--wa-header); }
+  .member-filter-avatar{
+    flex-shrink:0; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:10.5px; font-weight:700; color:#fff;
+  }
 
 
   .task-label-row{ display:flex; gap:5px; flex-wrap:wrap; margin: 4px 0 6px; }
@@ -1889,6 +1901,7 @@
   let activeLobFilter = ''; // 'GI' | 'LI' | 'Short term' | '' for Any
   let activeStatusFilter = 'open'; // 'open' | 'done' — no "All" option anymore
   let activeDirectionFilter = null; // 'given' | 'received' | null for "All" (member self-view only)
+  let activeMemberFilter = ''; // memberId or '' for All team members
   let pendingTaskLabels = new Set(); // labels toggled while task modal is open
   // (legacy pendingTaskImage variable removed — see pendingTaskAttachments)
   let adminPin = null;
@@ -2760,7 +2773,46 @@
         </div>
         ${activeCount>0 ? `<button class="clear-more-filters-btn" onclick="clearMoreFilters()">Clear these filters</button>` : ''}
       </div>`;
+    html += `
+      <button class="filter-icon-btn ${activeMemberFilter?'has-filters':''}" onclick="toggleMemberFilterPanel(event)" title="Filter by team member">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        ${activeMemberFilter ? `<span class="filter-icon-badge">1</span>` : ''}
+      </button>
+      <div class="more-filters-panel member-filter-panel" id="memberFilterPanel">
+        <div class="more-filters-section" style="margin-bottom:8px;">
+          <div class="more-filters-label">Team member</div>
+          <div class="member-filter-list">
+            <button class="member-filter-item ${activeMemberFilter===''?'active':''}" onclick="setMemberFilter('')">
+              <span class="member-filter-avatar" style="background:var(--wa-header);">All</span>
+              <span>All members</span>
+            </button>
+            ${members.map(m => `
+            <button class="member-filter-item ${activeMemberFilter===m.id?'active':''}" onclick="setMemberFilter('${m.id}')">
+              <span class="member-filter-avatar" style="background:${m.color||'var(--wa-header)'};">${escapeHtml(initials(m.name))}</span>
+              <span>${escapeHtml(m.name)}</span>
+            </button>`).join('')}
+          </div>
+        </div>
+        ${activeMemberFilter ? `<button class="clear-more-filters-btn" onclick="setMemberFilter('')">Clear this filter</button>` : ''}
+      </div>`;
     row.innerHTML = html;
+  }
+  function setMemberFilter(memberId){
+    activeMemberFilter = memberId;
+    renderAll();
+    reopenMemberFilterPanel();
+  }
+  function toggleMemberFilterPanel(event){
+    event.stopPropagation();
+    const morePanel = document.getElementById('moreFiltersPanel');
+    if(morePanel) morePanel.classList.remove('open');
+    const panel = document.getElementById('memberFilterPanel');
+    const isOpen = panel.classList.contains('open');
+    panel.classList.toggle('open', !isOpen);
+  }
+  function reopenMemberFilterPanel(){
+    const panel = document.getElementById('memberFilterPanel');
+    if(panel) panel.classList.add('open');
   }
   function setCategoryFilter(cat){
     activeCategoryFilter = cat;
@@ -2789,6 +2841,8 @@
   }
   function toggleMoreFiltersPanel(event){
     event.stopPropagation();
+    const memberPanel = document.getElementById('memberFilterPanel');
+    if(memberPanel) memberPanel.classList.remove('open');
     const panel = document.getElementById('moreFiltersPanel');
     const isOpen = panel.classList.contains('open');
     panel.classList.toggle('open', !isOpen);
@@ -2803,6 +2857,10 @@
     const panel = document.getElementById('moreFiltersPanel');
     if(panel && panel.classList.contains('open') && !panel.contains(e.target) && !e.target.closest('.filter-icon-btn')){
       panel.classList.remove('open');
+    }
+    const memberPanel = document.getElementById('memberFilterPanel');
+    if(memberPanel && memberPanel.classList.contains('open') && !memberPanel.contains(e.target) && !e.target.closest('.filter-icon-btn')){
+      memberPanel.classList.remove('open');
     }
   });
 
@@ -2913,6 +2971,7 @@
     if(activeTypeFilter) relevantTasks = relevantTasks.filter(t => t.taskType === activeTypeFilter);
     if(activeLobFilter) relevantTasks = relevantTasks.filter(t => t.lineOfBusiness === activeLobFilter);
     if(activeLabelFilter) relevantTasks = relevantTasks.filter(t => (t.labels||[]).includes(activeLabelFilter));
+    if(activeMemberFilter) relevantTasks = relevantTasks.filter(t => t.assignee === activeMemberFilter || t.assignorId === activeMemberFilter);
     if(renewalsViewMode){
       const renewalLabelIds = getRenewalLabelIds();
       relevantTasks = relevantTasks.filter(t => (t.labels||[]).some(lid => renewalLabelIds.includes(lid)));
@@ -3718,7 +3777,7 @@
     'SAURABH KAMAT','SHERWIN P FERNANDES','SHRIDHAR SHET KANEKAR','SHRINIVAS PRAKASH KAMAT','SURENDRA S RAUT',
     'TIKAM SINGH RANA','VICTOR FERNANDES','VINAYAK DESSAI','YESHWANT N ADKONKER','YOGESH S SHETGAONKAR',
     'AMAR AJIT RANE','YASHIKA Y SAWANT','KISAN MANGESH MULE','AMRESH BHANUDAS TAMANKAR','ELICKSON RODRIGUES',
-    'NIKHIL LIC','TEJAS PAGI','DIRECT'
+    'NIKHIL LIC','TEJAS PAGI','POLLY DCRUZ','RITESH NAIK','PRATAP SAIL','ROYSTON RODRIGUES','DIRECT'
   ];
   function populateAgentNameSelect(prefix){
     const id = prefix === 'task' ? 'taskAgentNameInput' : 'inwardAgentInput';
@@ -5618,6 +5677,7 @@
     activeTypeFilter = '';
     activeLobFilter = '';
     activeLabelFilter = '';
+    activeMemberFilter = '';
     renewalsViewMode = false;
     activeInwardCategoryFilter = '';
     activeInwardPersonFilter = '';
