@@ -2785,7 +2785,7 @@
     html += `</div>`;
     html += `<div style="flex:1; min-width:10px;"></div>`;
     html += `
-      <button class="go-to-renewals-btn ${renewalsViewMode?'active':''}" onclick="toggleRenewalsQuickFilter()" title="Jump to every renewal-labeled task">
+      <button class="go-to-renewals-btn ${renewalsViewMode?'active':''}" onclick="toggleRenewalsQuickFilter()" title="Jump to every open task with Type: Renewal">
         <span class="go-to-renewals-icon">🔄</span>Go to Renewals
       </button>
       <button class="filter-icon-btn ${activeCount>0?'has-filters':''}" onclick="toggleFiltersPanel(event)" title="Filters">
@@ -2999,8 +2999,7 @@
     if(activeLabelFilter) relevantTasks = relevantTasks.filter(t => (t.labels||[]).includes(activeLabelFilter));
     if(activeMemberFilter) relevantTasks = relevantTasks.filter(t => t.assignee === activeMemberFilter || t.assignorId === activeMemberFilter);
     if(renewalsViewMode){
-      const renewalLabelIds = getRenewalLabelIds();
-      relevantTasks = relevantTasks.filter(t => (t.labels||[]).some(lid => renewalLabelIds.includes(lid)));
+      relevantTasks = relevantTasks.filter(t => t.taskType === 'Renewal');
     }
 
     const withActivity = relevantTasks.map(t => {
@@ -4864,22 +4863,18 @@
     openDashboard(session && session.type === 'member' ? session.memberId : null);
   }
 
-  function getRenewalLabelIds(){
-    return labels.filter(l => l.name.trim().toLowerCase() === 'renewal').map(l => l.id);
-  }
-
   function getScopedRenewalTasks(){
     // Same visibility rule as the main Task list: a member sees tasks where they're
     // assignee or assignor; Super Admin sees everything. This is a pure filter over
     // the existing `tasks` array — no separate copy of the data is created or stored.
-    const renewalLabelIds = getRenewalLabelIds();
-    if(renewalLabelIds.length === 0) return [];
+    // Driven by the task's Type field (New/Renewal/Endo/Others) rather than a label,
+    // so it keeps working even if the "Renewal"-named label is renamed or deleted.
     const isMemberSession = session && session.type === 'member';
     const scoped = isMemberSession
       ? tasks.filter(t => t.assignee === session.memberId || t.assignorId === session.memberId)
       : tasks.slice();
     return scoped
-      .filter(t => t.status !== 'done' && (t.labels||[]).some(lid => renewalLabelIds.includes(lid)))
+      .filter(t => t.status !== 'done' && t.taskType === 'Renewal')
       .sort((a, b) => {
         if(a.due && b.due) return a.due.localeCompare(b.due);
         if(a.due) return -1;
@@ -4893,13 +4888,9 @@
     if(!container) return;
     const renewals = getScopedRenewalTasks();
     if(renewals.length === 0){
-      const tagExists = getRenewalLabelIds().length > 0;
-      const message = tagExists
-        ? 'No open tasks tagged "Renewal" right now.'
-        : 'No "Renewal" tag exists yet — create one under Manage Labels and tag tasks with it to see them here.';
       container.innerHTML = `
         <div class="home-section-header">🔄 Renewals</div>
-        <div class="home-renewals-empty">${message}</div>`;
+        <div class="home-renewals-empty">No open tasks with Type "Renewal" right now.</div>`;
       return;
     }
     container.innerHTML = `
