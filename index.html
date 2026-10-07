@@ -61,7 +61,6 @@
   .top-nav-bar{
     grid-column: 1 / -1;
     grid-row: 1;
-    position:relative;
     display:flex; align-items:center; gap:14px;
     padding: 0 18px; height:60px; flex-shrink:0;
     background:#fff; border-bottom:1px solid var(--wa-border);
@@ -73,9 +72,15 @@
     width:30px; height:30px; border-radius:9px; background: var(--wa-header); color: var(--wa-header-text);
     display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px; flex-shrink:0;
   }
+  /* category chips — allowed to shrink/scroll so the control cluster below can sit near the middle */
   .top-nav-filter-row{
-    flex:1; min-width:0; display:flex; align-items:center; gap:8px;
+    flex:0 1 420px; min-width:0; display:flex; align-items:center; gap:8px;
   }
+  /* Go to Renewals + Filters + Search travel together as one cluster, centered in the bar's free space */
+  .top-nav-controls{
+    display:flex; align-items:center; gap:10px; flex-shrink:0; margin-left:auto; margin-right:auto;
+  }
+  .top-nav-controls-dynamic{ display:flex; align-items:center; gap:10px; }
   .top-nav-search{
     flex-shrink:0; width:220px; max-width:40vw;
   }
@@ -87,10 +92,9 @@
     border:none; background:none; outline:none; flex:1; min-width:0; font-size:12.5px; font-family:inherit; color: var(--wa-text);
   }
   .top-nav-search .search-box .icon{ font-size:13px; flex-shrink:0; }
-  /* "Go to Renewals" — centered in the bar, green, gently pulsing to draw the eye */
+  /* "Go to Renewals" — green, gently pulsing to draw the eye, grouped with Filters & Search */
   .go-to-renewals-btn{
-    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-    display:flex; align-items:center; gap:6px; background:#fff; border:1.5px solid var(--wa-sage);
+    flex-shrink:0; display:flex; align-items:center; gap:6px; background:#fff; border:1.5px solid var(--wa-sage);
     color: var(--wa-sage); border-radius:16px; padding:7px 14px; font-weight:800; font-size:12px; white-space:nowrap; cursor:pointer;
     animation: renewalsPulse 1.8s ease-in-out infinite;
   }
@@ -101,12 +105,22 @@
     0%, 100% { box-shadow: 0 0 0 0 rgba(76,154,91,0.45); }
     50% { box-shadow: 0 0 0 7px rgba(76,154,91,0); }
   }
+  /* "Filters" — pill with a visible label (not icon-only), matching the design */
+  .filters-pill-btn{
+    position:relative; flex-shrink:0; display:flex; align-items:center; gap:6px; background: var(--wa-header);
+    color: var(--wa-header-text); border:1.5px solid var(--wa-header); border-radius:16px; padding:7px 13px 7px 11px;
+    font-weight:800; font-size:12px; white-space:nowrap; cursor:pointer;
+  }
+  .filters-pill-btn:hover{ opacity:0.92; }
+  .filters-pill-badge{
+    background: var(--wa-amber); color:#fff; font-size:10px; font-weight:700;
+    min-width:16px; height:16px; border-radius:9px; display:flex; align-items:center; justify-content:center; padding:0 4px;
+  }
   .filters-panel{ width:260px; }
   @media (max-width:520px){
     .top-nav-bar{ padding:0 12px; gap:10px; }
     .top-nav-brand span{ display:none; }
     .top-nav-search{ width:120px; }
-    .go-to-renewals-btn{ position:static; transform:none; margin:0 auto; }
   }
 
   /* ---------- Home screen ---------- */
@@ -1241,10 +1255,13 @@
       <span>Team Tasks</span>
     </div>
     <div class="top-nav-filter-row" id="topNavFilterRow"></div>
-    <div class="top-nav-search">
-      <div class="search-box">
-        <span class="icon">🔍</span>
-        <input type="text" id="searchInput" placeholder="Search tasks, clients, notes, or members" oninput="onSearchInput()">
+    <div class="top-nav-controls">
+      <div class="top-nav-controls-dynamic" id="topNavControlsDynamic"></div>
+      <div class="top-nav-search">
+        <div class="search-box">
+          <span class="icon">🔍</span>
+          <input type="text" id="searchInput" placeholder="Search tasks, clients, notes, or members" oninput="onSearchInput()">
+        </div>
       </div>
     </div>
   </div>
@@ -2797,21 +2814,25 @@
 
   function renderTopNavFilters(){
     const row = document.getElementById('topNavFilterRow');
-    if(!row) return;
+    const controls = document.getElementById('topNavControlsDynamic');
+    if(!row || !controls) return;
     const activeCount = (activeTypeFilter ? 1 : 0) + (activeLobFilter ? 1 : 0) + (activeCategoryFilter ? 1 : 0) + (activeMemberFilter ? 1 : 0);
-    let html = `<div class="category-filter-scroll">`;
-    html += `<button class="category-filter-chip ${activeLabelFilter===''?'active':''}" onclick="setLabelFilterOption('')">All</button>`;
-    html += labels.map(l => `<button class="category-filter-chip ${activeLabelFilter===l.id?'active':''}" onclick="setLabelFilterOption('${l.id}')" style="${activeLabelFilter===l.id?`background:${l.color};border-color:${l.color};`:''}"><span class="mini-pill-dot" style="background:${l.color}"></span>${escapeHtml(l.name)}</button>`).join('');
-    html += `</div>`;
-    html += `<div style="flex:1; min-width:10px;"></div>`;
-    html += `
+
+    let chipsHtml = `<div class="category-filter-scroll">`;
+    chipsHtml += `<button class="category-filter-chip ${activeLabelFilter===''?'active':''}" onclick="setLabelFilterOption('')">All</button>`;
+    chipsHtml += labels.map(l => `<button class="category-filter-chip ${activeLabelFilter===l.id?'active':''}" onclick="setLabelFilterOption('${l.id}')" style="${activeLabelFilter===l.id?`background:${l.color};border-color:${l.color};`:''}"><span class="mini-pill-dot" style="background:${l.color}"></span>${escapeHtml(l.name)}</button>`).join('');
+    chipsHtml += `</div>`;
+    row.innerHTML = chipsHtml;
+
+    let html = `
       <button class="go-to-renewals-btn ${renewalsViewMode?'active':''}" onclick="toggleRenewalsQuickFilter()" title="Jump to every open task with Type: Renewal">
         <span class="go-to-renewals-icon">🔄</span>Go to Renewals
       </button>
       <div class="filters-trigger-wrap">
-      <button class="filter-icon-btn ${activeCount>0?'has-filters':''}" onclick="toggleFiltersPanel(event)" title="Filters">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-        ${activeCount>0 ? `<span class="filter-icon-badge">${activeCount}</span>` : ''}
+      <button class="filters-pill-btn" onclick="toggleFiltersPanel(event)" title="Filters">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        Filters
+        ${activeCount>0 ? `<span class="filters-pill-badge">${activeCount}</span>` : ''}
       </button>
       <div class="more-filters-panel filters-panel" id="filtersPanel">
         <div class="more-filters-section">
@@ -2852,7 +2873,7 @@
         ${activeCount>0 ? `<button class="clear-more-filters-btn" onclick="clearAllTopFilters()">Clear these filters</button>` : ''}
       </div>
       </div>`;
-    row.innerHTML = html;
+    controls.innerHTML = html;
   }
   function setMemberFilter(memberId){
     activeMemberFilter = memberId;
@@ -2907,7 +2928,7 @@
   }
   document.addEventListener('click', (e) => {
     const panel = document.getElementById('filtersPanel');
-    if(panel && panel.classList.contains('open') && !panel.contains(e.target) && !e.target.closest('.filter-icon-btn')){
+    if(panel && panel.classList.contains('open') && !panel.contains(e.target) && !e.target.closest('.filters-pill-btn')){
       panel.classList.remove('open');
     }
   });
