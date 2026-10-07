@@ -118,9 +118,12 @@
   }
   .filters-panel{ width:260px; }
   @media (max-width:520px){
-    .top-nav-bar{ padding:0 12px; gap:10px; }
-    .top-nav-brand span{ display:none; }
-    .top-nav-search{ width:120px; }
+    /* Stack into tidy rows instead of squeezing everything onto one cramped line */
+    .top-nav-bar{ height:auto; flex-wrap:wrap; row-gap:8px; padding:8px 12px; }
+    .top-nav-brand{ order:1; flex:1 1 auto; }
+    .top-nav-filter-row{ order:3; flex:1 1 100%; }
+    .top-nav-controls{ order:2; flex:1 1 100%; margin:0; justify-content:center; flex-wrap:wrap; row-gap:8px; }
+    .top-nav-search{ width:auto; max-width:none; flex:1 1 150px; }
   }
 
   /* ---------- Home screen ---------- */
