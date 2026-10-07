@@ -54,8 +54,40 @@
     height: 100dvh;
     display: grid;
     grid-template-columns: 68px 400px 1fr;
+    grid-template-rows: auto 1fr;
     background: var(--wa-panel);
     box-shadow: 0 0 0 1px rgba(0,0,0,0.06);
+  }
+  .top-nav-bar{
+    grid-column: 1 / -1;
+    grid-row: 1;
+    display:flex; align-items:center; gap:16px;
+    padding: 0 18px; height:60px; flex-shrink:0;
+    background:#fff; border-bottom:1px solid var(--wa-border);
+    overflow-x:auto; overflow-y:hidden;
+  }
+  .top-nav-bar::-webkit-scrollbar{ display:none; }
+  .top-nav-brand{
+    display:flex; align-items:center; gap:9px; flex-shrink:0; font-weight:800; font-size:14.5px; color: var(--wa-text);
+  }
+  .top-nav-logo{
+    width:30px; height:30px; border-radius:9px; background: var(--wa-header); color: var(--wa-header-text);
+    display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px; flex-shrink:0;
+  }
+  .top-nav-filter-row{
+    flex:1; min-width:0; display:flex; align-items:center; gap:8px; position:relative;
+  }
+  .go-to-renewals-btn{
+    flex-shrink:0; display:flex; align-items:center; gap:6px; background:#fff; border:1.5px solid var(--wa-amber);
+    color: var(--wa-amber); border-radius:16px; padding:7px 13px; font-weight:800; font-size:12px; white-space:nowrap; cursor:pointer;
+  }
+  .go-to-renewals-btn:hover{ background: #FDF3DF; }
+  .go-to-renewals-btn.active{ background: var(--wa-amber); color:#fff; }
+  .go-to-renewals-icon{ font-size:13px; }
+  .filters-panel{ width:260px; }
+  @media (max-width:520px){
+    .top-nav-bar{ padding:0 12px; gap:10px; }
+    .top-nav-brand span{ display:none; }
   }
 
   /* ---------- Home screen ---------- */
@@ -1182,6 +1214,15 @@
 
 <div class="app" id="appRoot" style="display:none;">
 
+  <!-- Top navigation bar: category chips, Go to Renewals, and the merged Filters (Category/Type/LOB/Team member) -->
+  <div class="top-nav-bar" id="topNavBar">
+    <div class="top-nav-brand">
+      <div class="top-nav-logo">✓</div>
+      <span>Team Tasks</span>
+    </div>
+    <div class="top-nav-filter-row" id="topNavFilterRow"></div>
+  </div>
+
   <!-- Icon rail -->
   <div class="icon-rail" id="iconRail">
     <div class="icon-rail-avatar-wrap" id="railAvatarSlot" title="Team Tasks"></div>
@@ -1236,7 +1277,6 @@
     </div>
     <div class="direction-filter-row" id="directionFilterRow"></div>
     <div class="status-filter-row" id="statusFilterRow"></div>
-    <div class="label-filter-row" id="labelFilterRow"></div>
     <div id="backupReminderBanner"></div>
     <div class="chat-list" id="chatList"></div>
   </div>
@@ -2735,21 +2775,31 @@
   const TYPE_OPTIONS = ['New', 'Renewal', 'Endo', 'Others'];
   const LOB_OPTIONS = ['GI', 'LI', 'Short term'];
 
-  function renderTagFilterRow(){
-    const row = document.getElementById('labelFilterRow');
+  function renderTopNavFilters(){
+    const row = document.getElementById('topNavFilterRow');
     if(!row) return;
-    row.style.display = 'flex';
-    const activeCount = (activeTypeFilter ? 1 : 0) + (activeLobFilter ? 1 : 0) + (activeCategoryFilter ? 1 : 0);
+    const activeCount = (activeTypeFilter ? 1 : 0) + (activeLobFilter ? 1 : 0) + (activeCategoryFilter ? 1 : 0) + (activeMemberFilter ? 1 : 0);
     let html = `<div class="category-filter-scroll">`;
     html += `<button class="category-filter-chip ${activeLabelFilter===''?'active':''}" onclick="setLabelFilterOption('')">All</button>`;
     html += labels.map(l => `<button class="category-filter-chip ${activeLabelFilter===l.id?'active':''}" onclick="setLabelFilterOption('${l.id}')" style="${activeLabelFilter===l.id?`background:${l.color};border-color:${l.color};`:''}"><span class="mini-pill-dot" style="background:${l.color}"></span>${escapeHtml(l.name)}</button>`).join('');
     html += `</div>`;
+    html += `<div style="flex:1; min-width:10px;"></div>`;
     html += `
-      <button class="filter-icon-btn ${activeCount>0?'has-filters':''}" onclick="toggleMoreFiltersPanel(event)" title="More filters">
+      <button class="go-to-renewals-btn ${renewalsViewMode?'active':''}" onclick="toggleRenewalsQuickFilter()" title="Jump to every renewal-labeled task">
+        <span class="go-to-renewals-icon">🔄</span>Go to Renewals
+      </button>
+      <button class="filter-icon-btn ${activeCount>0?'has-filters':''}" onclick="toggleFiltersPanel(event)" title="Filters">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
         ${activeCount>0 ? `<span class="filter-icon-badge">${activeCount}</span>` : ''}
       </button>
-      <div class="more-filters-panel" id="moreFiltersPanel">
+      <div class="more-filters-panel filters-panel" id="filtersPanel">
+        <div class="more-filters-section">
+          <div class="more-filters-label">Category</div>
+          <div class="mini-pill-group">
+            <button class="mini-pill ${activeCategoryFilter===''?'active':''}" onclick="setCategoryFilter('')">Any</button>
+            ${CATEGORY_OPTIONS.map(c => `<button class="mini-pill ${activeCategoryFilter===c?'active':''}" onclick="setCategoryFilter('${c}')">${c}</button>`).join('')}
+          </div>
+        </div>
         <div class="more-filters-section">
           <div class="more-filters-label">Type</div>
           <div class="mini-pill-group">
@@ -2764,21 +2814,6 @@
             ${LOB_OPTIONS.map(v => `<button class="mini-pill ${activeLobFilter===v?'active':''}" onclick="setLobFilter('${v}')">${v}</button>`).join('')}
           </div>
         </div>
-        <div class="more-filters-section">
-          <div class="more-filters-label">Category</div>
-          <div class="mini-pill-group">
-            <button class="mini-pill ${activeCategoryFilter===''?'active':''}" onclick="setCategoryFilter('')">Any</button>
-            ${CATEGORY_OPTIONS.map(c => `<button class="mini-pill ${activeCategoryFilter===c?'active':''}" onclick="setCategoryFilter('${c}')">${c}</button>`).join('')}
-          </div>
-        </div>
-        ${activeCount>0 ? `<button class="clear-more-filters-btn" onclick="clearMoreFilters()">Clear these filters</button>` : ''}
-      </div>`;
-    html += `
-      <button class="filter-icon-btn ${activeMemberFilter?'has-filters':''}" onclick="toggleMemberFilterPanel(event)" title="Filter by team member">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        ${activeMemberFilter ? `<span class="filter-icon-badge">1</span>` : ''}
-      </button>
-      <div class="more-filters-panel member-filter-panel" id="memberFilterPanel">
         <div class="more-filters-section" style="margin-bottom:8px;">
           <div class="more-filters-label">Team member</div>
           <div class="member-filter-list">
@@ -2793,74 +2828,65 @@
             </button>`).join('')}
           </div>
         </div>
-        ${activeMemberFilter ? `<button class="clear-more-filters-btn" onclick="setMemberFilter('')">Clear this filter</button>` : ''}
+        ${activeCount>0 ? `<button class="clear-more-filters-btn" onclick="clearAllTopFilters()">Clear these filters</button>` : ''}
       </div>`;
     row.innerHTML = html;
   }
   function setMemberFilter(memberId){
     activeMemberFilter = memberId;
     renderAll();
-    reopenMemberFilterPanel();
-  }
-  function toggleMemberFilterPanel(event){
-    event.stopPropagation();
-    const morePanel = document.getElementById('moreFiltersPanel');
-    if(morePanel) morePanel.classList.remove('open');
-    const panel = document.getElementById('memberFilterPanel');
-    const isOpen = panel.classList.contains('open');
-    panel.classList.toggle('open', !isOpen);
-  }
-  function reopenMemberFilterPanel(){
-    const panel = document.getElementById('memberFilterPanel');
-    if(panel) panel.classList.add('open');
+    reopenFiltersPanel();
   }
   function setCategoryFilter(cat){
     activeCategoryFilter = cat;
     renderAll();
-    reopenMoreFiltersPanel();
+    reopenFiltersPanel();
   }
   function setTypeFilter(val){
     activeTypeFilter = val;
     renderAll();
-    reopenMoreFiltersPanel();
+    reopenFiltersPanel();
   }
   function setLobFilter(val){
     activeLobFilter = val;
     renderAll();
-    reopenMoreFiltersPanel();
+    reopenFiltersPanel();
   }
   function setLabelFilterOption(id){
     activeLabelFilter = id;
     renderAll();
   }
-  function clearMoreFilters(){
+  function clearAllTopFilters(){
     activeTypeFilter = '';
     activeLobFilter = '';
     activeCategoryFilter = '';
+    activeMemberFilter = '';
     renderAll();
   }
-  function toggleMoreFiltersPanel(event){
+  function toggleFiltersPanel(event){
     event.stopPropagation();
-    const memberPanel = document.getElementById('memberFilterPanel');
-    if(memberPanel) memberPanel.classList.remove('open');
-    const panel = document.getElementById('moreFiltersPanel');
+    const panel = document.getElementById('filtersPanel');
     const isOpen = panel.classList.contains('open');
     panel.classList.toggle('open', !isOpen);
   }
-  function reopenMoreFiltersPanel(){
-    // After renderAll() rebuilds the sidebar, re-open the panel so picking Type then LOB
+  function reopenFiltersPanel(){
+    // After renderAll() rebuilds the top bar, re-open the panel so picking Type then LOB
     // in one sitting doesn't require re-clicking the filter icon each time.
-    const panel = document.getElementById('moreFiltersPanel');
+    const panel = document.getElementById('filtersPanel');
     if(panel) panel.classList.add('open');
   }
+  function toggleRenewalsQuickFilter(){
+    if(renewalsViewMode){
+      renewalsViewMode = false;
+      renderAll();
+    } else {
+      goToRenewals();
+    }
+  }
   document.addEventListener('click', (e) => {
-    const panel = document.getElementById('moreFiltersPanel');
+    const panel = document.getElementById('filtersPanel');
     if(panel && panel.classList.contains('open') && !panel.contains(e.target) && !e.target.closest('.filter-icon-btn')){
       panel.classList.remove('open');
-    }
-    const memberPanel = document.getElementById('memberFilterPanel');
-    if(memberPanel && memberPanel.classList.contains('open') && !memberPanel.contains(e.target) && !e.target.closest('.filter-icon-btn')){
-      memberPanel.classList.remove('open');
     }
   });
 
@@ -2868,7 +2894,7 @@
     const isMemberSession = session && session.type === 'member';
     renderDirectionFilterRow();
     renderStatusFilterRow();
-    renderTagFilterRow();
+    renderTopNavFilters();
     const list = document.getElementById('chatList');
     const scopeMemberId = isMemberSession ? session.memberId : null;
     renderTaskList(list, scopeMemberId);
