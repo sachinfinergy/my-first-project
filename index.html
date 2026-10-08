@@ -118,12 +118,18 @@
   }
   .filters-panel{ width:260px; }
   @media (max-width:520px){
-    /* Stack into tidy rows instead of squeezing everything onto one cramped line */
-    .top-nav-bar{ height:auto; flex-wrap:wrap; row-gap:8px; padding:8px 12px; }
-    .top-nav-brand{ order:1; flex:1 1 auto; }
-    .top-nav-filter-row{ order:3; flex:1 1 100%; }
-    .top-nav-controls{ order:2; flex:1 1 100%; margin:0; justify-content:center; flex-wrap:wrap; row-gap:8px; }
-    .top-nav-search{ width:auto; max-width:none; flex:1 1 150px; }
+    /* Compact 3-row header: [logo · Go to Renewals · Filters] / [search] / [chips] */
+    .top-nav-bar{ height:auto; min-width:0; flex-wrap:wrap; row-gap:8px; column-gap:8px; padding:8px 12px; }
+    .top-nav-brand{ order:1; flex:0 0 auto; }
+    .top-nav-brand span{ display:none; }
+    .top-nav-controls, .top-nav-controls-dynamic{ display:contents; }
+    .go-to-renewals-btn{ order:2; flex:1 1 auto; justify-content:center; }
+    .filters-trigger-wrap{ order:3; }
+    .top-nav-search{ order:4; flex:1 1 100%; width:auto; max-width:none; min-width:0; }
+    .top-nav-search .search-box input{ width:100%; min-width:0; }
+    .top-nav-filter-row{ order:5; flex:1 1 100%; min-width:0; }
+    /* once a task chat is open, give the whole screen to the conversation */
+    .app.chat-open .top-nav-bar{ display:none; }
   }
 
   /* ---------- Home screen ---------- */
@@ -1179,7 +1185,7 @@
 
   /* Mobile */
   @media (max-width: 820px){
-    .app{ grid-template-columns: 1fr; }
+    .app{ grid-template-columns: minmax(0, 1fr); }
     .dashboard-overlay{ grid-template-columns: 1fr; }
     .icon-rail{ display:none; }
     .sidebar{ display:flex; }
