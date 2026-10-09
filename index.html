@@ -1886,6 +1886,18 @@
   let archivedInwardEntries = []; // soft-deleted by a non-admin — held here for Super Admin review
   let deletedNoteKeys = []; // tombstones for deleted messages, keyed "taskId::time_authorId"
   const MAX_TOMBSTONES = 1000; // cap so this can't grow the document unboundedly over years of use
+  // ---- Storage mode ----
+  // 1 = legacy: every task lives inside the single boards/main document (hard 1 MiB cap).
+  // 2 = scalable: every task is its own document in boards/main/tasks (no practical cap);
+  //     boards/main keeps only members, labels, counters, settings and inward entries.
+  let storageMode = 1;
+  let upgradingStorage = false;
+  let lastTaskJson = new Map();   // task id -> JSON of the copy last known to be on the server (mode 2)
+  let tasksUnsubscribe = null;
+  const tasksColRef = boardDocRef.collection('tasks');
+  function mainSnapshotString(){
+    return JSON.stringify({ members, tasks: storageMode === 2 ? [] : tasks, labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto, inwardEntries, inwardCounter, deletedTaskIds, deletedLabelIds, deletedInwardIds, archivedInwardEntries, deletedNoteKeys });
+  }
 
   // ---------- Notification sound ----------
   let audioCtx = null;
@@ -2145,7 +2157,8 @@
       if(doc.exists){
         const data = doc.data();
         members = data.members || [];
-        tasks = data.tasks || [];
+        storageMode = data.schemaVersion === 2 ? 2 : 1;
+        tasks = storageMode === 2 ? [] : (data.tasks || []);
         labels = data.labels || [];
         taskCounter = data.taskCounter || (tasks.length + 1);
         labelCounter = data.labelCounter || (labels.length + 1);
@@ -2159,6 +2172,7 @@
         deletedInwardIds = data.deletedInwardIds || [];
         archivedInwardEntries = data.archivedInwardEntries || [];
         deletedNoteKeys = data.deletedNoteKeys || [];
+        if(storageMode === 2) await startTasksListener(true);
         if(migrateTaskStatuses(tasks)) await saveBoard();
       } else {
         const seed = defaultBoard();
@@ -2171,7 +2185,7 @@
         deletedNoteKeys = seed.deletedNoteKeys;
         await saveBoard();
       }
-      lastSavedSnapshot = JSON.stringify({members, tasks, labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto, inwardEntries, inwardCounter, deletedTaskIds, deletedLabelIds, deletedInwardIds, archivedInwardEntries, deletedNoteKeys});
+      lastSavedSnapshot = mainSnapshotString();
       setSidebarSubtitle('Synced ' + timeNow());
     } catch(err){
       console.error('Load failed', err);
@@ -2558,7 +2572,7 @@
     }));
     const projectedPayload = { members, tasks: [...tasks, ...newTasks], labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto };
     const sizeKB = getPayloadSizeKB(projectedPayload);
-    if(sizeKB > 950){
+    if(storageMode !== 2 && sizeKB > 950){
       if(!confirm(`⚠️ Importing these ${newTasks.length} tasks would bring your board to ${sizeKB}KB of the 1024KB limit, and may fail to save. Continue anyway?`)) return;
     }
     tasks.push(...newTasks);
@@ -2569,8 +2583,9 @@
   }
 
   async function saveBoard(retryCount){
+    if(storageMode === 2) return saveBoardV2(retryCount);
     retryCount = retryCount || 0;
-    const localSnapshot = JSON.stringify({ members, tasks, labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto, inwardEntries, inwardCounter, deletedTaskIds, deletedLabelIds, deletedInwardIds, archivedInwardEntries, deletedNoteKeys });
+    const localSnapshot = mainSnapshotString();
     if(localSnapshot === lastSavedSnapshot) return true;
 
     let mergedPayload = null;
@@ -2727,7 +2742,7 @@
   const byteSize = o => new Blob([JSON.stringify(o)]).size;
 
   function boardPayloadForSize(){
-    return { members, tasks, labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto, inwardEntries, inwardCounter, deletedTaskIds, deletedLabelIds, deletedInwardIds, archivedInwardEntries, deletedNoteKeys };
+    return { members, tasks: storageMode === 2 ? [] : tasks, labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto, inwardEntries, inwardCounter, deletedTaskIds, deletedLabelIds, deletedInwardIds, archivedInwardEntries, deletedNoteKeys };
   }
   function openStorageArchiveModal(){
     if(!session || session.type !== 'admin') return;
@@ -2745,6 +2760,13 @@
   function closeStorageArchiveModal(){ document.getElementById('storageArchiveOverlay').classList.remove('open'); }
 
   function renderStorageMeter(){
+    if(storageMode === 2){
+      const kb2 = getPayloadSizeKB(boardPayloadForSize());
+      document.getElementById('storageMeter').innerHTML = `
+        <div style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color:var(--wa-sage);">✅ Scalable storage is on</div>
+        <div style="font-size:12px; color:var(--wa-text-soft); margin-top:4px;">Every task is stored separately, so the board is no longer limited to 1MB. ${tasks.length} live task${tasks.length!==1?'s':''} · team settings &amp; inward use ${kb2} KB of their own 1024 KB.</div>`;
+      return;
+    }
     const kb = getPayloadSizeKB(boardPayloadForSize());
     const pct = Math.min(100, Math.round(kb / 1024 * 100));
     const color = pct >= 93 ? '#C62828' : (pct >= 75 ? '#E0A030' : 'var(--wa-sage)');
@@ -2755,7 +2777,12 @@
       <div style="height:9px; background:var(--wa-border); border-radius:5px; overflow:hidden;">
         <div style="height:100%; width:${pct}%; background:${color}; transition:width .3s;"></div>
       </div>
-      <div style="font-size:11.5px; color:var(--wa-text-soft); margin-top:5px;">${(archiveTasksCache||[]).length ? archiveTasksCache.length + ' task(s) currently in the archive.' : ''}</div>`;
+      <div style="font-size:11.5px; color:var(--wa-text-soft); margin-top:5px;">${(archiveTasksCache||[]).length ? archiveTasksCache.length + ' task(s) currently in the archive.' : ''}</div>
+      <div style="margin-top:12px; padding:12px; background:#F3F8F5; border:1px solid var(--wa-border); border-radius:10px;">
+        <div style="font-weight:700; font-size:13px;">Remove the 1MB limit for good</div>
+        <div style="font-size:12px; color:var(--wa-text-soft); margin:3px 0 8px;">Stores every task as its own record. One-time upgrade, a full backup is taken first.</div>
+        <button class="btn-primary" id="upgradeStorageBtn" onclick="upgradeStorageToV2()">Upgrade storage</button>
+      </div>`;
   }
 
   function getArchiveCandidates(){
@@ -2935,6 +2962,254 @@
     XLSX.writeFile(wb, `team-tasks-archive-${new Date().toISOString().slice(0,10)}.xlsx`);
   }
 
+  // ================= Scalable storage (mode 2): one document per task =================
+  function sortTasksByCreated(){ tasks.sort((a,b) => (a.created||0) - (b.created||0)); }
+
+  // Merges two copies of the same task: notes are unioned (so a note someone else just added is never
+  // lost) and read receipts / reactions on a shared note are combined — same rules as the legacy save.
+  function mergeTaskCopies(freshT, localT, noteTombstones){
+    const id = localT.id;
+    const noteKey = n => `${id}::${n.time}_${n.authorId}`;
+    const freshByKey = new Map((freshT.notes||[]).map(n => [noteKey(n), n]));
+    const localByKey = new Map((localT.notes||[]).map(n => [noteKey(n), n]));
+    const keys = new Set([...freshByKey.keys(), ...localByKey.keys()]);
+    const notes = Array.from(keys).filter(k => !noteTombstones.has(k)).map(k => {
+      const fN = freshByKey.get(k), lN = localByKey.get(k);
+      if(fN && lN){
+        return { ...lN,
+          readBy: [...new Set([...(fN.readBy||[]), ...(lN.readBy||[])])],
+          reactions: { ...(fN.reactions||{}), ...(lN.reactions||{}) } };
+      }
+      return lN || fN;
+    }).sort((a,b) => a.time - b.time);
+    return { ...localT, notes };
+  }
+
+  function renderAfterRemoteChange(){
+    if(anyModalOpen()){ setSidebarSubtitle('Synced ' + timeNow()); return; }
+    const draft = captureDraftText();
+    renderAll();
+    restoreDraftText(draft);
+    renderNoteImagePreview();
+    renderReplyPreview();
+    setSidebarSubtitle('Synced ' + timeNow());
+  }
+
+  // Listens to the tasks collection. The first snapshot fills `tasks`; later snapshots only carry the
+  // tasks that actually changed, so reads stay small no matter how many tasks exist.
+  function startTasksListener(waitForFirst){
+    if(tasksUnsubscribe) return Promise.resolve();
+    return new Promise(resolve => {
+      let first = true;
+      tasksUnsubscribe = tasksColRef.onSnapshot(snap => {
+        const tomb = new Set(deletedTaskIds);
+        let changed = first;
+        const byId = new Map(tasks.map(t => [t.id, t]));
+        snap.docChanges().forEach(ch => {
+          const t = ch.doc.data();
+          if(ch.type === 'removed'){
+            byId.delete(ch.doc.id); lastTaskJson.delete(ch.doc.id); changed = true;
+          } else if(!tomb.has(t.id)){
+            byId.set(t.id, t); lastTaskJson.set(t.id, JSON.stringify(t)); changed = true;
+          }
+        });
+        if(!changed) return;
+        tasks = Array.from(byId.values());
+        sortTasksByCreated();
+        migrateTaskStatuses(tasks);
+        checkForNewActivityAndNotify();
+        if(first){ first = false; resolve(); if(waitForFirst) return; }
+        renderAfterRemoteChange();
+      }, err => {
+        console.error('Task sync error', err);
+        setSidebarSubtitle('Sync error — check connection');
+        if(first){ first = false; resolve(); }
+      });
+    });
+  }
+
+  async function reloadTasksFromServer(){
+    const snap = await tasksColRef.get({ source: 'server' });
+    const tomb = new Set(deletedTaskIds);
+    tasks = snap.docs.map(d => d.data()).filter(t => !tomb.has(t.id));
+    sortTasksByCreated();
+    lastTaskJson = new Map(tasks.map(t => [t.id, JSON.stringify(t)]));
+    migrateTaskStatuses(tasks);
+  }
+
+  async function saveBoardV2(retryCount){
+    retryCount = retryCount || 0;
+    const localMain = mainSnapshotString();
+    const localIds = new Set(tasks.map(t => t.id));
+    const dirty = tasks.filter(t => lastTaskJson.get(t.id) !== JSON.stringify(t));
+    const removedIds = Array.from(lastTaskJson.keys()).filter(id => !localIds.has(id));
+    if(localMain === lastSavedSnapshot && dirty.length === 0 && removedIds.length === 0) return true;
+
+    try{
+      // Any task removed locally must be tombstoned so no stale device can write it back.
+      removedIds.forEach(id => { if(!deletedTaskIds.includes(id)) deletedTaskIds.push(id); });
+      if(deletedTaskIds.length > MAX_TOMBSTONES) deletedTaskIds = deletedTaskIds.slice(-MAX_TOMBSTONES);
+
+      // 1) Main document first (counters + tombstones must exist before any task doc is written/deleted).
+      let mergedMain = null, pulledInNewItems = false;
+      await db.runTransaction(async (transaction) => {
+        const freshDoc = await transaction.get(boardDocRef);
+        const freshData = freshDoc.exists ? freshDoc.data() : {};
+        const freshMembers = freshData.members || [];
+        const freshLabels = freshData.labels || [];
+        const freshInward = freshData.inwardEntries || [];
+        const freshArchivedInward = freshData.archivedInwardEntries || [];
+        const localMemberIds = new Set(members.map(m => m.id));
+        const localLabelIds = new Set(labels.map(l => l.id));
+        const localInwardIds = new Set(inwardEntries.map(e => e.id));
+
+        const mDelTasks = [...new Set([...(freshData.deletedTaskIds||[]), ...deletedTaskIds])].slice(-MAX_TOMBSTONES);
+        const mDelLabels = [...new Set([...(freshData.deletedLabelIds||[]), ...deletedLabelIds])].slice(-MAX_TOMBSTONES);
+        const mDelInward = [...new Set([...(freshData.deletedInwardIds||[]), ...deletedInwardIds])].slice(-MAX_TOMBSTONES);
+        const mDelNotes = [...new Set([...(freshData.deletedNoteKeys||[]), ...deletedNoteKeys])].slice(-MAX_TOMBSTONES);
+        const delLabelSet = new Set(mDelLabels), delInwardSet = new Set(mDelInward);
+
+        const localArchById = new Map(archivedInwardEntries.map(e => [e.id, e]));
+        const freshArchById = new Map(freshArchivedInward.map(e => [e.id, e]));
+        const mArchived = Array.from(new Set([...localArchById.keys(), ...freshArchById.keys()]))
+          .filter(id => !delInwardSet.has(id)).map(id => localArchById.get(id) || freshArchById.get(id));
+        const archSet = new Set(mArchived.map(e => e.id));
+
+        const newMembers = freshMembers.filter(m => !localMemberIds.has(m.id));
+        const newLabels = freshLabels.filter(l => !localLabelIds.has(l.id) && !delLabelSet.has(l.id));
+        const newInward = freshInward.filter(e => !localInwardIds.has(e.id) && !delInwardSet.has(e.id) && !archSet.has(e.id));
+        pulledInNewItems = newMembers.length > 0 || newLabels.length > 0 || newInward.length > 0;
+
+        mergedMain = {
+          members: [...newMembers, ...members],
+          tasks: [],
+          labels: [...newLabels, ...labels].filter(l => !delLabelSet.has(l.id)),
+          taskCounter: Math.max(taskCounter, freshData.taskCounter || 0),
+          labelCounter: Math.max(labelCounter, freshData.labelCounter || 0),
+          adminPin, adminName, adminPhoto,
+          inwardEntries: [...newInward, ...inwardEntries].filter(e => !delInwardSet.has(e.id) && !archSet.has(e.id)),
+          inwardCounter: Math.max(inwardCounter, freshData.inwardCounter || 0),
+          deletedTaskIds: mDelTasks, deletedLabelIds: mDelLabels, deletedInwardIds: mDelInward,
+          archivedInwardEntries: mArchived, deletedNoteKeys: mDelNotes,
+          schemaVersion: 2,
+        };
+        if(getPayloadSizeKB(mergedMain) > 1020){ throw new Error('SIZE_LIMIT_EXCEEDED'); }
+        transaction.set(boardDocRef, mergedMain);
+      });
+      members = mergedMain.members; labels = mergedMain.labels;
+      taskCounter = mergedMain.taskCounter; labelCounter = mergedMain.labelCounter;
+      inwardEntries = mergedMain.inwardEntries; inwardCounter = mergedMain.inwardCounter;
+      deletedTaskIds = mergedMain.deletedTaskIds; deletedLabelIds = mergedMain.deletedLabelIds;
+      deletedInwardIds = mergedMain.deletedInwardIds; archivedInwardEntries = mergedMain.archivedInwardEntries;
+      deletedNoteKeys = mergedMain.deletedNoteKeys;
+      const taskTomb = new Set(deletedTaskIds), noteTomb = new Set(deletedNoteKeys);
+
+      // 2) Only the task documents that actually changed.
+      const savedById = new Map();
+      const droppedIds = new Set();
+      const writeOne = async (t) => {
+        if(taskTomb.has(t.id)){ droppedIds.add(t.id); return; }     // deleted elsewhere — don't resurrect
+        const ref = tasksColRef.doc(t.id);
+        let result = null;
+        await db.runTransaction(async (transaction) => {
+          const fresh = await transaction.get(ref);
+          result = fresh.exists ? mergeTaskCopies(fresh.data(), t, noteTomb) : t;
+          if(byteSize(result) > 1000 * 1024){ throw new Error('TASK_TOO_LARGE'); }
+          transaction.set(ref, result);
+        });
+        savedById.set(t.id, result);
+      };
+      for(let i = 0; i < dirty.length; i += 10){
+        await Promise.all(dirty.slice(i, i + 10).map(writeOne));
+      }
+      await Promise.all(removedIds.map(id => tasksColRef.doc(id).delete().then(() => lastTaskJson.delete(id))));
+
+      tasks = tasks.filter(t => !droppedIds.has(t.id)).map(t => savedById.get(t.id) || t);
+      droppedIds.forEach(id => lastTaskJson.delete(id));
+      savedById.forEach((t, id) => lastTaskJson.set(id, JSON.stringify(t)));
+      sortTasksByCreated();
+      lastSavedSnapshot = mainSnapshotString();
+      setSidebarSubtitle('Synced ' + timeNow());
+      if((pulledInNewItems || droppedIds.size) && !anyModalOpen()) renderAll();
+
+      const sizeKB = getPayloadSizeKB(mergedMain);
+      if(sizeKB > 950){
+        alert(`⚠️ The team settings/inward area is almost full (${sizeKB}KB of 1024KB). Please contact your developer to move Inward entries to their own storage.`);
+      }
+      return true;
+    } catch(err){
+      console.error('Save failed', err);
+      if(err.message === 'SIZE_LIMIT_EXCEEDED'){
+        alert('⚠️ This change could not be saved — the team settings/inward area is full (1024KB). Please contact your developer.');
+        return false;
+      }
+      if(err.message === 'TASK_TOO_LARGE'){
+        alert('⚠️ This one task has grown too large to save (over 1MB of text). Please remove some of its long notes.');
+        return false;
+      }
+      if(retryCount < 1){
+        await new Promise(r => setTimeout(r, 1200));
+        return saveBoardV2(retryCount + 1);
+      }
+      setSidebarSubtitle('Save failed');
+      alert('⚠️ This change could not be saved to the shared board. Please try again. Nothing you just did was saved.');
+      return false;
+    }
+  }
+
+  // One-time, Super-Admin-only upgrade from "all tasks in one document" to "one document per task".
+  async function upgradeStorageToV2(){
+    if(!session || session.type !== 'admin' || storageMode === 2) return;
+    if(!confirm('Upgrade storage?\n\nThis copies every task into its own record so the board is no longer limited to 1MB. A full backup of the current board is saved first, and the other devices will reload automatically.\n\nBest done when nobody else is mid-edit. Continue?')) return;
+    const btn = document.getElementById('upgradeStorageBtn');
+    if(btn){ btn.disabled = true; btn.textContent = 'Upgrading…'; }
+    upgradingStorage = true;
+    try{
+      const freshDoc = await boardDocRef.get({ source: 'server' });
+      if(!freshDoc.exists) throw new Error('No board found');
+      const data = freshDoc.data();
+      if(data.schemaVersion === 2){ alert('Storage is already upgraded.'); location.reload(); return; }
+      const tomb = new Set(data.deletedTaskIds || []);
+      const list = (data.tasks || []).filter(t => !tomb.has(t.id));
+      const sourceJson = JSON.stringify(data.tasks || []);
+
+      // 1) Backup of the whole current board
+      await db.collection('boards').doc('backup_pre_v2').set({ ...data, backedUpAt: Date.now() });
+      // 2) Copy tasks in batches
+      for(let i = 0; i < list.length; i += 400){
+        const batch = db.batch();
+        list.slice(i, i + 400).forEach(t => batch.set(tasksColRef.doc(t.id), t));
+        await batch.commit();
+      }
+      // 3) Verify every task landed
+      const check = await tasksColRef.get({ source: 'server' });
+      const have = new Set(check.docs.map(d => d.id));
+      const missing = list.filter(t => !have.has(t.id));
+      if(missing.length) throw new Error(missing.length + ' task(s) did not copy');
+      // 4) Flip the switch — only if nobody changed the tasks while we copied
+      await db.runTransaction(async (transaction) => {
+        const cur = await transaction.get(boardDocRef);
+        const curData = cur.data();
+        if(JSON.stringify(curData.tasks || []) !== sourceJson) throw new Error('CHANGED_DURING_UPGRADE');
+        const { tasks: _drop, ...rest } = curData;
+        transaction.set(boardDocRef, { ...rest, tasks: [], schemaVersion: 2 });
+      });
+      storageMode = 2;
+      lastTaskJson = new Map(tasks.map(t => [t.id, JSON.stringify(t)]));
+      lastSavedSnapshot = mainSnapshotString();
+      await startTasksListener(false);
+      renderAll(); renderStorageMeter(); updateArchivePreview();
+      alert(`Storage upgraded ✅  ${list.length} task${list.length!==1?'s':''} moved. Other devices will reload on their own. A backup of the old board is kept in the database as "backup_pre_v2".`);
+    } catch(err){
+      console.error('Upgrade failed', err);
+      alert(err.message === 'CHANGED_DURING_UPGRADE'
+        ? 'Someone changed a task while the upgrade was running, so nothing was switched over. Nothing is lost — please try again in a moment.'
+        : 'The upgrade did not finish, so nothing was switched over and your board is unchanged. (' + err.message + ') Check that your Firestore rules allow the "boards" collection and its sub-collections, then try again.');
+      if(btn){ btn.disabled = false; btn.textContent = 'Upgrade storage'; }
+    }
+    upgradingStorage = false;
+  }
+
   function anyModalOpen(){ return document.querySelectorAll('.modal-overlay.open').length > 0; }
 
   function captureDraftText(){
@@ -2952,10 +3227,17 @@
     firestoreUnsubscribe = boardDocRef.onSnapshot(doc => {
       if(!doc.exists) return;
       const data = doc.data();
+      if(data.schemaVersion === 2 && storageMode !== 2){
+        // The Super Admin just upgraded the storage layout — reload so this device switches over too.
+        if(!upgradingStorage){ setSidebarSubtitle('Storage upgraded — reloading…'); setTimeout(() => location.reload(), 800); }
+        return;
+      }
       members = data.members || [];
-      tasks = data.tasks || [];
-      migrateTaskStatuses(tasks);
-      checkForNewActivityAndNotify();
+      if(storageMode !== 2){
+        tasks = data.tasks || [];
+        migrateTaskStatuses(tasks);
+        checkForNewActivityAndNotify();
+      }
       labels = data.labels || [];
       taskCounter = data.taskCounter || taskCounter;
       labelCounter = data.labelCounter || labelCounter;
@@ -2969,7 +3251,7 @@
       deletedInwardIds = data.deletedInwardIds || deletedInwardIds;
       archivedInwardEntries = data.archivedInwardEntries || archivedInwardEntries;
       deletedNoteKeys = data.deletedNoteKeys || deletedNoteKeys;
-      lastSavedSnapshot = JSON.stringify({members, tasks, labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto, inwardEntries, inwardCounter, deletedTaskIds, deletedLabelIds, deletedInwardIds, archivedInwardEntries, deletedNoteKeys});
+      lastSavedSnapshot = mainSnapshotString();
       if(anyModalOpen()){
         // Keep the underlying data current so any in-progress edit saves against fresh data,
         // but don't visually disturb whatever modal the person currently has open.
@@ -2983,6 +3265,7 @@
       renderReplyPreview();
       setSidebarSubtitle('Synced ' + timeNow());
     }, err => { console.error('Realtime sync error', err); setSidebarSubtitle('Sync error — check connection'); });
+    if(storageMode === 2) startTasksListener(false);
   }
   function resetAllFilters(){
     activeDirectionFilter = null; activeStatusFilter = 'open'; activeCategoryFilter = ''; activeTypeFilter = '';
@@ -3005,8 +3288,10 @@
       if(doc.exists){
         const data = doc.data();
         members = data.members || [];
-        tasks = data.tasks || [];
-        migrateTaskStatuses(tasks);
+        if(storageMode !== 2){
+          tasks = data.tasks || [];
+          migrateTaskStatuses(tasks);
+        }
         labels = data.labels || [];
         taskCounter = data.taskCounter || taskCounter;
         labelCounter = data.labelCounter || labelCounter;
@@ -3020,7 +3305,8 @@
         deletedInwardIds = data.deletedInwardIds || deletedInwardIds;
         archivedInwardEntries = data.archivedInwardEntries || archivedInwardEntries;
         deletedNoteKeys = data.deletedNoteKeys || deletedNoteKeys;
-        lastSavedSnapshot = JSON.stringify({members, tasks, labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto, inwardEntries, inwardCounter, deletedTaskIds, deletedLabelIds, deletedInwardIds, archivedInwardEntries, deletedNoteKeys});
+        lastSavedSnapshot = mainSnapshotString();
+        if(storageMode === 2) await reloadTasksFromServer();
         renderAll();
       }
       setSidebarSubtitle('Synced ' + timeNow());
