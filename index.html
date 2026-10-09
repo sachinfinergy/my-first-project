@@ -2966,8 +2966,9 @@
     renderTaskList(list, scopeMemberId);
     const badge = document.getElementById('renewalsModeBadge');
     if(badge){
-      badge.classList.toggle('show', renewalsViewMode);
-      badge.textContent = '🔄 Renewals';
+      const mode = renewalsViewMode ? 'Renewals' : (activeTypeFilter === 'New' ? 'New' : (activeTypeFilter || 'All'));
+      badge.classList.add('show');
+      badge.textContent = (mode==='Renewals' ? '🔄 ' : mode==='New' ? '✨ ' : '') + mode;
     }
   }
 
@@ -5749,6 +5750,15 @@
     } catch(err){ /* no saved session */ }
     return false;
   }
+
+  window.addEventListener('pageshow', (e) => {
+    // Restored from the browser's back/forward cache = effectively a fresh open: reset every filter to "All"
+    if(e.persisted){
+      activeDirectionFilter = null; activeStatusFilter = 'open'; activeCategoryFilter = ''; activeTypeFilter = '';
+      activeLobFilter = ''; activeLabelFilter = ''; activeMemberFilter = ''; renewalsViewMode = false;
+      try{ renderAll(); }catch(err){ /* not signed in yet */ }
+    }
+  });
 
   function logout(){
     clearSessionStorage();
