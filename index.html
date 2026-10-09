@@ -3171,7 +3171,7 @@
       if(data.schemaVersion === 2){ alert('Storage is already upgraded.'); location.reload(); return; }
       const tomb = new Set(data.deletedTaskIds || []);
       const list = (data.tasks || []).filter(t => !tomb.has(t.id));
-      const sourceJson = JSON.stringify(data.tasks || []);
+      let finalTasks = [];
 
       // 1) Backup of the whole current board
       await db.collection('boards').doc('backup_pre_v2').set({ ...data, backedUpAt: Date.now() });
@@ -3187,13 +3187,26 @@
       const missing = list.filter(t => !have.has(t.id));
       if(missing.length) throw new Error(missing.length + ' task(s) did not copy');
       // 4) Flip the switch — only if nobody changed the tasks while we copied
+      const copiedJson = new Map(list.map(t => [t.id, JSON.stringify(t)]));
       await db.runTransaction(async (transaction) => {
         const cur = await transaction.get(boardDocRef);
         const curData = cur.data();
-        if(JSON.stringify(curData.tasks || []) !== sourceJson) throw new Error('CHANGED_DURING_UPGRADE');
+        // Teammates are live (read receipts, new notes…), so the board can move on while we copy.
+        // Bring any such small differences across inside this same atomic step instead of giving up.
+        const curTomb = new Set(curData.deletedTaskIds || []);
+        const curList = (curData.tasks || []).filter(t => !curTomb.has(t.id));
+        const curIds = new Set(curList.map(t => t.id));
+        const changed = curList.filter(t => copiedJson.get(t.id) !== JSON.stringify(t));
+        const gone = list.filter(t => !curIds.has(t.id));
+        if(changed.length + gone.length > 300) throw new Error('CHANGED_DURING_UPGRADE');
+        changed.forEach(t => transaction.set(tasksColRef.doc(t.id), t));
+        gone.forEach(t => transaction.delete(tasksColRef.doc(t.id)));
         const { tasks: _drop, ...rest } = curData;
         transaction.set(boardDocRef, { ...rest, tasks: [], schemaVersion: 2 });
+        finalTasks = curList;
       });
+      tasks = finalTasks.slice();
+      sortTasksByCreated();
       storageMode = 2;
       lastTaskJson = new Map(tasks.map(t => [t.id, JSON.stringify(t)]));
       lastSavedSnapshot = mainSnapshotString();
