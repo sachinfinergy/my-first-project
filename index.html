@@ -108,6 +108,12 @@
     font-weight:800; font-size:12px; white-space:nowrap; cursor:pointer;
   }
   .filters-pill-btn:hover{ opacity:0.92; }
+  .top-reset-btn{
+    flex-shrink:0; display:flex; align-items:center; justify-content:center; gap:6px; background:#fff; color:var(--wa-header);
+    border:1.5px solid var(--wa-header); border-radius:16px; padding:7px 12px; font-weight:800; font-size:12px; cursor:pointer; white-space:nowrap;
+  }
+  .top-reset-btn:hover{ background:#E6F2EF; }
+  .top-reset-btn:active{ transform:scale(0.96); }
   .filters-pill-badge{
     background: var(--wa-amber); color:#fff; font-size:10px; font-weight:700;
     min-width:16px; height:16px; border-radius:9px; display:flex; align-items:center; justify-content:center; padding:0 4px;
@@ -116,13 +122,15 @@
   @media (max-width:520px){
     /* Compact 2-row header: [logo · Go to Renewals · Filters] / [chips] */
     .top-nav-bar{ min-width:0; flex-wrap:wrap; row-gap:8px; column-gap:8px; padding:8px 12px; }
-    .top-nav-brand{ order:1; flex:0 0 auto; }
+    .top-nav-brand{ order:1; flex:0 0 auto; display:none; }
     .top-nav-brand span{ display:none; }
     .top-nav-controls, .top-nav-controls-dynamic{ display:contents; }
     .type-quick-group{ order:2; flex:1 1 auto; gap:6px; }
     .type-quick-group .go-to-renewals-btn, .type-quick-group .type-quick-btn{ flex:1 1 auto; justify-content:center; padding:7px 8px; font-size:11px; gap:3px; }
     .type-quick-group .go-to-renewals-icon{ display:none; }
     .filters-trigger-wrap{ order:3; }
+    .top-reset-btn{ order:4; padding:8px 10px; }
+    .top-reset-label{ display:none; }
     .top-nav-filter-row{ order:5; flex:1 1 100%; min-width:0; }
     /* once a task chat is open, give the whole screen to the conversation */
     .app.chat-open .top-nav-bar{ display:none; }
@@ -2731,6 +2739,18 @@
       setSidebarSubtitle('Synced ' + timeNow());
     }, err => { console.error('Realtime sync error', err); setSidebarSubtitle('Sync error — check connection'); });
   }
+  function resetAllFilters(){
+    activeDirectionFilter = null; activeStatusFilter = 'open'; activeCategoryFilter = ''; activeTypeFilter = '';
+    activeLobFilter = ''; activeLabelFilter = ''; activeMemberFilter = ''; renewalsViewMode = false;
+    searchQuery = '';
+    const si = document.getElementById('searchInput'); if(si) si.value = '';
+    const panel = document.getElementById('filtersPanel'); if(panel) panel.classList.remove('open');
+  }
+  async function resetAndRefresh(){
+    resetAllFilters();
+    renderAll();
+    await manualRefresh();
+  }
   async function manualRefresh(){
     const icons = document.querySelectorAll('.refresh-icon');
     icons.forEach(el => el.classList.add('spinning'));
@@ -2884,7 +2904,11 @@
         </div>
         ${activeCount>0 ? `<button class="clear-more-filters-btn" onclick="clearAllTopFilters()">Clear these filters</button>` : ''}
       </div>
-      </div>`;
+      </div>
+      <button class="top-reset-btn" onclick="resetAndRefresh()" title="Reset all filters to All and refresh" aria-label="Reset filters and refresh">
+        <svg class="refresh-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        <span class="top-reset-label">Reset</span>
+      </button>`;
     controls.innerHTML = html;
   }
   function setMemberFilter(memberId){
