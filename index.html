@@ -81,17 +81,6 @@
     display:flex; align-items:center; gap:10px; flex-shrink:0; margin-left:auto;
   }
   .top-nav-controls-dynamic{ display:flex; align-items:center; gap:10px; }
-  .top-nav-search{
-    flex-shrink:0; width:220px; max-width:40vw;
-  }
-  .top-nav-search .search-box{
-    background: var(--wa-input-bg, #F0EFE9); border-radius:18px; padding:8px 14px;
-    display:flex; align-items:center; gap:7px; color: var(--wa-text-soft); font-size:12.5px;
-  }
-  .top-nav-search .search-box input{
-    border:none; background:none; outline:none; flex:1; min-width:0; font-size:12.5px; font-family:inherit; color: var(--wa-text);
-  }
-  .top-nav-search .search-box .icon{ font-size:13px; flex-shrink:0; }
   /* "Go to Renewals" — green, gently pulsing to draw the eye, grouped with Filters & Search */
   .go-to-renewals-btn{
     flex-shrink:0; display:flex; align-items:center; gap:6px; background:#fff; border:1.5px solid var(--wa-sage);
@@ -118,15 +107,13 @@
   }
   .filters-panel{ width:260px; }
   @media (max-width:520px){
-    /* Compact 3-row header: [logo · Go to Renewals · Filters] / [search] / [chips] */
+    /* Compact 2-row header: [logo · Go to Renewals · Filters] / [chips] */
     .top-nav-bar{ min-width:0; flex-wrap:wrap; row-gap:8px; column-gap:8px; padding:8px 12px; }
     .top-nav-brand{ order:1; flex:0 0 auto; }
     .top-nav-brand span{ display:none; }
     .top-nav-controls, .top-nav-controls-dynamic{ display:contents; }
     .go-to-renewals-btn{ order:2; flex:1 1 auto; justify-content:center; }
     .filters-trigger-wrap{ order:3; }
-    .top-nav-search{ order:4; flex:1 1 100%; width:auto; max-width:none; min-width:0; }
-    .top-nav-search .search-box input{ width:100%; min-width:0; }
     .top-nav-filter-row{ order:5; flex:1 1 100%; min-width:0; }
     /* once a task chat is open, give the whole screen to the conversation */
     .app.chat-open .top-nav-bar{ display:none; }
@@ -1267,12 +1254,6 @@
     <div class="top-nav-filter-row" id="topNavFilterRow"></div>
     <div class="top-nav-controls">
       <div class="top-nav-controls-dynamic" id="topNavControlsDynamic"></div>
-      <div class="top-nav-search">
-        <div class="search-box">
-          <span class="icon">🔍</span>
-          <input type="text" id="searchInput" placeholder="Search tasks, clients, notes, or members" oninput="onSearchInput()">
-        </div>
-      </div>
     </div>
   </div>
 
@@ -1320,6 +1301,12 @@
         <button class="icon-btn-round sound-toggle-btn" onclick="toggleNotifSound()" title="Notification sound"></button>
         <button class="icon-btn-round" onclick="manualRefresh()" title="Refresh"><svg class="refresh-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
         <button class="icon-btn-round" onclick="logout()" title="Log out"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg></button>
+      </div>
+    </div>
+    <div class="search-wrap">
+      <div class="search-box">
+        <span class="icon">🔍</span>
+        <input type="text" id="searchInput" placeholder="Search tasks, clients, notes, or members" oninput="onSearchInput()">
       </div>
     </div>
     <div class="direction-filter-row" id="directionFilterRow"></div>
