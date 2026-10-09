@@ -90,6 +90,13 @@
   .go-to-renewals-btn:hover{ background: #E7F4E9; }
   .go-to-renewals-btn.active{ background: var(--wa-sage); color:#fff; animation:none; }
   .go-to-renewals-icon{ font-size:13px; }
+  .type-quick-group{ display:flex; align-items:center; gap:8px; flex-shrink:0; }
+  .type-quick-btn{
+    flex-shrink:0; display:flex; align-items:center; gap:6px; background:#fff; border:1.5px solid var(--wa-sage);
+    color:var(--wa-sage); border-radius:16px; padding:7px 14px; font-weight:800; font-size:12px; white-space:nowrap; cursor:pointer;
+  }
+  .type-quick-btn:hover{ background:#E7F4E9; }
+  .type-quick-btn.active{ background:var(--wa-sage); color:#fff; }
   @keyframes renewalsPulse{
     0%, 100% { box-shadow: 0 0 0 0 rgba(76,154,91,0.45); }
     50% { box-shadow: 0 0 0 7px rgba(76,154,91,0); }
@@ -112,7 +119,9 @@
     .top-nav-brand{ order:1; flex:0 0 auto; }
     .top-nav-brand span{ display:none; }
     .top-nav-controls, .top-nav-controls-dynamic{ display:contents; }
-    .go-to-renewals-btn{ order:2; flex:1 1 auto; justify-content:center; }
+    .type-quick-group{ order:2; flex:1 1 auto; gap:6px; }
+    .type-quick-group .go-to-renewals-btn, .type-quick-group .type-quick-btn{ flex:1 1 auto; justify-content:center; padding:7px 8px; font-size:11px; gap:3px; }
+    .type-quick-group .go-to-renewals-icon{ display:none; }
     .filters-trigger-wrap{ order:3; }
     .top-nav-filter-row{ order:5; flex:1 1 100%; min-width:0; }
     /* once a task chat is open, give the whole screen to the conversation */
@@ -2822,9 +2831,15 @@
     row.innerHTML = chipsHtml;
 
     let html = `
-      <button class="go-to-renewals-btn ${renewalsViewMode?'active':''}" onclick="toggleRenewalsQuickFilter()" title="Jump to every open task with Type: Renewal">
-        <span class="go-to-renewals-icon">🔄</span>Go to Renewals
-      </button>
+      <div class="type-quick-group">
+        <button class="type-quick-btn ${(!renewalsViewMode && !activeTypeFilter)?'active':''}" onclick="showAllTypes()" title="Show tasks of every Type">All</button>
+        <button class="type-quick-btn ${(!renewalsViewMode && activeTypeFilter==='New')?'active':''}" onclick="goToNewQuickFilter()" title="Jump to every task with Type: New">
+          <span class="go-to-renewals-icon">✨</span>Go to New
+        </button>
+        <button class="go-to-renewals-btn ${renewalsViewMode?'active':''}" onclick="toggleRenewalsQuickFilter()" title="Jump to every open task with Type: Renewal">
+          <span class="go-to-renewals-icon">🔄</span>Go to Renewals
+        </button>
+      </div>
       <div class="filters-trigger-wrap">
       <button class="filters-pill-btn" onclick="toggleFiltersPanel(event)" title="Filters">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
@@ -2884,6 +2899,7 @@
   }
   function setTypeFilter(val){
     activeTypeFilter = val;
+    renewalsViewMode = false;
     renderAll();
     reopenFiltersPanel();
   }
@@ -2914,6 +2930,16 @@
     // in one sitting doesn't require re-clicking the filter icon each time.
     const panel = document.getElementById('filtersPanel');
     if(panel) panel.classList.add('open');
+  }
+  function showAllTypes(){
+    renewalsViewMode = false;
+    activeTypeFilter = '';
+    renderAll();
+  }
+  function goToNewQuickFilter(){
+    renewalsViewMode = false;
+    activeTypeFilter = 'New';
+    renderAll();
   }
   function toggleRenewalsQuickFilter(){
     if(renewalsViewMode){
@@ -4896,6 +4922,7 @@
   }
 
   function goToRenewals(){
+    activeTypeFilter = '';
     activeStatusFilter = 'open'; // start on a clean, actionable view — user can still switch to Completed
     goToTasks(true);
   }
