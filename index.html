@@ -1283,6 +1283,7 @@
       <button class="icon-btn-round rail-btn member-only" onclick="openDashboard(session.memberId)" title="My dashboard">📊</button>
       <button class="icon-btn-round rail-btn admin-only" onclick="openLabelManageModal()" title="Manage labels"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 12.42 21.58a2 2 0 0 1-2.83 0L2.42 14.4a2 2 0 0 1 0-2.83L10.58 3.4A2 2 0 0 1 12 2.83L21 3l.17 9a2 2 0 0 1-.58 1.41z"/><circle cx="16.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/></svg></button>
       <button class="icon-btn-round rail-btn admin-only" onclick="exportToExcel()" title="Export to Excel"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+      <button class="icon-btn-round rail-btn admin-only" onclick="openStorageArchiveModal()" title="Storage & archive"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg></button>
       <button class="icon-btn-round rail-btn admin-only" onclick="openBulkUploadModal()" title="Bulk upload tasks"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></button>
       <button class="icon-btn-round rail-btn admin-only" onclick="openMemberModal()" title="Add team member"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg></button>
       <button class="icon-btn-round rail-btn" onclick="openTaskModal()" title="New task"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
@@ -1616,6 +1617,32 @@
     <div id="inwardArchiveList" style="max-height:60vh; overflow-y:auto;"></div>
     <div class="modal-actions">
       <button class="btn-ghost" onclick="closeInwardArchiveModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="storageArchiveOverlay">
+  <div class="modal modal-wide">
+    <h3 style="margin-bottom:4px;">Storage &amp; Archive</h3>
+    <p style="font-size:12.5px; color:var(--wa-text-soft); margin:0 0 14px;">Old completed tasks can be moved out of the live board into the archive. They stay searchable and exportable here, and free up space so the board keeps saving.</p>
+    <div id="storageMeter"></div>
+    <div class="more-filters-label" style="margin:16px 0 6px;">Archive completed tasks older than</div>
+    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <select id="archiveAgeSelect" class="person-name-input" style="width:auto;" onchange="updateArchivePreview()">
+        <option value="30">30 days</option><option value="60">60 days</option><option value="90" selected>90 days</option>
+        <option value="180">180 days</option><option value="365">1 year</option>
+      </select>
+      <button class="btn-primary" id="archiveNowBtn" onclick="runArchive()">Archive now</button>
+    </div>
+    <div id="archivePreview" style="font-size:12.5px; color:var(--wa-text-soft); margin-top:8px;"></div>
+    <div class="more-filters-label" style="margin:18px 0 6px;">Archived tasks</div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+      <input type="text" id="archiveSearchInput" class="person-name-input" style="flex:1; min-width:160px;" placeholder="Search archive (title, client, mobile, notes…)" oninput="renderArchiveList()">
+      <button class="btn-ghost" onclick="exportArchiveToExcel()">Export archive</button>
+    </div>
+    <div id="archiveList" style="max-height:38vh; overflow-y:auto;"></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeStorageArchiveModal()">Close</button>
     </div>
   </div>
 </div>
@@ -2671,13 +2698,13 @@
 
       const sizeKB = getPayloadSizeKB(mergedPayload);
       if(sizeKB > 950){
-        alert(`⚠️ Your team board is almost full (${sizeKB}KB of a 1024KB limit). Please ask your Super Admin to archive or remove some old tasks soon.`);
+        alert(`⚠️ Your team board is almost full (${sizeKB}KB of a 1024KB limit). Your Super Admin can free space from the Storage & archive button in the side rail (archive old completed tasks).`);
       }
       return true;
     } catch(err){
       console.error('Save failed', err);
       if(err.message === 'SIZE_LIMIT_EXCEEDED'){
-        alert('⚠️ This change could not be saved — your team board is completely full (1024KB limit). Please ask your Super Admin to remove old tasks or attachments before trying again.');
+        alert('⚠️ This change could not be saved — your team board is completely full (1024KB limit). Your Super Admin needs to archive old completed tasks (Storage & archive button in the side rail) before changes can be saved.');
         return false;
       }
       if(retryCount < 1){
@@ -2688,6 +2715,224 @@
       alert('⚠️ This change could not be saved to the shared board. Please try again. Nothing you just did was saved.');
       return false;
     }
+  }
+
+  // ---------- Storage & archive (old completed tasks live in separate Firestore docs) ----------
+  // The live board doc (boards/main) has a hard 1 MiB cap. Completed tasks past a chosen age are
+  // moved into boards/archive_0001, archive_0002, … (each kept under ~700KB). Archived task IDs are
+  // added to the existing deleted-ID list so no stale client can bring them back into the live board.
+  const ARCHIVE_CHUNK_MAX_BYTES = 700 * 1024;
+  let archiveTasksCache = null;
+  const archiveDocRef = n => db.collection('boards').doc('archive_' + String(n).padStart(4,'0'));
+  const byteSize = o => new Blob([JSON.stringify(o)]).size;
+
+  function boardPayloadForSize(){
+    return { members, tasks, labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto, inwardEntries, inwardCounter, deletedTaskIds, deletedLabelIds, deletedInwardIds, archivedInwardEntries, deletedNoteKeys };
+  }
+  function openStorageArchiveModal(){
+    if(!session || session.type !== 'admin') return;
+    archiveTasksCache = null;
+    document.getElementById('archiveSearchInput').value = '';
+    document.getElementById('archiveList').innerHTML = `<div class="label-picker-empty" style="padding:14px 0;">Loading archive…</div>`;
+    renderStorageMeter();
+    updateArchivePreview();
+    document.getElementById('storageArchiveOverlay').classList.add('open');
+    loadArchiveTasks().then(renderArchiveList).catch(err => {
+      console.error('Archive load failed', err);
+      document.getElementById('archiveList').innerHTML = `<div class="label-picker-empty" style="padding:14px 0;">Could not load the archive. Check your connection (and that your Firestore rules allow the "boards" collection), then reopen.</div>`;
+    });
+  }
+  function closeStorageArchiveModal(){ document.getElementById('storageArchiveOverlay').classList.remove('open'); }
+
+  function renderStorageMeter(){
+    const kb = getPayloadSizeKB(boardPayloadForSize());
+    const pct = Math.min(100, Math.round(kb / 1024 * 100));
+    const color = pct >= 93 ? '#C62828' : (pct >= 75 ? '#E0A030' : 'var(--wa-sage)');
+    document.getElementById('storageMeter').innerHTML = `
+      <div style="display:flex; justify-content:space-between; font-size:12.5px; font-weight:700; margin-bottom:5px;">
+        <span>Live board storage</span><span>${kb} KB of 1024 KB (${pct}%)</span>
+      </div>
+      <div style="height:9px; background:var(--wa-border); border-radius:5px; overflow:hidden;">
+        <div style="height:100%; width:${pct}%; background:${color}; transition:width .3s;"></div>
+      </div>
+      <div style="font-size:11.5px; color:var(--wa-text-soft); margin-top:5px;">${(archiveTasksCache||[]).length ? archiveTasksCache.length + ' task(s) currently in the archive.' : ''}</div>`;
+  }
+
+  function getArchiveCandidates(){
+    const days = Number(document.getElementById('archiveAgeSelect').value) || 90;
+    const cutoff = Date.now() - days * 86400000;
+    return tasks.filter(t => t.status === 'done' && (t.completedAt || t.created || 0) < cutoff);
+  }
+  function updateArchivePreview(){
+    const list = getArchiveCandidates();
+    const kb = Math.round(byteSize(list) / 1024);
+    document.getElementById('archivePreview').textContent = list.length
+      ? `${list.length} completed task${list.length!==1?'s':''} match — archiving frees about ${kb} KB.`
+      : 'No completed tasks are old enough yet.';
+    document.getElementById('archiveNowBtn').disabled = list.length === 0;
+  }
+
+  async function loadArchiveTasks(){
+    const all = [];
+    for(let n = 1; n < 500; n++){
+      const doc = await archiveDocRef(n).get();
+      if(!doc.exists) break;
+      (doc.data().tasks || []).forEach(t => all.push({ ...t, _chunk: n }));
+    }
+    archiveTasksCache = all;
+    renderStorageMeter();
+    return all;
+  }
+
+  // Appends tasks to the newest archive chunk, rolling over to a new chunk when it would pass ~700KB.
+  async function writeTasksToArchive(list){
+    let lastN = 0, current = [];
+    for(let n = 1; n < 500; n++){
+      const doc = await archiveDocRef(n).get();
+      if(!doc.exists) break;
+      lastN = n; current = doc.data().tasks || [];
+    }
+    const existingIds = new Set();
+    // Every chunk's IDs, so re-running after a half-finished archive never duplicates a task.
+    for(let n = 1; n <= lastN; n++){
+      if(n === lastN) current.forEach(t => existingIds.add(t.id));
+      else (await archiveDocRef(n).get()).data().tasks.forEach(t => existingIds.add(t.id));
+    }
+    let idx = lastN || 1;
+    let bytes = byteSize(current);
+    const toFlush = [];
+    for(const t of list){
+      if(existingIds.has(t.id)) continue;
+      const item = { ...t, archivedAt: Date.now() };
+      const sz = byteSize(item);
+      if(current.length && bytes + sz > ARCHIVE_CHUNK_MAX_BYTES){
+        toFlush.push({ n: idx, tasks: current });
+        idx++; current = []; bytes = 0;
+      }
+      current.push(item); bytes += sz;
+    }
+    toFlush.push({ n: idx, tasks: current });
+    for(const f of toFlush){
+      await archiveDocRef(f.n).set({ tasks: f.tasks, updatedAt: Date.now() });
+    }
+  }
+
+  async function runArchive(){
+    const list = getArchiveCandidates();
+    if(list.length === 0) return;
+    const days = document.getElementById('archiveAgeSelect').value;
+    if(!confirm(`Move ${list.length} completed task${list.length!==1?'s':''} older than ${days} days into the archive? They will leave the live board but stay searchable under Storage & Archive.`)) return;
+    const btn = document.getElementById('archiveNowBtn');
+    btn.disabled = true; btn.textContent = 'Archiving…';
+    try{
+      // 1) copy to the archive first — if this fails, nothing has left the live board
+      await writeTasksToArchive(list);
+      // 2) only then remove from the live board and tombstone the IDs
+      const ids = new Set(list.map(t => t.id));
+      tasks = tasks.filter(t => !ids.has(t.id));
+      if(selectedTaskId && ids.has(selectedTaskId)) selectedTaskId = null;
+      deletedTaskIds = [...new Set([...deletedTaskIds, ...ids])];
+      const ok = await saveBoard();
+      if(!ok){ alert('The tasks were copied to the archive but the live board could not be updated. Please press Reset to reload, then run Archive again — nothing is lost.'); }
+      renderAll();
+    } catch(err){
+      console.error('Archive failed', err);
+      alert('Archiving failed — no tasks were removed from the live board. Please check your connection (and Firestore rules) and try again.');
+    }
+    btn.textContent = 'Archive now';
+    archiveTasksCache = null;
+    renderStorageMeter();
+    updateArchivePreview();
+    try{ await loadArchiveTasks(); renderArchiveList(); } catch(e){ /* ignore */ }
+  }
+
+  function archiveTaskSearchText(t){
+    return [t.id, t.title, t.desc, t.customerName, t.customerMobile, t.agentName, t.productType, t.productDetails, t.category, t.taskType,
+      ...(t.notes||[]).map(n => n.text)].join(' ').toLowerCase();
+  }
+  function renderArchiveList(){
+    const box = document.getElementById('archiveList');
+    if(!box) return;
+    if(archiveTasksCache === null) return;
+    const q = (document.getElementById('archiveSearchInput').value || '').trim().toLowerCase();
+    let list = archiveTasksCache.slice().sort((a,b) => (b.completedAt||b.created||0) - (a.completedAt||a.created||0));
+    if(q) list = list.filter(t => archiveTaskSearchText(t).includes(q));
+    if(list.length === 0){
+      box.innerHTML = `<div class="label-picker-empty" style="padding:18px 0; text-align:center;">${archiveTasksCache.length ? 'No archived tasks match your search.' : 'The archive is empty.'}</div>`;
+      return;
+    }
+    const shown = list.slice(0, 100);
+    box.innerHTML = shown.map(t => {
+      const assignee = getAssigneeEntity(t);
+      const done = t.completedAt ? new Date(t.completedAt).toLocaleDateString('en-GB') : '—';
+      const notes = (t.notes||[]).map(n => `<div style="font-size:12px; margin:3px 0;"><b>${escapeHtml(noteAuthorLabel(n))}</b> <span style="color:var(--wa-text-soft);">${n.time ? new Date(n.time).toLocaleString('en-GB') : ''}</span><br>${escapeHtml(n.text||'')}</div>`).join('') || '<div style="font-size:12px; color:var(--wa-text-soft);">No updates.</div>';
+      return `
+      <details class="manage-label-row" style="display:block; padding:8px 0;">
+        <summary style="cursor:pointer; list-style:none;">
+          <div style="font-weight:700; font-size:13.5px;">${escapeHtml(t.title||'(untitled)')} <span style="font-weight:500; color:var(--wa-text-soft); font-size:11.5px;">${escapeHtml(t.id)}</span></div>
+          <div style="font-size:11.5px; color:var(--wa-text-soft); margin-top:2px;">${t.customerName ? escapeHtml(t.customerName) + ' · ' : ''}${assignee ? escapeHtml(assignee.name) + ' · ' : ''}Completed ${done}</div>
+        </summary>
+        <div style="margin:8px 0 4px; padding-left:4px;">
+          ${t.desc ? `<div style="font-size:12.5px; margin-bottom:6px;">${escapeHtml(t.desc)}</div>` : ''}
+          ${notes}
+          <button class="btn-ghost" style="margin-top:8px; padding:5px 12px; font-size:12px;" onclick="restoreArchivedTask('${t.id}')">Restore to live board</button>
+        </div>
+      </details>`;
+    }).join('') + (list.length > shown.length ? `<div style="font-size:12px; color:var(--wa-text-soft); padding:8px 0;">Showing the newest ${shown.length} of ${list.length} — refine your search to narrow down.</div>` : '');
+  }
+
+  async function restoreArchivedTask(id){
+    const t = (archiveTasksCache||[]).find(x => x.id === id);
+    if(!t) return;
+    if(!confirm('Restore this task to the live board? It will be given a new task number so it can’t clash with the original.')) return;
+    try{
+      const { _chunk, archivedAt, ...clean } = t;
+      const restored = { ...clean, id: 'T-' + String(taskCounter++).padStart(3,'0'), restoredFrom: id };
+      const ref = archiveDocRef(_chunk);
+      const doc = await ref.get();
+      const remaining = ((doc.exists && doc.data().tasks) || []).filter(x => x.id !== id);
+      tasks.push(restored);
+      const ok = await saveBoard();
+      if(!ok){ tasks = tasks.filter(x => x.id !== restored.id); alert('Could not restore — the live board is too full. Archive more tasks first.'); return; }
+      await ref.set({ tasks: remaining, updatedAt: Date.now() });
+      renderAll();
+      await loadArchiveTasks();
+      renderArchiveList(); renderStorageMeter(); updateArchivePreview();
+    } catch(err){
+      console.error('Restore failed', err);
+      alert('Could not restore that task. Please try again.');
+    }
+  }
+
+  function exportArchiveToExcel(){
+    if(typeof XLSX === 'undefined'){ alert('The export tool failed to load — please check your internet connection and try again.'); return; }
+    if(!archiveTasksCache || archiveTasksCache.length === 0){ alert('The archive is empty — nothing to export.'); return; }
+    const rows = archiveTasksCache.map(t => {
+      const assignee = getAssigneeEntity(t);
+      return {
+        'Task ID': t.id, 'Title': t.title, 'Description': t.desc || '',
+        'Assignee': assignee ? assignee.name : 'Unassigned', 'Assigned By': assignorLabel(t) || '',
+        'Priority': t.priority, 'Due Date': t.due || '',
+        'Created': t.created ? new Date(t.created).toLocaleString('en-GB') : '',
+        'Completed On': t.completedAt ? new Date(t.completedAt).toLocaleString('en-GB') : '',
+        'Archived On': t.archivedAt ? new Date(t.archivedAt).toLocaleString('en-GB') : '',
+        'Customer Name': t.customerName || '', 'Customer Mobile': t.customerMobile || '',
+        'Agent Name': t.agentName || '', 'Relationship Manager': t.relationshipManager || '',
+        'Product Type': t.productType || '', 'Product Details': t.productDetails || '',
+        'Type': t.taskType || '', 'Category': t.category || '', 'Line of Business': t.lineOfBusiness || '',
+        'Labels': (t.labels||[]).map(lid => { const l = labelById(lid); return l ? l.name : null; }).filter(Boolean).join(', '),
+        'Updates Count': (t.notes||[]).length
+      };
+    });
+    const updates = [];
+    archiveTasksCache.forEach(t => (t.notes||[]).forEach(n => updates.push({
+      'Task ID': t.id, 'Task Title': t.title, 'Author': noteAuthorLabel(n), 'Text': n.text || '',
+      'Time': n.time ? new Date(n.time).toLocaleString('en-GB') : ''
+    })));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Archived Tasks');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(updates), 'Updates');
+    XLSX.writeFile(wb, `team-tasks-archive-${new Date().toISOString().slice(0,10)}.xlsx`);
   }
 
   function anyModalOpen(){ return document.querySelectorAll('.modal-overlay.open').length > 0; }
