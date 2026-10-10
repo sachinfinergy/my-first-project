@@ -5657,6 +5657,81 @@
     closeDashboard();
   }
 
+  // ---- Motor vs All-other business split (Inward Dashboard) ----
+  let inwardSplitPeriod = 'yesterday'; // 'yesterday' | 'today' | 'last7' | 'month' | 'custom'
+  let inwardSplitCustom = '';          // YYYY-MM-DD when period === 'custom'
+  function isoLocal(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+  function setInwardSplitPeriod(p){ inwardSplitPeriod = p; renderInwardDashboard(); }
+  function setInwardSplitCustom(v){ inwardSplitCustom = v; inwardSplitPeriod = v ? 'custom' : 'yesterday'; renderInwardDashboard(); }
+  function inwardSplitRange(){
+    const today = new Date(); today.setHours(0,0,0,0);
+    const addDays = n => { const d = new Date(today); d.setDate(d.getDate() + n); return d; };
+    const nice = s => formatInwardDateDisplay(s);
+    if(inwardSplitPeriod === 'today'){ const s = isoLocal(today); return { from:s, to:s, label:'Today (' + nice(s) + ')' }; }
+    if(inwardSplitPeriod === 'last7'){ const f = isoLocal(addDays(-6)), t = isoLocal(today); return { from:f, to:t, label:'Last 7 days (' + nice(f) + ' to ' + nice(t) + ')' }; }
+    if(inwardSplitPeriod === 'month'){ const f = isoLocal(new Date(today.getFullYear(), today.getMonth(), 1)), t = isoLocal(today); return { from:f, to:t, label:'This month (' + nice(f) + ' to ' + nice(t) + ')' }; }
+    if(inwardSplitPeriod === 'custom' && inwardSplitCustom){ return { from:inwardSplitCustom, to:inwardSplitCustom, label:nice(inwardSplitCustom) }; }
+    const y = isoLocal(addDays(-1)); return { from:y, to:y, label:'Yesterday (' + nice(y) + ')' };
+  }
+  function buildMotorSplitHtml(entries, fmtINR){
+    const range = inwardSplitRange();
+    const inRange = entries.filter(e => e.inwardDate && e.inwardDate >= range.from && e.inwardDate <= range.to);
+    const isMotor = e => String(e.productType||'').trim().toUpperCase() === 'MOTOR';
+    const agg = list => ({
+      count: list.length,
+      gross: list.reduce((s,e) => s + (Number(e.grossPremium)||0), 0),
+      net: list.reduce((s,e) => s + (Number(e.netPremium)||0), 0),
+      payout: list.reduce((s,e) => s + (Number(e.payoutPremium)||0), 0)
+    });
+    const motorList = inRange.filter(isMotor), otherList = inRange.filter(e => !isMotor(e));
+    const m = agg(motorList), o = agg(otherList), t = agg(inRange);
+    const pct = (a, b) => b > 0 ? Math.round(a / b * 100) : 0;
+    const motorShare = pct(m.gross, t.gross);
+
+    const card = (title, color, a) => `
+      <div class="kpi-card" style="text-align:left; border-top:4px solid ${color};">
+        <div class="kpi-label" style="font-weight:800; margin-bottom:6px;">${title}</div>
+        <div class="kpi-value">${fmtINR(a.gross)}</div>
+        <div class="kpi-label">Gross Premium · ${a.count} ${a.count===1?'entry':'entries'}</div>
+        <div style="font-size:12px; color:var(--wa-text-soft); margin-top:6px;">Net ${fmtINR(a.net)} · Payout ${fmtINR(a.payout)}</div>
+      </div>`;
+
+    const otherByProduct = {};
+    otherList.forEach(e => {
+      const k = (e.productType || 'Not specified').toString().trim().toUpperCase() || 'NOT SPECIFIED';
+      (otherByProduct[k] = otherByProduct[k] || []).push(e);
+    });
+    const otherRows = Object.entries(otherByProduct).map(([k, list]) => [k, agg(list)]).sort((a,b) => b[1].gross - a[1].gross);
+    const otherMax = otherRows.length ? Math.max(1, otherRows[0][1].gross) : 1;
+    const otherHtml = otherRows.length
+      ? otherRows.map(([k, a]) => barRow(k, a.gross, otherMax, 'var(--wa-amber)', fmtINR(a.gross) + ' · ' + a.count)).join('')
+      : `<div class="dash-empty">No other-product entries in this period.</div>`;
+
+    const chip = (val, label) => `<button class="inward-person-chip ${inwardSplitPeriod===val?'active':''}" onclick="setInwardSplitPeriod('${val}')">${label}</button>`;
+    return `
+      <div class="dash-section">
+        <h3>Motor vs All Other Business</h3>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px;">
+          ${chip('yesterday','Yesterday')}${chip('today','Today')}${chip('last7','Last 7 days')}${chip('month','This month')}
+          <input type="date" value="${inwardSplitCustom}" max="${isoLocal(new Date())}" onchange="setInwardSplitCustom(this.value)" class="person-name-input" style="flex:0 0 auto; width:150px; padding:5px 10px; ${inwardSplitPeriod==='custom'?'border-color:var(--wa-header);':''}" title="Pick a specific date">
+        </div>
+        <div style="font-size:12.5px; color:var(--wa-text-soft); margin-bottom:10px;">${escapeHtml(range.label)} · by Inward Date</div>
+        <div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));">
+          ${card('🚗 Total Motor', 'var(--wa-header)', m)}
+          ${card('📦 All Other Business', 'var(--wa-amber)', o)}
+          ${card('Total Business', 'var(--wa-sage)', t)}
+        </div>
+        ${t.count ? `
+        <div style="margin:14px 0 4px; font-size:12px; font-weight:700; color:var(--wa-text-soft);">Share of Gross Premium</div>
+        <div style="display:flex; height:22px; border-radius:11px; overflow:hidden; background:var(--wa-border);">
+          <div style="width:${motorShare}%; background:var(--wa-header); color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center;">${motorShare >= 8 ? 'Motor ' + motorShare + '%' : ''}</div>
+          <div style="width:${100 - motorShare}%; background:var(--wa-amber); color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center;">${(100 - motorShare) >= 8 ? 'Other ' + (100 - motorShare) + '%' : ''}</div>
+        </div>` : `<div class="dash-empty" style="margin-top:12px;">No Inward entries for this date.</div>`}
+        <div style="margin:16px 0 6px; font-size:12px; font-weight:700; color:var(--wa-text-soft);">What's inside “All Other Business” (Gross · entries)</div>
+        ${otherHtml}
+      </div>`;
+  }
+
   function renderInwardDashboard(){
     const entries = getVisibleInwardEntries();
     const tier = getInwardAccessTier();
@@ -5737,6 +5812,7 @@
 
     document.getElementById('inwardDashboardBody').innerHTML = `
       ${kpiHtml}
+      ${buildMotorSplitHtml(entries, fmtINR)}
       <div class="dash-grid-2">
         <div class="dash-section"><h3>By Category</h3>${catHtml}</div>
         <div class="dash-section"><h3>By Office</h3>${officeHtml}</div>
