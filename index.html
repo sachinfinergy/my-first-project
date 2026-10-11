@@ -5660,13 +5660,37 @@
   // ---- Motor vs All-other business split (Inward Dashboard) ----
   let inwardSplitPeriod = 'yesterday'; // 'yesterday' | 'today' | 'last7' | 'month' | 'custom'
   let inwardSplitCustom = '';          // YYYY-MM-DD when period === 'custom'
+  let inwardSplitMonth = '';           // YYYY-MM when period === 'monthpick'
+  let inwardSplitLob = '';             // '' (All) | 'GI' | 'LI'
+  const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   function isoLocal(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
-  function setInwardSplitPeriod(p){ inwardSplitPeriod = p; renderInwardDashboard(); }
-  function setInwardSplitCustom(v){ inwardSplitCustom = v; inwardSplitPeriod = v ? 'custom' : 'yesterday'; renderInwardDashboard(); }
+  function setInwardSplitPeriod(p){ inwardSplitPeriod = p; inwardSplitMonth = ''; inwardSplitCustom = ''; renderInwardDashboard(); }
+  function setInwardSplitCustom(v){ inwardSplitCustom = v; inwardSplitMonth = ''; inwardSplitPeriod = v ? 'custom' : 'yesterday'; renderInwardDashboard(); }
+  function setInwardSplitMonth(v){ inwardSplitMonth = v; inwardSplitCustom = ''; inwardSplitPeriod = v ? 'monthpick' : 'yesterday'; renderInwardDashboard(); }
+  function setInwardSplitLob(v){ inwardSplitLob = v; renderInwardDashboard(); }
+  // Months from the earliest Inward entry up to the current month, newest first.
+  function inwardSplitMonthOptions(entries){
+    const now = new Date();
+    let earliest = entries.reduce((min, e) => (e.inwardDate && e.inwardDate < min) ? e.inwardDate : min, isoLocal(now));
+    let y = Number(earliest.slice(0,4)), m = Number(earliest.slice(5,7)) - 1;
+    const out = [];
+    while(y < now.getFullYear() || (y === now.getFullYear() && m <= now.getMonth())){
+      out.unshift({ value: y + '-' + String(m+1).padStart(2,'0'), label: MONTH_SHORT[m] + ' ' + y });
+      m++; if(m > 11){ m = 0; y++; }
+    }
+    return out;
+  }
   function inwardSplitRange(){
     const today = new Date(); today.setHours(0,0,0,0);
     const addDays = n => { const d = new Date(today); d.setDate(d.getDate() + n); return d; };
     const nice = s => formatInwardDateDisplay(s);
+    if(inwardSplitPeriod === 'monthpick' && inwardSplitMonth){
+      const y = Number(inwardSplitMonth.slice(0,4)), m = Number(inwardSplitMonth.slice(5,7)) - 1;
+      const f = isoLocal(new Date(y, m, 1));
+      const lastDay = new Date(y, m + 1, 0);
+      const t = isoLocal(lastDay > today ? today : lastDay);
+      return { from:f, to:t, label: MONTH_SHORT[m] + ' ' + y + ' (' + nice(f) + ' to ' + nice(t) + ')' };
+    }
     if(inwardSplitPeriod === 'today'){ const s = isoLocal(today); return { from:s, to:s, label:'Today (' + nice(s) + ')' }; }
     if(inwardSplitPeriod === 'last7'){ const f = isoLocal(addDays(-6)), t = isoLocal(today); return { from:f, to:t, label:'Last 7 days (' + nice(f) + ' to ' + nice(t) + ')' }; }
     if(inwardSplitPeriod === 'month'){ const f = isoLocal(new Date(today.getFullYear(), today.getMonth(), 1)), t = isoLocal(today); return { from:f, to:t, label:'This month (' + nice(f) + ' to ' + nice(t) + ')' }; }
@@ -5675,7 +5699,8 @@
   }
   function buildMotorSplitHtml(entries, fmtINR){
     const range = inwardSplitRange();
-    const inRange = entries.filter(e => e.inwardDate && e.inwardDate >= range.from && e.inwardDate <= range.to);
+    const lobMatch = e => !inwardSplitLob || String(e.category||'').trim().toUpperCase() === inwardSplitLob;
+    const inRange = entries.filter(e => e.inwardDate && e.inwardDate >= range.from && e.inwardDate <= range.to && lobMatch(e));
     const isMotor = e => String(e.productType||'').trim().toUpperCase() === 'MOTOR';
     const agg = list => ({
       count: list.length,
@@ -5686,14 +5711,14 @@
     const motorList = inRange.filter(isMotor), otherList = inRange.filter(e => !isMotor(e));
     const m = agg(motorList), o = agg(otherList), t = agg(inRange);
     const pct = (a, b) => b > 0 ? Math.round(a / b * 100) : 0;
-    const motorShare = pct(m.gross, t.gross);
+    const motorShare = pct(m.payout, t.payout);
 
     const card = (title, color, a) => `
       <div class="kpi-card" style="text-align:left; border-top:4px solid ${color};">
         <div class="kpi-label" style="font-weight:800; margin-bottom:6px;">${title}</div>
-        <div class="kpi-value">${fmtINR(a.gross)}</div>
-        <div class="kpi-label">Gross Premium · ${a.count} ${a.count===1?'entry':'entries'}</div>
-        <div style="font-size:12px; color:var(--wa-text-soft); margin-top:6px;">Net ${fmtINR(a.net)} · Payout ${fmtINR(a.payout)}</div>
+        <div class="kpi-value">${fmtINR(a.payout)}</div>
+        <div class="kpi-label">Payout Premium · ${a.count} ${a.count===1?'entry':'entries'}</div>
+        <div style="font-size:12px; color:var(--wa-text-soft); margin-top:6px;">Gross ${fmtINR(a.gross)} · Net ${fmtINR(a.net)}</div>
       </div>`;
 
     const otherByProduct = {};
@@ -5701,33 +5726,46 @@
       const k = (e.productType || 'Not specified').toString().trim().toUpperCase() || 'NOT SPECIFIED';
       (otherByProduct[k] = otherByProduct[k] || []).push(e);
     });
-    const otherRows = Object.entries(otherByProduct).map(([k, list]) => [k, agg(list)]).sort((a,b) => b[1].gross - a[1].gross);
-    const otherMax = otherRows.length ? Math.max(1, otherRows[0][1].gross) : 1;
+    const otherRows = Object.entries(otherByProduct).map(([k, list]) => [k, agg(list)]).sort((a,b) => b[1].payout - a[1].payout);
+    const otherMax = otherRows.length ? Math.max(1, otherRows[0][1].payout) : 1;
     const otherHtml = otherRows.length
-      ? otherRows.map(([k, a]) => barRow(k, a.gross, otherMax, 'var(--wa-amber)', fmtINR(a.gross) + ' · ' + a.count)).join('')
+      ? otherRows.map(([k, a]) => barRow(k, a.payout, otherMax, 'var(--wa-amber)', fmtINR(a.payout) + ' · ' + a.count)).join('')
       : `<div class="dash-empty">No other-product entries in this period.</div>`;
 
     const chip = (val, label) => `<button class="inward-person-chip ${inwardSplitPeriod===val?'active':''}" onclick="setInwardSplitPeriod('${val}')">${label}</button>`;
+    const lobChip = (val, label) => `<button class="inward-person-chip ${inwardSplitLob===val?'active':''}" onclick="setInwardSplitLob('${val}')">${label}</button>`;
+    const monthOpts = inwardSplitMonthOptions(entries)
+      .map(o => `<option value="${o.value}" ${inwardSplitPeriod==='monthpick' && inwardSplitMonth===o.value ? 'selected' : ''}>${o.label}</option>`).join('');
+    const ctrlStyle = 'flex:0 0 auto; padding:5px 10px; border:1px solid var(--wa-border); border-radius:16px; background:#fff; font-size:13px; font-weight:600; color:var(--wa-text); cursor:pointer;';
+    const lobLabel = inwardSplitLob ? ' · ' + inwardSplitLob + ' only' : '';
     return `
       <div class="dash-section">
         <h3>Motor vs All Other Business</h3>
-        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px;">
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px;">
           ${chip('yesterday','Yesterday')}${chip('today','Today')}${chip('last7','Last 7 days')}${chip('month','This month')}
+          <select onchange="setInwardSplitMonth(this.value)" title="Pick a month" style="${ctrlStyle} ${inwardSplitPeriod==='monthpick'?'border-color:var(--wa-header); background:var(--wa-header); color:var(--wa-header-text);':''}">
+            <option value="" ${inwardSplitPeriod==='monthpick'?'':'selected'}>Select month</option>
+            ${monthOpts}
+          </select>
           <input type="date" value="${inwardSplitCustom}" max="${isoLocal(new Date())}" onchange="setInwardSplitCustom(this.value)" class="person-name-input" style="flex:0 0 auto; width:150px; padding:5px 10px; ${inwardSplitPeriod==='custom'?'border-color:var(--wa-header);':''}" title="Pick a specific date">
         </div>
-        <div style="font-size:12.5px; color:var(--wa-text-soft); margin-bottom:10px;">${escapeHtml(range.label)} · by Inward Date</div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px;">
+          <span style="font-size:12px; font-weight:700; color:var(--wa-text-soft);">Line of Business:</span>
+          ${lobChip('','All')}${lobChip('GI','GI')}${lobChip('LI','LI')}
+        </div>
+        <div style="font-size:12.5px; color:var(--wa-text-soft); margin-bottom:10px;">${escapeHtml(range.label)} · by Inward Date${lobLabel}</div>
         <div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));">
           ${card('🚗 Total Motor', 'var(--wa-header)', m)}
           ${card('📦 All Other Business', 'var(--wa-amber)', o)}
           ${card('Total Business', 'var(--wa-sage)', t)}
         </div>
         ${t.count ? `
-        <div style="margin:14px 0 4px; font-size:12px; font-weight:700; color:var(--wa-text-soft);">Share of Gross Premium</div>
+        <div style="margin:14px 0 4px; font-size:12px; font-weight:700; color:var(--wa-text-soft);">Share of Payout Premium</div>
         <div style="display:flex; height:22px; border-radius:11px; overflow:hidden; background:var(--wa-border);">
           <div style="width:${motorShare}%; background:var(--wa-header); color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center;">${motorShare >= 8 ? 'Motor ' + motorShare + '%' : ''}</div>
           <div style="width:${100 - motorShare}%; background:var(--wa-amber); color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center;">${(100 - motorShare) >= 8 ? 'Other ' + (100 - motorShare) + '%' : ''}</div>
-        </div>` : `<div class="dash-empty" style="margin-top:12px;">No Inward entries for this date.</div>`}
-        <div style="margin:16px 0 6px; font-size:12px; font-weight:700; color:var(--wa-text-soft);">What's inside “All Other Business” (Gross · entries)</div>
+        </div>` : `<div class="dash-empty" style="margin-top:12px;">No Inward entries for this period.</div>`}
+        <div style="margin:16px 0 6px; font-size:12px; font-weight:700; color:var(--wa-text-soft);">What's inside “All Other Business” (Payout · entries)</div>
         ${otherHtml}
       </div>`;
   }
