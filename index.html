@@ -5661,13 +5661,31 @@
   let inwardSplitPeriod = 'yesterday'; // 'yesterday' | 'today' | 'last7' | 'month' | 'custom'
   let inwardSplitCustom = '';          // YYYY-MM-DD when period === 'custom'
   let inwardSplitMonth = '';           // YYYY-MM when period === 'monthpick'
-  let inwardSplitLob = '';             // '' (All) | 'GI' | 'LI'
+  let inwardSplitLob = '';             // '' (All) | 'GI' (GI + Short Term) | 'LI'
+  let inwardSplitType = '';            // '' (All) | 'New' | 'Renewal' | 'Endorsement' — only when a LOB is picked
   const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   function isoLocal(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
   function setInwardSplitPeriod(p){ inwardSplitPeriod = p; inwardSplitMonth = ''; inwardSplitCustom = ''; renderInwardDashboard(); }
   function setInwardSplitCustom(v){ inwardSplitCustom = v; inwardSplitMonth = ''; inwardSplitPeriod = v ? 'custom' : 'yesterday'; renderInwardDashboard(); }
   function setInwardSplitMonth(v){ inwardSplitMonth = v; inwardSplitCustom = ''; inwardSplitPeriod = v ? 'monthpick' : 'yesterday'; renderInwardDashboard(); }
-  function setInwardSplitLob(v){ inwardSplitLob = v; renderInwardDashboard(); }
+  function setInwardSplitLob(v){ inwardSplitLob = v; if(!v) inwardSplitType = ''; renderInwardDashboard(); }
+  function setInwardSplitType(v){ inwardSplitType = v; renderInwardDashboard(); }
+  // Single source of truth for the dashboard's top filters (period + LOB + type).
+  function inwardSplitFiltered(entries){
+    const range = inwardSplitRange();
+    const cat = e => String(e.category||'').trim().toUpperCase();
+    const lobMatch = e => !inwardSplitLob
+      || (inwardSplitLob === 'GI' ? (cat(e) === 'GI' || cat(e) === 'SHORT TERM') : cat(e) === inwardSplitLob);
+    const typeMatch = e => !inwardSplitType || String(e.type||'').trim().toLowerCase() === inwardSplitType.toLowerCase();
+    const list = entries.filter(e => e.inwardDate && e.inwardDate >= range.from && e.inwardDate <= range.to && lobMatch(e) && typeMatch(e));
+    return { range, list };
+  }
+  function inwardFilterLabel(){
+    let s = '';
+    if(inwardSplitLob) s += ' · ' + (inwardSplitLob === 'GI' ? 'GI + Short Term' : 'LI');
+    if(inwardSplitLob && inwardSplitType) s += ' · ' + inwardSplitType;
+    return s;
+  }
   // Months from the earliest Inward entry up to the current month, newest first.
   function inwardSplitMonthOptions(entries){
     const now = new Date();
@@ -5698,9 +5716,7 @@
     const y = isoLocal(addDays(-1)); return { from:y, to:y, label:'Yesterday (' + nice(y) + ')' };
   }
   function buildMotorSplitHtml(entries, fmtINR){
-    const range = inwardSplitRange();
-    const lobMatch = e => !inwardSplitLob || String(e.category||'').trim().toUpperCase() === inwardSplitLob;
-    const inRange = entries.filter(e => e.inwardDate && e.inwardDate >= range.from && e.inwardDate <= range.to && lobMatch(e));
+    const { range, list: inRange } = inwardSplitFiltered(entries);
     const isMotor = e => String(e.productType||'').trim().toUpperCase() === 'MOTOR';
     const agg = list => ({
       count: list.length,
@@ -5737,7 +5753,8 @@
     const monthOpts = inwardSplitMonthOptions(entries)
       .map(o => `<option value="${o.value}" ${inwardSplitPeriod==='monthpick' && inwardSplitMonth===o.value ? 'selected' : ''}>${o.label}</option>`).join('');
     const ctrlStyle = 'flex:0 0 auto; padding:5px 10px; border:1px solid var(--wa-border); border-radius:16px; background:#fff; font-size:13px; font-weight:600; color:var(--wa-text); cursor:pointer;';
-    const lobLabel = inwardSplitLob ? ' · ' + inwardSplitLob + ' only' : '';
+    const lobLabel = inwardFilterLabel();
+    const typeChip = (val, label) => `<button class="inward-person-chip ${inwardSplitType===val?'active':''}" onclick="setInwardSplitType('${val}')">${label}</button>`;
     return `
       <div class="dash-section">
         <h3>Motor vs All Other Business</h3>
@@ -5751,8 +5768,13 @@
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px;">
           <span style="font-size:12px; font-weight:700; color:var(--wa-text-soft);">Line of Business:</span>
-          ${lobChip('','All')}${lobChip('GI','GI')}${lobChip('LI','LI')}
+          ${lobChip('','All')}${lobChip('GI','GI + Short Term')}${lobChip('LI','LI')}
         </div>
+        ${inwardSplitLob ? `
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:-4px 0 12px; padding-left:12px; border-left:3px solid var(--wa-header);">
+          <span style="font-size:12px; font-weight:700; color:var(--wa-text-soft);">Type:</span>
+          ${typeChip('','All')}${typeChip('New','New')}${typeChip('Renewal','Renewal')}${typeChip('Endorsement','Endorsement')}
+        </div>` : ''}
         <div style="font-size:12.5px; color:var(--wa-text-soft); margin-bottom:10px;">${escapeHtml(range.label)} · by Inward Date${lobLabel}</div>
         <div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));">
           ${card('🚗 Total Motor', 'var(--wa-header)', m)}
@@ -5804,37 +5826,65 @@
         <div class="kpi-card"><div class="kpi-value">${thisMonthCount}</div><div class="kpi-label">This month</div></div>
       </div>`;
 
-    function breakdownBars(values, counter, colorFor){
-      const counts = {};
-      values.forEach(v => counts[v] = 0);
-      counter(counts);
-      const max = Math.max(1, ...Object.values(counts));
-      return Object.keys(counts).map(k => barRow(k, counts[k], max, colorFor(k))).join('');
+    // Everything below the Motor split follows the filters chosen in that section.
+    const { list: fl } = inwardSplitFiltered(entries);
+    const payOf = e => Number(e.payoutPremium)||0;
+    const filterNote = `<div style="font-size:11.5px; color:var(--wa-text-soft); margin:-4px 0 10px;">${escapeHtml(inwardSplitRange().label + inwardFilterLabel())} · Payout · entries</div>`;
+    const totalRow = (sum, count) => `
+      <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px dashed var(--wa-border); margin-top:10px; padding-top:8px; font-size:12.5px; font-weight:800;">
+        <span>Total</span><span>${fmtINR(sum)} · ${count} ${count===1?'entry':'entries'}</span>
+      </div>`;
+    // values: fixed bucket list; keyOf: entry -> bucket; colorFor: bucket -> colour
+    function breakdownBars(values, keyOf, colorFor){
+      const b = {};
+      values.forEach(v => b[v] = { sum:0, count:0 });
+      fl.forEach(e => { const k = keyOf(e); if(k && b[k]){ b[k].sum += payOf(e); b[k].count++; } });
+      const max = Math.max(1, ...Object.values(b).map(x => x.sum));
+      const tot = Object.values(b).reduce((s,x) => ({ sum:s.sum + x.sum, count:s.count + x.count }), { sum:0, count:0 });
+      return filterNote + Object.keys(b).map(k => barRow(k, b[k].sum, max, colorFor(k), fmtINR(b[k].sum) + ' · ' + b[k].count)).join('') + totalRow(tot.sum, tot.count);
     }
+    const norm = (v, opts) => { const s = String(v||'').trim().toLowerCase(); return opts.find(o => o.toLowerCase() === s) || ''; };
 
-    const catHtml = breakdownBars(INWARD_CATEGORIES, (counts) => {
-      entries.forEach(e => { if(e.category && counts[e.category] !== undefined) counts[e.category]++; });
-    }, (k) => ({'GI':'var(--wa-header)','LI':'#5B2C91','Short Term':'var(--wa-amber)'}[k] || 'var(--wa-header)'));
+    const catHtml = breakdownBars(INWARD_CATEGORIES, e => norm(e.category, INWARD_CATEGORIES),
+      (k) => ({'GI':'var(--wa-header)','LI':'#5B2C91','Short Term':'var(--wa-amber)'}[k] || 'var(--wa-header)'));
+    const officeHtml = breakdownBars(['Vasco','Panjim'], e => norm(e.office, ['Vasco','Panjim']), () => 'var(--wa-sage)');
+    const TYPES = ['New','Renewal','Endorsement'];
+    const typeColor = { 'New':'var(--wa-header)', 'Renewal':'var(--wa-amber)', 'Endorsement':'#5B2C91' };
+    const typeHtml = breakdownBars(TYPES, e => norm(e.type, TYPES), (k) => typeColor[k]);
+    const statusHtml = breakdownBars(['Issued','Pending'], e => norm(e.policyStatus, ['Issued','Pending']),
+      (k) => k === 'Pending' ? 'var(--wa-rust)' : 'var(--wa-sage)');
 
-    const officeHtml = breakdownBars(['Vasco','Panjim'], (counts) => {
-      entries.forEach(e => { if(e.office && counts[e.office] !== undefined) counts[e.office]++; });
-    }, () => 'var(--wa-sage)');
-
-    const typeHtml = breakdownBars(['New','Renewal','Endorsement'], (counts) => {
-      entries.forEach(e => { if(e.type && counts[e.type] !== undefined) counts[e.type]++; });
-    }, () => 'var(--wa-amber)');
-
-    const statusHtml = breakdownBars(['Issued','Pending'], (counts) => {
-      entries.forEach(e => { if(e.policyStatus && counts[e.policyStatus] !== undefined) counts[e.policyStatus]++; });
-    }, (k) => k === 'Pending' ? 'var(--wa-rust)' : 'var(--wa-sage)');
-
-    const rmPremium = {};
-    entries.forEach(e => { if(e.rm) rmPremium[e.rm] = (rmPremium[e.rm]||0) + (Number(e.grossPremium)||0); });
-    const rmSorted = Object.entries(rmPremium).sort((a,b) => b[1]-a[1]).slice(0,8);
-    const rmMax = rmSorted.length ? rmSorted[0][1] : 1;
+    // RM-wise: one stacked bar per RM, split New / Renewal / Endorsement (by Payout).
+    const rmAgg = {};
+    fl.forEach(e => {
+      if(!e.rm) return;
+      const r = rmAgg[e.rm] = rmAgg[e.rm] || { sum:0, count:0, parts:{ 'New':0, 'Renewal':0, 'Endorsement':0, 'Other':0 } };
+      const p = payOf(e); r.sum += p; r.count++;
+      r.parts[norm(e.type, TYPES) || 'Other'] += p;
+    });
+    const rmSorted = Object.entries(rmAgg).sort((a,b) => b[1].sum - a[1].sum);
+    const rmMax = rmSorted.length ? Math.max(1, rmSorted[0][1].sum) : 1;
+    const segColor = Object.assign({ 'Other':'#b9b9b4' }, typeColor);
+    const rmLegend = `<div style="display:flex; gap:12px; flex-wrap:wrap; font-size:11.5px; color:var(--wa-text-soft); margin-bottom:10px;">
+        ${['New','Renewal','Endorsement'].map(k => `<span><span style="display:inline-block; width:10px; height:10px; border-radius:3px; background:${segColor[k]}; margin-right:4px; vertical-align:-1px;"></span>${k}</span>`).join('')}
+      </div>`;
+    const rmRow = ([name, r]) => {
+      const segs = ['New','Renewal','Endorsement','Other'].filter(k => r.parts[k] > 0).map(k => {
+        const w = r.parts[k] / rmMax * 100;
+        const share = r.sum > 0 ? Math.round(r.parts[k] / r.sum * 100) : 0;
+        return `<div title="${k}: ${fmtINR(r.parts[k])} (${share}%)" style="width:${w}%; background:${segColor[k]}; color:#fff; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; overflow:hidden; white-space:nowrap;">${share >= 15 && w >= 12 ? share + '%' : ''}</div>`;
+      }).join('');
+      return `
+        <div class="bar-row">
+          <span class="bar-label" title="${escapeHtml(name)}">${escapeHtml(name)}</span>
+          <div class="bar-track" style="display:flex; height:18px;">${segs}</div>
+          <span class="bar-value" style="width:auto; font-weight:600; color:var(--wa-text-soft); font-size:11px;">${fmtINR(r.sum)} · ${r.count}</span>
+        </div>`;
+    };
+    const rmTot = rmSorted.reduce((s,[,r]) => ({ sum:s.sum + r.sum, count:s.count + r.count }), { sum:0, count:0 });
     const rmHtml = rmSorted.length
-      ? rmSorted.map(([name,val]) => barRow(name, val, rmMax, 'var(--wa-header)', fmtINR(val))).join('')
-      : `<div class="dash-empty">No data yet.</div>`;
+      ? filterNote + rmLegend + rmSorted.map(rmRow).join('') + totalRow(rmTot.sum, rmTot.count)
+      : `<div class="dash-empty">No entries with an RM for these filters.</div>`;
 
     const recent = entries.slice().sort((a,b) => (b.createdAt||0) - (a.createdAt||0)).slice(0,8);
     const recentHtml = recent.length
@@ -5857,7 +5907,7 @@
         <div class="dash-section"><h3>By Type</h3>${typeHtml}</div>
         <div class="dash-section"><h3>Policy Status</h3>${statusHtml}</div>
       </div>
-      <div class="dash-section"><h3>Top RMs by Gross Premium</h3>${rmHtml}</div>
+      <div class="dash-section"><h3>Relationship Manager wise (Payout · New / Renewal / Endorsement)</h3>${rmHtml}</div>
       <div class="dash-section"><h3>Recent entries</h3>${recentHtml}</div>
     `;
   }
