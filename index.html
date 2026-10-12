@@ -984,6 +984,26 @@
     font-size:13px; font-weight:600; color: var(--wa-text);
   }
 
+  .bulk-warn-box{
+    background:#fff8e6; border:1px solid #f1dfa8; border-radius:8px; padding:10px 14px; margin-top:10px;
+    font-size:12.5px; color: var(--wa-text); max-height:160px; overflow-y:auto;
+  }
+  .bulk-warn-box ul{ margin:6px 0 0; padding-left:18px; }
+  .bulk-note-box{
+    background:#f3f5f6; border:1px solid var(--wa-border); border-radius:8px; padding:9px 14px; margin-top:10px;
+    font-size:12.5px; color: var(--wa-text-soft); line-height:1.5;
+  }
+  .bulk-stats{ display:flex; gap:8px; margin-top:12px; }
+  .bulk-stat{ flex:1; border-radius:8px; padding:9px 6px; text-align:center; font-size:11.5px; line-height:1.3; border:1px solid transparent; }
+  .bulk-stat b{ display:block; font-size:22px; line-height:1.2; }
+  .bulk-stat.ok{ background:#e7f8f2; border-color:#b8e6d3; color: var(--wa-header); }
+  .bulk-stat.bad{ background:#fdf2ef; border-color:#f0d4cf; color: var(--wa-rust); }
+  .bulk-stat.warn{ background:#fff8e6; border-color:#f1dfa8; color:#8a6500; }
+  .bulk-stat.zero{ background:#f6f7f8; border-color: var(--wa-border); color: var(--wa-text-soft); }
+  .bulk-options{ margin-top:4px; display:flex; flex-direction:column; gap:7px; font-size:12.5px; color: var(--wa-text); }
+  .bulk-options label{ display:flex; align-items:center; gap:7px; cursor:pointer; }
+  .bulk-options .bulk-opt-row select{ padding:4px 6px; border:1px solid var(--wa-border); border-radius:6px; font-size:12.5px; background:#fff; }
+
   .attach-preview-empty{ font-size:12px; color: var(--wa-text-soft); margin-bottom:6px; }
   .attach-preview-row{ display:flex; flex-wrap:wrap; gap:10px; margin-bottom:4px; }
   .attach-preview-thumb{ position:relative; display:inline-block; margin-bottom:0; }
@@ -1816,15 +1836,28 @@
 
 <!-- Bulk Upload Modal -->
 <div class="modal-overlay" id="bulkUploadModalOverlay">
-  <div class="modal">
+  <div class="modal" style="max-width:560px;">
     <h3>Bulk upload tasks</h3>
     <p style="font-size:13px; color:var(--wa-text-soft); margin-bottom:14px; line-height:1.5;">
-      Download the template below, fill it in, then upload it here. Every row must be valid before anything gets imported — you'll see a full list of anything that needs fixing first.
+      Download the template, fill it in (up to 1000 rows), then upload it here. You'll see a preview first. Rows with a problem are skipped, everything else is imported, and you can download the skipped rows with the reason to fix and upload again.
     </p>
-    <button class="btn-ghost" onclick="downloadTaskTemplate()" style="width:100%; margin-bottom:16px;">⬇ Download template</button>
+    <button class="btn-ghost" id="bulkUploadTemplateBtn" onclick="downloadTaskTemplate()" style="width:100%; margin-bottom:16px;">⬇ Download template</button>
     <div class="field">
       <label>Upload filled template (.xlsx)</label>
       <input type="file" id="bulkUploadFileInput" accept=".xlsx,.xls" onchange="handleBulkUploadFile(event)">
+    </div>
+    <div class="bulk-options">
+      <label><input type="checkbox" id="bulkOptCreateLabels" checked onchange="rerunBulkValidation()"> Create labels that don't exist yet</label>
+      <label><input type="checkbox" id="bulkOptSkipDupes" checked onchange="rerunBulkValidation()"> Skip duplicates (same customer, title and type already on the board)</label>
+      <label class="bulk-opt-row">If a row has no Type:
+        <select id="bulkOptDefaultType" onchange="rerunBulkValidation()">
+          <option value="">skip that row</option>
+          <option value="New">treat as New</option>
+          <option value="Renewal">treat as Renewal</option>
+          <option value="Endo">treat as Endo</option>
+          <option value="Others">treat as Others</option>
+        </select>
+      </label>
     </div>
     <div id="bulkUploadResult"></div>
     <div class="modal-actions">
@@ -2391,19 +2424,164 @@
     renderBackupReminderBanner();
   }
 
-  let pendingBulkImportRows = null; // validated rows ready to import, or null if nothing valid yet
+  // ---------- Bulk upload from Excel ----------
+  const BULK_MAX_ROWS = 1000;
+  const BULK_COLUMNS = ['Title','Description','Assign To','Assigned By','Priority','Due Date','Customer Name','Customer Mobile','Agent Name','Relationship Manager','Product Type','Product Details','Type','Line of Business','Category','Labels','Renewal Date','Old Policy Number','Status','Completed On','Outcome','Outcome Note'];
+  // Column headers are matched loosely (case, spaces and common alternative names), so a sheet
+  // exported from elsewhere usually works without renaming anything.
+  const BULK_HEADER_ALIASES = {
+    'Title': ['title','task','task title','task name','subject'],
+    'Description': ['description','desc','remarks','notes'],
+    'Assign To': ['assign to','assigned to','assignee','owner','assign'],
+    'Assigned By': ['assigned by','assignor','created by','assign by'],
+    'Priority': ['priority'],
+    'Due Date': ['due date','due','deadline','target date'],
+    'Customer Name': ['customer name','customer','client name','client'],
+    'Customer Mobile': ['customer mobile','mobile','mobile no','mobile number','mobile no.','phone','phone number','contact number','customer phone','customer contact'],
+    'Agent Name': ['agent name','agent'],
+    'Relationship Manager': ['relationship manager','rm'],
+    'Product Type': ['product type','product'],
+    'Product Details': ['product details','product detail','sub product'],
+    'Type': ['type','task type'],
+    'Line of Business': ['line of business','lob'],
+    'Category': ['category'],
+    'Labels': ['labels','label','tags','tag'],
+    'Renewal Date': ['renewal date','policy expiry','policy expiry date','expiry date','renewal due date','policy renewal date'],
+    'Old Policy Number': ['old policy number','old policy no','old policy','previous policy number','previous policy no','policy number','policy no'],
+    'Status': ['status'],
+    'Completed On': ['completed on','completion date','completed date','date completed'],
+    'Outcome': ['outcome','won lost','result'],
+    'Outcome Note': ['outcome note','outcome notes','outcome reason','reason for outcome']
+  };
+  const BULK_QUIET_HEADERS = ['excel row','reason','row','sr no','sr','s no','sno','serial no','no','#','sl no'];
+  const BULK_TYPE_MAP = { 'new':'New', 'renewal':'Renewal', 'endo':'Endo', 'endorsement':'Endo', 'others':'Others', 'other':'Others' };
+  const BULK_STATUS_MAP = { 'open':'open', 'completed':'done', 'complete':'done', 'done':'done', 'closed':'done' };
+  const VALID_PRIORITIES = ['Low','Medium','High','Urgent'];
+  const BULK_MONTHS = { jan:1, feb:2, mar:3, apr:4, may:5, jun:6, jul:7, aug:8, sep:9, sept:9, oct:10, nov:11, dec:12 };
+
+  let bulkParsed = null;        // the file as read: headers, column positions, raw rows
+  let bulkResult = null;        // the latest validation result (what the preview shows)
+  let bulkImporting = false;
+  let bulkHeaderLookup = null;
+
+  function bulkNormHeader(s){ return String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9#]+/g,' ').trim(); }
+  function getBulkHeaderLookup(){
+    if(bulkHeaderLookup) return bulkHeaderLookup;
+    bulkHeaderLookup = {};
+    Object.keys(BULK_HEADER_ALIASES).forEach(canon => BULK_HEADER_ALIASES[canon].forEach(a => { bulkHeaderLookup[a] = canon; }));
+    return bulkHeaderLookup;
+  }
+
+  // Text of a spreadsheet cell, tidied (numbers without exponent noise, dates as YYYY-MM-DD).
+  function bulkCellText(v){
+    if(v === null || v === undefined) return '';
+    if(v instanceof Date) return isNaN(v.getTime()) ? '' : bulkYmd(new Date(v.getTime() + 12*3600*1000));
+    if(typeof v === 'number'){ return Number.isFinite(v) ? String(v) : ''; }
+    return String(v).trim();
+  }
+  function bulkYmd(d){
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+  function bulkIsRealDate(y, m, d){
+    if(y < 2000 || y > 2100 || m < 1 || m > 12 || d < 1 || d > 31) return false;
+    const dt = new Date(y, m-1, d);
+    return dt.getFullYear() === y && dt.getMonth() === m-1 && dt.getDate() === d;
+  }
+  // Returns 'YYYY-MM-DD', '' (empty cell) or null (couldn't be understood).
+  // Written dates are read DAY FIRST (30/09/2026, 30-09-2026, 30.09.2026, 30 Sep 2026).
+  function parseBulkDate(val){
+    if(val === null || val === undefined || val === '') return '';
+    if(val instanceof Date){
+      if(isNaN(val.getTime())) return null;
+      // +12h absorbs the few seconds of timezone drift Excel dates can carry.
+      const d = new Date(val.getTime() + 12*3600*1000);
+      return bulkIsRealDate(d.getFullYear(), d.getMonth()+1, d.getDate()) ? bulkYmd(d) : null;
+    }
+    if(typeof val === 'number'){
+      if(val < 20000 || val > 80000) return null;                    // not an Excel date serial
+      const d = new Date(Math.round((val - 25569) * 86400 * 1000));  // serial -> UTC date
+      return bulkIsRealDate(d.getUTCFullYear(), d.getUTCMonth()+1, d.getUTCDate())
+        ? `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}` : null;
+    }
+    const s = String(val).trim();
+    if(!s) return '';
+    let m = s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})(?:[ T].*)?$/);
+    if(m){ const y=+m[1], mo=+m[2], d=+m[3]; return bulkIsRealDate(y,mo,d) ? `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}` : null; }
+    m = s.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2}|\d{4})$/);
+    if(m){ const d=+m[1], mo=+m[2]; let y=+m[3]; if(m[3].length === 2) y += 2000;
+      return bulkIsRealDate(y,mo,d) ? `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}` : null; }
+    m = s.match(/^(\d{1,2})[ \-\/.]([A-Za-z]{3,9})[ \-\/.,]*(\d{2}|\d{4})$/);
+    if(m){ const d=+m[1]; const mo = BULK_MONTHS[m[2].toLowerCase().slice(0,4)] || BULK_MONTHS[m[2].toLowerCase().slice(0,3)]; let y=+m[3]; if(m[3].length === 2) y += 2000;
+      return (mo && bulkIsRealDate(y,mo,d)) ? `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}` : null; }
+    return null;
+  }
+
+  function bulkDupKey(name, mobile, title, type, oldPolicy){
+    const digits = String(mobile || '').replace(/\D/g,'').slice(-10);
+    const cust = digits || String(name || '').trim().toLowerCase();
+    if(!cust) return '';          // nothing to recognise the customer by — can't call it a duplicate
+    return [cust, String(title || '').trim().toLowerCase(), type || '', String(oldPolicy || '').trim().toLowerCase()].join('|');
+  }
 
   function downloadTaskTemplate(){
     if(typeof XLSX === 'undefined'){ alert('The template tool failed to load — please check your internet connection and try again.'); return; }
     const sampleAssignee = members[0] ? members[0].name : 'Team Member Name';
     const sampleAssignor = adminName || 'Super Admin';
-    const headers = ['Title','Description','Assign To','Assigned By','Priority','Due Date','Customer Name','Customer Mobile','Agent Name','Relationship Manager','Product Type','Product Details','Type','Line of Business','Category','Labels'];
-    const example = ['Send renewal reminder','Call client before policy lapses', sampleAssignee, sampleAssignor, 'Medium', '2026-09-30', 'Rohan Mehta', '9876543210', 'Suresh Kumar', 'Priya Nair', 'MOTOR', 'PVT CAR-COMP', 'Renewal', 'LI', 'Quote', ''];
-    const ws = XLSX.utils.aoa_to_sheet([headers, example]);
-    ws['!cols'] = headers.map(() => ({wch:20}));
+    const ex1 = ['(Example) Renewal reminder — delete this row','Call client before the policy lapses', sampleAssignee, sampleAssignor, 'Medium', '30/09/2026', 'Rohan Mehta', '9876543210', 'Suresh Kumar', 'Priya Nair', 'MOTOR', 'PVT CAR-COMP', 'Renewal', 'GI', 'Quote', '', '15/10/2026', 'OLD/12345/2025', 'Open', '', '', ''];
+    const ex2 = ['(Example) New policy — already done, delete this row','', sampleAssignee, sampleAssignor, 'High', '10/09/2026', 'Anita Shah', '9811122233', '', '', '', '', 'New', 'LI', 'Policy Issuance', '', '', '', 'Completed', '12/09/2026', 'Won', 'Client bought the plan'];
+    const ws = XLSX.utils.aoa_to_sheet([BULK_COLUMNS, ex1, ex2]);
+    ws['!cols'] = BULK_COLUMNS.map(c => ({ wch: Math.max(14, c.length + 4) }));
+
+    const productTypes = Object.keys(PRODUCT_TYPE_DETAILS_MAP);
+    const memberNames = [adminName || 'Super Admin', ...members.map(m => m.name)];
+    const info = [
+      ['Column','Required?','What to put','Allowed values / notes'],
+      ['Title','Yes','What the task is','Free text'],
+      ['Description','No','More detail','Free text'],
+      ['Assign To','Yes','Who does the task','Exact name of a team member or the Super Admin (see list below)'],
+      ['Assigned By','No','Who gave the task','Same names as above. Left blank = you (the person uploading)'],
+      ['Priority','No','How urgent','Low, Medium, High, Urgent. Left blank = Medium'],
+      ['Due Date','No','Deadline','DD/MM/YYYY (e.g. 30/09/2026) or a real Excel date. Dates are read day-first.'],
+      ['Customer Name','No','','Free text'],
+      ['Customer Mobile','No','','10-digit mobile number'],
+      ['Agent Name','No','','Free text'],
+      ['Relationship Manager','No','','A team member, the Super Admin, or ' + DIRECT_RM_OPTIONS.join(' / ')],
+      ['Product Type','No','',productTypes.join(', ')],
+      ['Product Details','No','','Must belong to the Product Type chosen'],
+      ['Type','Yes','','New, Renewal, Endo, Others'],
+      ['Line of Business','No','','GI, LI, Short term'],
+      ['Category','No','','Quote, Claims, Policy Issuance, Admin'],
+      ['Labels','No','Tags for the task','Separate several with commas, e.g.  Motor, Urgent.  Names that do not exist yet can be created automatically during the upload'],
+      ['Renewal Date','No','Policy renewal / expiry date','Only used when Type = Renewal. DD/MM/YYYY'],
+      ['Old Policy Number','No','','Only used when Type = Renewal'],
+      ['Status','No','Open or already finished','Open or Completed. Left blank = Open'],
+      ['Completed On','No','When it was finished','Only for Completed rows. DD/MM/YYYY. Left blank = today'],
+      ['Outcome','Completed New / Renewal rows','Won or Lost','Required when Status = Completed and Type is New or Renewal'],
+      ['Outcome Note','No','Why it was won / lost','Free text'],
+      [],
+      ['Tips'],
+      ['• Rows whose Title starts with "(Example)" are ignored, so you can leave the sample rows in.'],
+      ['• Up to ' + BULK_MAX_ROWS + ' rows per upload. Rows with a problem are skipped, the rest are imported, and you get a file listing what was skipped and why.'],
+      ['• Column names can differ a little (for example "Mobile" or "Assignee") — the app recognises the common ones.'],
+      ['• If Excel turns your dates into the wrong day/month, format the whole date column as Text before typing them.'],
+      [],
+      ['Current team members'], ...memberNames.map(n => [n]),
+      [],
+      ['Current labels'], ...(labels.length ? labels.map(l => [l.name]) : [['(none yet)']])
+    ];
+    const wsInfo = XLSX.utils.aoa_to_sheet(info);
+    wsInfo['!cols'] = [{ wch: 24 }, { wch: 26 }, { wch: 30 }, { wch: 90 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Tasks');
+    XLSX.utils.book_append_sheet(wb, wsInfo, 'Instructions');
     XLSX.writeFile(wb, 'task-upload-template.xlsx');
+  }
+
+  function bulkSetBusy(on, message){
+    bulkImporting = on;
+    ['bulkUploadFileInput','bulkOptCreateLabels','bulkOptSkipDupes','bulkOptDefaultType','bulkUploadTemplateBtn'].forEach(id => { const el = document.getElementById(id); if(el) el.disabled = on; });
+    const btn = document.getElementById('bulkUploadConfirmBtn');
+    if(btn){ btn.disabled = on; if(on && message) btn.textContent = message; }
   }
 
   function openBulkUploadModal(){
@@ -2411,7 +2589,11 @@
     document.getElementById('bulkUploadFileInput').value = '';
     document.getElementById('bulkUploadResult').innerHTML = '';
     document.getElementById('bulkUploadConfirmBtn').style.display = 'none';
-    pendingBulkImportRows = null;
+    document.getElementById('bulkOptCreateLabels').checked = true;
+    document.getElementById('bulkOptSkipDupes').checked = true;
+    document.getElementById('bulkOptDefaultType').value = '';
+    bulkParsed = null; bulkResult = null;
+    bulkSetBusy(false);
   }
   function closeBulkUploadModal(){ document.getElementById('bulkUploadModalOverlay').classList.remove('open'); }
 
@@ -2423,219 +2605,425 @@
     const m = members.find(m => m.name.toLowerCase() === n);
     return m ? m.id : null;
   }
-
-  function formatExcelDateValue(val){
-    if(val instanceof Date){
-      if(isNaN(val.getTime())) return null;
-      const yyyy = val.getFullYear(), mm = String(val.getMonth()+1).padStart(2,'0'), dd = String(val.getDate()).padStart(2,'0');
-      return `${yyyy}-${mm}-${dd}`;
-    }
-    const s = String(val).trim();
-    if(!s) return '';
-    if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-    // Deliberately no fallback to new Date(string) here: formats like "09/08/2026" are
-    // ambiguous (9 Aug vs Sep 8) and could silently import the wrong date. Better to
-    // reject and ask for an unambiguous format than guess wrong with no error shown.
-    return null;
+  function bulkEditDistance(a, b){
+    const dp = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+    for(let j = 1; j <= b.length; j++) dp[0][j] = j;
+    for(let i = 1; i <= a.length; i++) for(let j = 1; j <= b.length; j++)
+      dp[i][j] = Math.min(dp[i-1][j] + 1, dp[i][j-1] + 1, dp[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1));
+    return dp[a.length][b.length];
   }
-
-  const VALID_PRIORITIES = ['Low','Medium','High','Urgent'];
+  // "Did you mean…" for a name that matched nobody (typos, first name only, extra spaces).
+  function bulkPersonHint(name){
+    const n = String(name).trim().toLowerCase().replace(/\s+/g, ' ');
+    if(!n) return '';
+    const near = members.filter(m => {
+      const full = m.name.toLowerCase(), first = full.split(' ')[0];
+      return full.includes(n) || n.includes(first) || bulkEditDistance(n, full) <= 2 || bulkEditDistance(n, first) <= 2;
+    }).map(m => m.name).slice(0, 3);
+    return near.length ? ` Did you mean ${near.map(x => '"' + x + '"').join(' or ')}?` : '';
+  }
 
   function handleBulkUploadFile(event){
     const file = event.target.files[0];
     if(!file) return;
     if(typeof XLSX === 'undefined'){ alert('The import tool failed to load — please check your internet connection and try again.'); return; }
+    const resultBox = document.getElementById('bulkUploadResult');
+    resultBox.innerHTML = `<div class="bulk-note-box">Reading ${escapeHtml(file.name)}…</div>`;
     const reader = new FileReader();
     reader.onload = e => {
       try{
-        const data = new Uint8Array(e.target.result);
-        const wb = XLSX.read(data, { type:'array', cellDates:true });
-        const sheet = wb.Sheets[wb.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(sheet, { defval:'' });
-        validateAndPreviewBulkRows(rows);
+        const wb = XLSX.read(new Uint8Array(e.target.result), { type:'array', cellDates:true });
+        const sheetName = wb.SheetNames.includes('Tasks') ? 'Tasks' : wb.SheetNames[0];
+        const aoa = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header:1, defval:'', blankrows:true, raw:true });
+        parseBulkSheet(aoa, file.name);
       } catch(err){
         console.error('Bulk upload read failed', err);
-        document.getElementById('bulkUploadResult').innerHTML = `<div class="bulk-error-box">Could not read that file. Please make sure it's a valid .xlsx file, ideally the downloaded template.</div>`;
+        bulkParsed = null; bulkResult = null;
+        resultBox.innerHTML = `<div class="bulk-error-box">Could not read that file. Please make sure it's a valid .xlsx file, ideally the downloaded template.</div>`;
+        document.getElementById('bulkUploadConfirmBtn').style.display = 'none';
       }
     };
     reader.readAsArrayBuffer(file);
   }
 
-  function validateAndPreviewBulkRows(rows){
+  // Finds the header row and which column is which, then validates.
+  function parseBulkSheet(aoa, fileName){
     const resultBox = document.getElementById('bulkUploadResult');
     const confirmBtn = document.getElementById('bulkUploadConfirmBtn');
-    if(rows.length === 0){
-      resultBox.innerHTML = `<div class="bulk-error-box">That file has no rows to import.</div>`;
-      confirmBtn.style.display = 'none';
-      pendingBulkImportRows = null;
+    const lookup = getBulkHeaderLookup();
+    let headerIdx = -1;
+    for(let i = 0; i < Math.min(aoa.length, 15); i++){
+      if((aoa[i] || []).some(c => lookup[bulkNormHeader(c)] === 'Title')){ headerIdx = i; break; }
+    }
+    if(headerIdx === -1){
+      bulkParsed = null; bulkResult = null; confirmBtn.style.display = 'none';
+      resultBox.innerHTML = `<div class="bulk-error-box"><b>Couldn't find a "Title" column.</b><br>The first row of the sheet should have column names such as Title, Assign To, Type. Download the template to see the layout.</div>`;
       return;
     }
-    const errors = [];
-    const validRows = [];
-    let skippedBlankRows = 0;
-    rows.forEach((row, idx) => {
-      const rowNum = idx + 2; // header is row 1
-      const title = String(row['Title']||'').trim();
-      const assignToName = String(row['Assign To']||'').trim();
-      const assignedByName = String(row['Assigned By']||'').trim();
-      const priorityRaw = String(row['Priority']||'').trim();
-      const dueRaw = row['Due Date'];
-      const rmRaw = String(row['Relationship Manager']||'').trim();
-      const typeRaw = String(row['Type']||'').trim();
-      const lobRaw = String(row['Line of Business']||'').trim();
-      const categoryRaw = String(row['Category']||'').trim();
-      const labelsRaw = String(row['Labels']||'').trim();
+    const headerRow = aoa[headerIdx];
+    const colIndex = {}, ignored = [];
+    headerRow.forEach((h, i) => {
+      const label = bulkCellText(h);
+      if(!label) return;
+      const canon = lookup[bulkNormHeader(h)];
+      if(canon){ if(colIndex[canon] === undefined) colIndex[canon] = i; }
+      else if(!BULK_QUIET_HEADERS.includes(bulkNormHeader(h))) ignored.push(label);
+    });
+    const missingReq = ['Title','Assign To'].filter(c => colIndex[c] === undefined);
+    if(missingReq.length){
+      bulkParsed = null; bulkResult = null; confirmBtn.style.display = 'none';
+      resultBox.innerHTML = `<div class="bulk-error-box"><b>Missing column${missingReq.length>1?'s':''}: ${missingReq.map(escapeHtml).join(', ')}.</b><br>Add ${missingReq.length>1?'them':'it'} to the first row of the sheet, or download the template.</div>`;
+      return;
+    }
+    const rows = [];
+    for(let i = headerIdx + 1; i < aoa.length; i++) rows.push({ rowNum: i + 1, cells: aoa[i] || [] });
+    bulkParsed = { fileName, headers: headerRow.map(bulkCellText), colIndex, ignored, rows };
+    runBulkValidation();
+  }
 
-      const isEntirelyBlank = !title && !assignToName && !assignedByName && !priorityRaw &&
-        (dueRaw === '' || dueRaw === undefined || dueRaw === null) &&
-        !rmRaw && !typeRaw && !lobRaw && !categoryRaw && !labelsRaw &&
-        !String(row['Description']||'').trim() && !String(row['Customer Name']||'').trim() &&
-        !String(row['Customer Mobile']||'').trim() && !String(row['Agent Name']||'').trim() &&
-        !String(row['Product Type']||'').trim() && !String(row['Product Details']||'').trim();
-      if(isEntirelyBlank){ skippedBlankRows++; return; }
+  function rerunBulkValidation(){ if(bulkParsed && bulkParsed.rows.length && !bulkImporting) runBulkValidation(); }
 
-      if(!title) errors.push(`Row ${rowNum}: Title is required.`);
+  function runBulkValidation(){
+    const opts = {
+      createLabels: document.getElementById('bulkOptCreateLabels').checked,
+      skipDupes: document.getElementById('bulkOptSkipDupes').checked,
+      defaultType: document.getElementById('bulkOptDefaultType').value
+    };
+    bulkResult = validateBulkRows(bulkParsed, opts);
+    renderBulkPreview(bulkResult);
+  }
 
+  function validateBulkRows(parsed, opts){
+    const res = { ready: [], skipped: [], duplicates: [], blank: 0, examples: 0, newLabelNames: [], warnings: [], ignoredHeaders: parsed.ignored, personProblem: false, tooMany: false, fileName: parsed.fileName };
+    const col = parsed.colIndex;
+    const existingKeys = new Set(tasks.map(t => bulkDupKey(t.customerName, t.customerMobile, t.title, t.taskType, t.oldPolicyNumber)).filter(Boolean));
+    const seenKeys = new Set();
+    const newLabelByLower = new Map();   // lower-case name -> display name
+    const memberNames = () => [adminName || 'Super Admin', ...members.map(m => m.name)];
+
+    parsed.rows.forEach(r => {
+      const raw = parsed.headers.map((h, i) => bulkCellText(r.cells[i]));
+      if(raw.every(v => v === '')){ res.blank++; return; }
+      const get = key => col[key] === undefined ? '' : r.cells[col[key]];
+      const txt = key => bulkCellText(get(key));
+
+      const title = txt('Title');
+      if(/^\(example\)/i.test(title)){ res.examples++; return; }
+
+      const errors = [], warnings = [];
+      if(!title) errors.push('Title is required.');
+
+      // People
+      const assignToName = txt('Assign To');
       const assigneeId = resolvePersonIdByName(assignToName);
-      if(!assignToName) errors.push(`Row ${rowNum}: "Assign To" is required.`);
-      else if(!assigneeId) errors.push(`Row ${rowNum}: "Assign To" — no member or Super Admin named "${assignToName}" found.`);
+      if(!assignToName) errors.push('"Assign To" is required.');
+      else if(!assigneeId){ errors.push(`"Assign To" — no member or Super Admin named "${assignToName}".` + bulkPersonHint(assignToName)); res.personProblem = true; }
 
-      const assignorId = resolvePersonIdByName(assignedByName);
-      if(!assignedByName) errors.push(`Row ${rowNum}: "Assigned By" is required.`);
-      else if(!assignorId) errors.push(`Row ${rowNum}: "Assigned By" — no member or Super Admin named "${assignedByName}" found.`);
+      const assignedByName = txt('Assigned By');
+      let assignorId = currentIdentity();                     // blank = whoever is uploading
+      if(assignedByName){
+        assignorId = resolvePersonIdByName(assignedByName);
+        if(!assignorId){ errors.push(`"Assigned By" — no member or Super Admin named "${assignedByName}".` + bulkPersonHint(assignedByName)); res.personProblem = true; }
+      }
 
+      // Priority
       let priority = 'Medium';
+      const priorityRaw = txt('Priority');
       if(priorityRaw){
         const match = VALID_PRIORITIES.find(p => p.toLowerCase() === priorityRaw.toLowerCase());
-        if(!match) errors.push(`Row ${rowNum}: Priority "${priorityRaw}" isn't valid — use Low, Medium, High, or Urgent.`);
+        if(!match) errors.push(`Priority "${priorityRaw}" isn't valid — use Low, Medium, High or Urgent.`);
         else priority = match;
       }
 
-      let due = '';
-      if(dueRaw !== '' && dueRaw !== undefined && dueRaw !== null){
-        const formatted = formatExcelDateValue(dueRaw);
-        if(formatted === null) errors.push(`Row ${rowNum}: Due Date "${dueRaw}" isn't recognized — please use YYYY-MM-DD (e.g. 2026-09-30), or format the cell as an actual Excel date, to avoid day/month mix-ups.`);
-        else due = formatted;
+      // Dates
+      const dateField = (key, label) => {
+        const v = get(key);
+        const out = parseBulkDate(v);
+        if(out === null){ errors.push(`${label} "${bulkCellText(v)}" isn't a date I can read — use DD/MM/YYYY (e.g. 30/09/2026).`); return ''; }
+        return out;
+      };
+      const due = dateField('Due Date', 'Due Date');
+
+      // Type (required, like the task form)
+      let taskType = '';
+      const typeRaw = txt('Type');
+      if(typeRaw){
+        taskType = BULK_TYPE_MAP[typeRaw.toLowerCase()] || '';
+        if(!taskType) errors.push(`Type "${typeRaw}" isn't valid — use New, Renewal, Endo or Others.`);
+      } else if(opts.defaultType){
+        taskType = opts.defaultType;
+      } else {
+        errors.push('Type is required (New, Renewal, Endo or Others).');
       }
 
+      // Relationship Manager
       let rmName = '';
+      const rmRaw = txt('Relationship Manager');
       if(rmRaw){
-        if(DIRECT_RM_OPTIONS.some(v => v.toLowerCase() === rmRaw.toLowerCase())){
-          rmName = DIRECT_RM_OPTIONS.find(v => v.toLowerCase() === rmRaw.toLowerCase());
-        } else {
+        const direct = DIRECT_RM_OPTIONS.find(v => v.toLowerCase() === rmRaw.toLowerCase());
+        if(direct) rmName = direct;
+        else {
           const rmId = resolvePersonIdByName(rmRaw);
-          if(!rmId) errors.push(`Row ${rowNum}: "Relationship Manager" — no member, Super Admin, or Direct location named "${rmRaw}" found.`);
+          if(!rmId) errors.push(`"Relationship Manager" — no member, Super Admin or Direct location named "${rmRaw}".`);
           else rmName = rmId === 'admin' ? (adminName||'Super Admin') : memberById(rmId).name;
         }
       }
 
-      const productTypeRaw = String(row['Product Type']||'').trim();
-      const productDetailsRaw = String(row['Product Details']||'').trim();
+      // Product
+      const productTypeRaw = txt('Product Type'), productDetailsRaw = txt('Product Details');
       let productType = '', productDetails = '';
       if(productTypeRaw){
         const match = Object.keys(PRODUCT_TYPE_DETAILS_MAP).find(v => v.toLowerCase() === productTypeRaw.toLowerCase());
-        if(!match) errors.push(`Row ${rowNum}: Product Type "${productTypeRaw}" isn't valid — use ${Object.keys(PRODUCT_TYPE_DETAILS_MAP).join(', ')}.`);
+        if(!match) errors.push(`Product Type "${productTypeRaw}" isn't valid — use ${Object.keys(PRODUCT_TYPE_DETAILS_MAP).join(', ')}.`);
         else {
           productType = match;
           if(productDetailsRaw){
-            const detailMatch = PRODUCT_TYPE_DETAILS_MAP[match].find(v => v.toLowerCase() === productDetailsRaw.toLowerCase());
-            if(!detailMatch) errors.push(`Row ${rowNum}: Product Details "${productDetailsRaw}" isn't valid for Product Type "${match}".`);
-            else productDetails = detailMatch;
+            const dm = PRODUCT_TYPE_DETAILS_MAP[match].find(v => v.toLowerCase() === productDetailsRaw.toLowerCase());
+            if(!dm) errors.push(`Product Details "${productDetailsRaw}" isn't valid for Product Type "${match}".`);
+            else productDetails = dm;
           }
         }
       } else if(productDetailsRaw){
-        errors.push(`Row ${rowNum}: Product Details was given without a Product Type — please set Product Type first.`);
+        errors.push('Product Details was given without a Product Type.');
       }
 
-      let taskType = '';
-      if(typeRaw){
-        const match = ['New','Renewal'].find(v => v.toLowerCase() === typeRaw.toLowerCase());
-        if(!match) errors.push(`Row ${rowNum}: Type "${typeRaw}" isn't valid — use New or Renewal.`);
-        else taskType = match;
-      }
-
+      // Line of business / category
       let lineOfBusiness = '';
+      const lobRaw = txt('Line of Business');
       if(lobRaw){
-        const match = ['GI','LI','Short term'].find(v => v.toLowerCase() === lobRaw.toLowerCase());
-        if(!match) errors.push(`Row ${rowNum}: Line of Business "${lobRaw}" isn't valid — use GI, LI, or Short term.`);
-        else lineOfBusiness = match;
+        const m = LOB_OPTIONS.find(v => v.toLowerCase() === lobRaw.toLowerCase());
+        if(!m) errors.push(`Line of Business "${lobRaw}" isn't valid — use GI, LI or Short term.`); else lineOfBusiness = m;
       }
-
       let category = '';
-      if(categoryRaw){
-        const match = ['Quote','Claims','Policy Issuance','Admin'].find(v => v.toLowerCase() === categoryRaw.toLowerCase());
-        if(!match) errors.push(`Row ${rowNum}: Category "${categoryRaw}" isn't valid — use Quote, Claims, Policy Issuance, or Admin.`);
-        else category = match;
+      const catRaw = txt('Category');
+      if(catRaw){
+        const m = CATEGORY_OPTIONS.find(v => v.toLowerCase() === catRaw.toLowerCase());
+        if(!m) errors.push(`Category "${catRaw}" isn't valid — use Quote, Claims, Policy Issuance or Admin.`); else category = m;
       }
 
-      let labelIds = [];
+      // Labels
+      const labelRefs = [];
+      const labelsRaw = txt('Labels');
       if(labelsRaw){
-        const names = labelsRaw.split(',').map(s=>s.trim()).filter(Boolean);
-        names.forEach(name => {
-          const l = labels.find(l => l.name.toLowerCase() === name.toLowerCase());
-          if(!l) errors.push(`Row ${rowNum}: Label "${name}" doesn't exist yet — create it first or fix the spelling.`);
-          else labelIds.push(l.id);
+        labelsRaw.split(/[,;|\n]/).map(s => s.trim()).filter(Boolean).forEach(name => {
+          const existing = labels.find(l => l.name.toLowerCase() === name.toLowerCase());
+          if(existing){ if(!labelRefs.some(x => x.id === existing.id)) labelRefs.push({ id: existing.id }); }
+          else if(opts.createLabels){
+            const lower = name.toLowerCase();
+            if(!newLabelByLower.has(lower)) newLabelByLower.set(lower, name);
+            if(!labelRefs.some(x => x.newKey === lower)) labelRefs.push({ newKey: lower });
+          } else {
+            errors.push(`Label "${name}" doesn't exist yet — tick "Create labels that don't exist yet", or fix the spelling.`);
+          }
         });
       }
 
-      if(assigneeId && assignorId && title){
-        validRows.push({
-          title, desc: String(row['Description']||'').trim(),
-          assignee: assigneeId, assignorId,
-          priority, due, status: 'open',
-          customerName: String(row['Customer Name']||'').trim(),
-          customerMobile: String(row['Customer Mobile']||'').trim(),
-          agentName: String(row['Agent Name']||'').trim(),
-          relationshipManager: rmName,
-          productType, productDetails,
-          taskType, category, lineOfBusiness,
-          labels: labelIds
-        });
+      // Renewal details (only meaningful for Renewal tasks)
+      let renewalDate = '', oldPolicyNumber = '';
+      const renewalRaw = bulkCellText(get('Renewal Date')), oldPolRaw = txt('Old Policy Number');
+      if(taskType === 'Renewal'){
+        renewalDate = dateField('Renewal Date', 'Renewal Date');
+        oldPolicyNumber = oldPolRaw;
+      } else if(renewalRaw || oldPolRaw){
+        warnings.push('Renewal Date / Old Policy Number ignored because Type is not Renewal.');
       }
+
+      // Status, completion and outcome
+      let status = 'open';
+      const statusRaw = txt('Status');
+      if(statusRaw){
+        status = BULK_STATUS_MAP[statusRaw.toLowerCase()];
+        if(!status) errors.push(`Status "${statusRaw}" isn't valid — use Open or Completed.`);
+      }
+      let completedAtMs = null, outcome = null, outcomeNote = '';
+      const outcomeRaw = txt('Outcome'), outcomeNoteRaw = txt('Outcome Note'), completedOnRaw = get('Completed On');
+      if(status === 'done'){
+        const completedIso = dateField('Completed On', 'Completed On');
+        if(completedIso){ const [cy, cm, cd] = completedIso.split('-').map(Number); completedAtMs = new Date(cy, cm-1, cd, 12).getTime(); }
+        else completedAtMs = Date.now();
+        if(outcomeApplies(taskType)){
+          const o = { 'won':'Won', 'win':'Won', 'lost':'Lost', 'loss':'Lost' }[outcomeRaw.toLowerCase()];
+          if(!outcomeRaw) errors.push(`Completed ${taskType} tasks need an Outcome (Won or Lost).`);
+          else if(!o) errors.push(`Outcome "${outcomeRaw}" isn't valid — use Won or Lost.`);
+          else { outcome = o; outcomeNote = outcomeNoteRaw; }
+        } else if(outcomeRaw || outcomeNoteRaw){
+          warnings.push('Outcome ignored — Won/Lost only applies to New and Renewal tasks.');
+        }
+      } else if(outcomeRaw || outcomeNoteRaw || bulkCellText(completedOnRaw)){
+        warnings.push('Outcome / Completed On ignored because the task is not Completed.');
+      }
+
+      const customerName = txt('Customer Name');
+      let customerMobile = txt('Customer Mobile').replace(/\.0+$/, '');
+      const digits = customerMobile.replace(/\D/g, '');
+      if(customerMobile && (digits.length < 10 || digits.length > 13)) warnings.push(`Mobile "${customerMobile}" doesn't look like a 10-digit number (imported as given).`);
+
+      if(errors.length){ res.skipped.push({ rowNum: r.rowNum, raw, reasons: errors }); return; }
+
+      // Duplicate check — against the board and against earlier rows of this same file
+      const key = bulkDupKey(customerName, customerMobile, title, taskType, oldPolicyNumber);
+      if(key && opts.skipDupes){
+        const where = existingKeys.has(key) ? 'a task already on the board' : (seenKeys.has(key) ? 'an earlier row in this file' : '');
+        if(where){ res.duplicates.push({ rowNum: r.rowNum, raw, reasons: [`Looks like a duplicate of ${where} (same customer, title and type).`] }); return; }
+      }
+      if(key) seenKeys.add(key);
+      warnings.forEach(w => res.warnings.push({ rowNum: r.rowNum, text: w }));
+
+      res.ready.push({
+        title, desc: txt('Description'),
+        assignee: assigneeId, assignorId,
+        priority, due, status,
+        customerName, customerMobile,
+        agentName: txt('Agent Name'),
+        relationshipManager: rmName,
+        productType, productDetails,
+        taskType, category, lineOfBusiness,
+        labelRefs,
+        renewalDate, oldPolicyNumber,
+        outcome, outcomeNote,
+        completedAtMs
+      });
     });
 
-    if(errors.length > 0){
-      resultBox.innerHTML = `
-        <div class="bulk-error-box">
-          <b>${errors.length} problem${errors.length!==1?'s':''} found — fix these in the file and re-upload. Nothing has been imported.</b>
-          <ul>${errors.map(e=>`<li>${escapeHtml(e)}</li>`).join('')}</ul>
-        </div>`;
+    res.newLabelNames = Array.from(newLabelByLower.entries()).map(([lower, name]) => ({ lower, name }));
+    // A new label only counts if at least one importable row uses it.
+    const usedNew = new Set();
+    res.ready.forEach(t => t.labelRefs.forEach(x => { if(x.newKey) usedNew.add(x.newKey); }));
+    res.newLabelNames = res.newLabelNames.filter(x => usedNew.has(x.lower));
+    if(res.ready.length > BULK_MAX_ROWS) res.tooMany = true;
+    res.memberNames = memberNames();
+    return res;
+  }
+
+  function renderBulkPreview(res){
+    const box = document.getElementById('bulkUploadResult');
+    const confirmBtn = document.getElementById('bulkUploadConfirmBtn');
+    const nReady = res.ready.length, nBad = res.skipped.length, nDup = res.duplicates.length;
+    if(!nReady && !nBad && !nDup){
+      box.innerHTML = `<div class="bulk-error-box">That file has no task rows to import.${res.examples ? ' (Only the sample rows were found — add your own rows below the header.)' : ''}</div>`;
       confirmBtn.style.display = 'none';
-      pendingBulkImportRows = null;
-    } else if(validRows.length === 0){
-      resultBox.innerHTML = `<div class="bulk-error-box">Every row in that file was blank — nothing to import.</div>`;
-      confirmBtn.style.display = 'none';
-      pendingBulkImportRows = null;
-    } else {
-      const skippedNote = skippedBlankRows > 0 ? ` (${skippedBlankRows} blank row${skippedBlankRows!==1?'s':''} skipped)` : '';
-      resultBox.innerHTML = `<div class="bulk-success-box">✅ All ${validRows.length} row${validRows.length!==1?'s':''} look good and ready to import.${skippedNote}</div>`;
+      return;
+    }
+    const plural = (n, w) => `${n} ${w}${n !== 1 ? 's' : ''}`;
+    let html = `<div class="bulk-stats">
+      <div class="bulk-stat ok"><b>${nReady}</b><span>ready to import</span></div>
+      <div class="bulk-stat ${nBad ? 'bad' : 'zero'}"><b>${nBad}</b><span>need fixing — skipped</span></div>
+      <div class="bulk-stat ${nDup ? 'warn' : 'zero'}"><b>${nDup}</b><span>duplicate${nDup !== 1 ? 's' : ''} — skipped</span></div>
+    </div>`;
+    const notes = [];
+    if(res.blank) notes.push(`${plural(res.blank, 'blank row')} ignored.`);
+    if(res.examples) notes.push(`${plural(res.examples, 'sample row')} ignored.`);
+    if(res.ignoredHeaders.length) notes.push(`Columns not used: ${res.ignoredHeaders.map(escapeHtml).join(', ')}.`);
+    if(res.newLabelNames.length) notes.push(`New label${res.newLabelNames.length !== 1 ? 's' : ''} that will be created: <b>${res.newLabelNames.map(x => escapeHtml(x.name)).join(', ')}</b>.`);
+    if(notes.length) html += `<div class="bulk-note-box">${notes.join('<br>')}</div>`;
+
+    if(res.tooMany){
+      html += `<div class="bulk-error-box"><b>Too many rows (${nReady}).</b> Please upload at most ${BULK_MAX_ROWS} valid rows at a time — split the file and upload in parts.</div>`;
+    }
+    if(nBad){
+      const shown = res.skipped.slice(0, 40);
+      html += `<div class="bulk-error-box"><b>${plural(nBad, 'row')} can't be imported yet:</b>
+        <ul>${shown.map(s => `<li><b>Row ${s.rowNum}:</b> ${s.reasons.map(escapeHtml).join(' · ')}</li>`).join('')}</ul>
+        ${nBad > shown.length ? `<div style="margin-top:6px;">…and ${nBad - shown.length} more — they are all in the report below.</div>` : ''}
+        ${res.personProblem ? `<div style="margin-top:8px;">Team members: ${res.memberNames.map(escapeHtml).join(', ')}</div>` : ''}
+      </div>`;
+    }
+    if(nDup){
+      html += `<div class="bulk-warn-box"><b>${plural(nDup, 'duplicate')} skipped</b> (same customer, title and type already exist). Untick “Skip duplicates” above if you really want them imported.</div>`;
+    }
+    if(res.warnings.length){
+      const shownW = res.warnings.slice(0, 8);
+      html += `<div class="bulk-warn-box"><b>${plural(res.warnings.length, 'heads-up')} (still imported):</b><ul>${shownW.map(w => `<li>Row ${w.rowNum}: ${escapeHtml(w.text)}</li>`).join('')}</ul>${res.warnings.length > shownW.length ? `…and ${res.warnings.length - shownW.length} more.` : ''}</div>`;
+    }
+    if(nBad || nDup){
+      html += `<button class="btn-ghost" style="width:100%; margin-top:10px;" onclick="downloadBulkReport()">⬇ Download the ${nBad + nDup} skipped row${nBad + nDup !== 1 ? 's' : ''} (with the reason) to fix and re-upload</button>`;
+    }
+    box.innerHTML = html;
+    if(nReady > 0 && !res.tooMany){
       confirmBtn.style.display = 'inline-block';
-      confirmBtn.textContent = `Import ${validRows.length} task${validRows.length!==1?'s':''}`;
-      pendingBulkImportRows = validRows;
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = `Import ${plural(nReady, 'task')}`;
+    } else {
+      confirmBtn.style.display = 'none';
     }
   }
 
+  // An Excel file of every skipped row: original columns first (so it can be fixed and
+  // uploaded again as-is), then the row number and the reason.
+  function downloadBulkReport(){
+    if(!bulkResult || !bulkParsed) return;
+    if(typeof XLSX === 'undefined'){ alert('The export tool failed to load — please check your internet connection and try again.'); return; }
+    const all = [...bulkResult.skipped, ...bulkResult.duplicates].sort((a, b) => a.rowNum - b.rowNum);
+    if(!all.length) return;
+    const headers = [...bulkParsed.headers, 'Excel Row', 'Reason'];
+    const aoa = [headers, ...all.map(s => [...s.raw, s.rowNum, s.reasons.join(' | ')])];
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = headers.map(h => ({ wch: h === 'Reason' ? 70 : Math.max(14, String(h).length + 4) }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Skipped rows');
+    XLSX.writeFile(wb, `task-upload-skipped-rows-${new Date().toISOString().slice(0,10)}.xlsx`);
+  }
+
   async function confirmBulkImport(){
-    if(!pendingBulkImportRows || pendingBulkImportRows.length === 0) return;
-    const rowsToImport = pendingBulkImportRows;
-    pendingBulkImportRows = null; // clear immediately so a fast double-click can't import twice
-    const newTasks = rowsToImport.map(r => ({
-      id: 'T-' + String(taskCounter++).padStart(3,'0'),
-      created: Date.now(),
-      notes: [],
-      completedAt: null,
-      ...r
-    }));
+    if(!bulkResult || bulkImporting || bulkResult.ready.length === 0 || bulkResult.tooMany) return;
+    const res = bulkResult;
+    const count = res.ready.length;
+    const skippedTotal = res.skipped.length + res.duplicates.length;
+    const reportHeaders = bulkParsed ? bulkParsed.headers : [];
+    bulkSetBusy(true, `Importing ${count} task${count !== 1 ? 's' : ''}… please wait`);
+    bulkParsed = null; bulkResult = null;          // a second click or option change can't import twice
+    const resultBox = document.getElementById('bulkUploadResult');
+
+    // 1) Labels that don't exist yet
+    const newLabelIds = new Map();
+    res.newLabelNames.forEach(x => {
+      const l = { id: 'l' + (labelCounter++), name: x.name, color: COLORS[labels.length % COLORS.length] };
+      labels.push(l);
+      newLabelIds.set(x.lower, l.id);
+    });
+    // 2) The tasks
+    const now = Date.now();
+    const newTasks = res.ready.map(r => {
+      const { labelRefs, completedAtMs, ...fields } = r;
+      const completedAt = fields.status === 'done' ? (completedAtMs || now) : null;
+      const t = {
+        id: 'T-' + String(taskCounter++).padStart(3,'0'),
+        created: completedAt && completedAt < now ? completedAt : now,   // finished history shouldn't look like it took negative time
+        notes: [], image: null, pdfFile: null, attachments: [],
+        completedAt,
+        labels: labelRefs.map(x => x.id || newLabelIds.get(x.newKey)).filter(Boolean),
+        ...fields
+      };
+      return t;
+    });
     const projectedPayload = { members, tasks: [...tasks, ...newTasks], labels, taskCounter, labelCounter, adminPin, adminName, adminPhoto };
-    const sizeKB = getPayloadSizeKB(projectedPayload);
-    if(storageMode !== 2 && sizeKB > 950){
-      if(!confirm(`⚠️ Importing these ${newTasks.length} tasks would bring your board to ${sizeKB}KB of the 1024KB limit, and may fail to save. Continue anyway?`)) return;
+    if(storageMode !== 2){
+      const sizeKB = getPayloadSizeKB(projectedPayload);
+      if(sizeKB > 950 && !confirm(`⚠️ Importing these ${newTasks.length} tasks would bring your board to ${sizeKB}KB of the 1024KB limit, and may fail to save. Continue anyway?`)){
+        // Undo the label creation and counters, nothing has been added yet
+        labels = labels.filter(l => !Array.from(newLabelIds.values()).includes(l.id));
+        labelCounter -= res.newLabelNames.length; taskCounter -= newTasks.length;
+        bulkSetBusy(false); closeBulkUploadModal(); return;
+      }
     }
-    tasks.push(...newTasks);
-    closeBulkUploadModal();
+    newTasks.forEach(t => { tasks.push(t); syncCompletedLabel(t); });
     renderAll();
-    const ok = await saveBoard();
-    if(ok) alert(`${newTasks.length} task${newTasks.length!==1?'s':''} imported successfully.`);
+    resultBox.innerHTML = `<div class="bulk-note-box">Saving ${count} task${count !== 1 ? 's' : ''} to the shared board — keep this window open…</div>`;
+
+    let ok = false;
+    try{ ok = await saveBoard(); } catch(err){ console.error('Bulk import save failed', err); }
+    bulkSetBusy(false);
+    document.getElementById('bulkUploadFileInput').value = '';
+    const confirmBtn = document.getElementById('bulkUploadConfirmBtn');
+    confirmBtn.style.display = 'none';
+    if(ok){
+      bulkResult = { ...res, ready: [] };           // keeps the skipped list available for the report
+      bulkParsed = { headers: reportHeaders, colIndex: {}, ignored: [], rows: [], fileName: res.fileName };
+      resultBox.innerHTML = `<div class="bulk-success-box">✅ ${count} task${count !== 1 ? 's' : ''} imported successfully.${res.newLabelNames.length ? `<br><span style="font-weight:500;">Labels created: ${res.newLabelNames.map(x => escapeHtml(x.name)).join(', ')}.</span>` : ''}${skippedTotal ? `<br><span style="font-weight:500;">${skippedTotal} row${skippedTotal !== 1 ? 's were' : ' was'} skipped.</span>` : ''}</div>`
+        + (skippedTotal ? `<button class="btn-ghost" style="width:100%; margin-top:10px;" onclick="downloadBulkReport()">⬇ Download the skipped rows (with the reason)</button>` : '');
+    } else {
+      resultBox.innerHTML = `<div class="bulk-error-box"><b>The tasks are on your screen but could not be saved to the shared board.</b><br>Check your internet connection, then press the Reset/refresh button at the top and look for the imported tasks. If they are missing, upload the file again.</div>`;
+    }
   }
 
   async function saveBoard(retryCount){
