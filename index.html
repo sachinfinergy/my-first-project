@@ -513,6 +513,9 @@
   .status-badge-open{ background:#faf1dc; color:#b5811f; }
   .status-badge-done{ background:#e5f3e7; color: var(--wa-sage); }
   .status-badge-inward{ background:#ece5f7; color:#5B2C91; }
+  .section-inactive{ opacity:.45; pointer-events:none; user-select:none; }
+  .section-inactive input{ background:#f3f3f1; }
+  .section-hint{ font-size:11.5px; color:var(--wa-text-soft); margin:-2px 0 10px; }
   .outcome-pill{ flex-shrink:0; font-size:10.5px; font-weight:800; padding:2px 9px; border-radius:10px; text-transform:uppercase; letter-spacing:.02em; white-space:nowrap; }
   .outcome-pill.won{ background:#d9f2e0; color:#1d7a3a; }
   .outcome-pill.lost{ background:#fde5e2; color:#C0392B; }
@@ -1748,8 +1751,27 @@
             <option value="inward">Inward</option>
           </select>
         </div>
-        <div class="field" id="taskOutcomeField" style="display:none;">
-          <label>Outcome <span class="required-star">*</span></label>
+      </div>
+
+      <div class="form-section" id="taskRenewalSection">
+        <div class="form-section-title">Renewal details</div>
+        <div class="section-hint" id="taskRenewalHint">Active when Type is Renewal.</div>
+        <div class="field-row">
+          <div class="field">
+            <label>Renewal date</label>
+            <input type="date" id="taskRenewalDateInput">
+          </div>
+          <div class="field">
+            <label>Old policy number</label>
+            <input type="text" id="taskOldPolicyInput" placeholder="e.g. 2311/0045678/00/000">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section" id="taskOutcomeSection">
+        <div class="form-section-title">Outcome (Won / Lost)</div>
+        <div class="section-hint" id="taskOutcomeHint">Active when a New or Renewal task is marked Completed.</div>
+        <div class="field">
           <div class="pill-toggle-group" id="taskOutcomeToggle">
             <button type="button" class="pill-toggle-btn" data-value="Won" onclick="selectPillToggle('taskOutcomeToggle','taskOutcomeInput',this)">🏆 Won</button>
             <button type="button" class="pill-toggle-btn" data-value="Lost" onclick="selectPillToggle('taskOutcomeToggle','taskOutcomeInput',this)">❌ Lost</button>
@@ -2258,6 +2280,7 @@
         'Created': t.created ? new Date(t.created).toLocaleString('en-GB') : '',
         'Completed On': t.completedAt ? new Date(t.completedAt).toLocaleString('en-GB') : '',
         'Outcome': t.outcome || '', 'Outcome Note': t.outcomeNote || '',
+        'Renewal Date': t.renewalDate || '', 'Old Policy Number': t.oldPolicyNumber || '',
         'Customer Name': t.customerName || '',
         'Customer Mobile': t.customerMobile || '',
         'Agent Name': t.agentName || '',
@@ -2907,7 +2930,7 @@
   }
 
   function archiveTaskSearchText(t){
-    return [t.id, t.title, t.desc, t.customerName, t.customerMobile, t.agentName, t.productType, t.productDetails, t.category, t.taskType,
+    return [t.id, t.title, t.desc, t.customerName, t.customerMobile, t.agentName, t.oldPolicyNumber, t.productType, t.productDetails, t.category, t.taskType,
       ...(t.notes||[]).map(n => n.text)].join(' ').toLowerCase();
   }
   function renderArchiveList(){
@@ -2976,6 +2999,7 @@
         'Created': t.created ? new Date(t.created).toLocaleString('en-GB') : '',
         'Completed On': t.completedAt ? new Date(t.completedAt).toLocaleString('en-GB') : '',
         'Outcome': t.outcome || '', 'Outcome Note': t.outcomeNote || '',
+        'Renewal Date': t.renewalDate || '', 'Old Policy Number': t.oldPolicyNumber || '',
         'Archived On': t.archivedAt ? new Date(t.archivedAt).toLocaleString('en-GB') : '',
         'Customer Name': t.customerName || '', 'Customer Mobile': t.customerMobile || '',
         'Agent Name': t.agentName || '', 'Relationship Manager': t.relationshipManager || '',
@@ -3649,6 +3673,7 @@
         if(t.customerMobile && t.customerMobile.replace(/\s+/g,'').includes(q.replace(/\s+/g,''))) return true;
         if(t.agentName && t.agentName.toLowerCase().includes(q)) return true;
         if(t.relationshipManager && t.relationshipManager.toLowerCase().includes(q)) return true;
+        if(t.oldPolicyNumber && t.oldPolicyNumber.toLowerCase().includes(q)) return true;
         if(t.productType && t.productType.toLowerCase().includes(q)) return true;
         if(t.productDetails && t.productDetails.toLowerCase().includes(q)) return true;
         if(t.taskType && t.taskType.toLowerCase().includes(q)) return true;
@@ -3911,7 +3936,7 @@
             ${t.customerMobile ? `<a href="tel:${cleanMobile}" class="customer-action" title="Call">📞 ${escapeHtml(t.customerMobile)}</a>` : ''}
             ${t.customerMobile ? `<a href="https://wa.me/${cleanMobile.replace(/^\+/,'')}" target="_blank" rel="noopener" class="customer-action wa" title="Message on WhatsApp">💬</a>` : ''}
           </div>` : ''}
-        ${(t.agentName || t.relationshipManager || t.productType || t.taskType || t.category || t.lineOfBusiness) ? `
+        ${(t.agentName || t.relationshipManager || t.productType || t.taskType || t.category || t.lineOfBusiness || t.renewalDate || t.oldPolicyNumber || t.outcome) ? `
           <div class="task-case-meta">
             ${t.taskType ? `<span><b>Type:</b> ${escapeHtml(t.taskType)}</span>` : ''}
             ${t.lineOfBusiness ? `<span><b>LOB:</b> ${escapeHtml(t.lineOfBusiness)}</span>` : ''}
@@ -3919,6 +3944,9 @@
             ${t.agentName ? `<span><b>Agent:</b> ${escapeHtml(t.agentName)}</span>` : ''}
             ${t.relationshipManager ? `<span><b>RM:</b> ${escapeHtml(t.relationshipManager)}</span>` : ''}
             ${t.productType ? `<span><b>Product:</b> ${escapeHtml(t.productType)}${t.productDetails ? ' — ' + escapeHtml(t.productDetails) : ''}</span>` : ''}
+            ${t.renewalDate ? `<span><b>Renewal date:</b> ${escapeHtml(formatInwardDateDisplay(t.renewalDate))}</span>` : ''}
+            ${t.oldPolicyNumber ? `<span><b>Old policy no.:</b> ${escapeHtml(t.oldPolicyNumber)}</span>` : ''}
+            ${(t.outcome && t.status === 'done') ? `<span><b>Outcome:</b> ${t.outcome === 'Won' ? '🏆 Won' : '❌ Lost'}${t.outcomeNote ? ' — ' + escapeHtml(t.outcomeNote) : ''}</span>` : ''}
           </div>` : ''}
         ${(t.labels && t.labels.length) ? `<div class="task-label-row">${t.labels.map(lid => { const l = labelById(lid); return l ? `<span class="task-label-pill" style="background:${l.color}">${escapeHtml(l.name)}</span>` : ''; }).join('')}</div>` : ''}
         ${t.desc ? `
@@ -4330,10 +4358,22 @@
   // ---- Won / Lost outcome (New and Renewal tasks, asked only when completing) ----
   function outcomeApplies(taskType){ return taskType === 'New' || taskType === 'Renewal'; }
   function updateOutcomeFieldVisibility(){
-    const f = document.getElementById('taskOutcomeField');
-    if(!f) return;
-    const show = outcomeApplies(document.getElementById('taskTypeInput').value) && document.getElementById('taskStatusInput').value === 'done';
-    f.style.display = show ? '' : 'none';
+    const type = document.getElementById('taskTypeInput').value;
+    const status = document.getElementById('taskStatusInput').value;
+    const renewalOn = type === 'Renewal';
+    const outcomeOn = outcomeApplies(type) && status === 'done';
+    const setActive = (sectionId, on, inputIds) => {
+      const s = document.getElementById(sectionId);
+      if(!s) return;
+      s.classList.toggle('section-inactive', !on);
+      inputIds.forEach(id => { const el = document.getElementById(id); if(el) el.disabled = !on; });
+    };
+    setActive('taskRenewalSection', renewalOn, ['taskRenewalDateInput','taskOldPolicyInput']);
+    setActive('taskOutcomeSection', outcomeOn, ['taskOutcomeNoteInput']);
+    const rh = document.getElementById('taskRenewalHint');
+    if(rh) rh.textContent = renewalOn ? 'Fill in the policy being renewed.' : 'Active when Type is Renewal.';
+    const oh = document.getElementById('taskOutcomeHint');
+    if(oh) oh.textContent = outcomeOn ? 'Required to complete a New / Renewal task.' : 'Active when a New or Renewal task is marked Completed.';
   }
   let pendingOutcomeTaskId = null, pendingOutcomeEditOnly = false;
   function openOutcomeModal(id, editOnly){
@@ -4722,6 +4762,8 @@
       document.getElementById('taskStatusInput').disabled = !canChangeStatus(t);
       setPillToggleValue('taskOutcomeToggle', 'taskOutcomeInput', t.outcome || '');
       document.getElementById('taskOutcomeNoteInput').value = t.outcomeNote || '';
+      document.getElementById('taskRenewalDateInput').value = t.renewalDate || '';
+      document.getElementById('taskOldPolicyInput').value = t.oldPolicyNumber || '';
       document.getElementById('taskCustomerNameInput').value = t.customerName || '';
       document.getElementById('taskCustomerMobileInput').value = t.customerMobile || '';
       pendingTaskAttachments = getAttachments(t).slice();
@@ -4742,6 +4784,8 @@
       document.getElementById('taskStatusInput').disabled = true;
       setPillToggleValue('taskOutcomeToggle', 'taskOutcomeInput', '');
       document.getElementById('taskOutcomeNoteInput').value = '';
+      document.getElementById('taskRenewalDateInput').value = '';
+      document.getElementById('taskOldPolicyInput').value = '';
       document.getElementById('taskCustomerNameInput').value = '';
       document.getElementById('taskCustomerMobileInput').value = '';
       pendingTaskAttachments = [];
@@ -4790,6 +4834,12 @@
       data.outcomeNote = outcomeVal ? document.getElementById('taskOutcomeNoteInput').value.trim() : ((existingForOutcome && existingForOutcome.outcomeNote) || '');
     } else {
       data.outcome = null; data.outcomeNote = '';
+    }
+    if(taskType === 'Renewal'){
+      data.renewalDate = document.getElementById('taskRenewalDateInput').value || '';
+      data.oldPolicyNumber = document.getElementById('taskOldPolicyInput').value.trim();
+    } else {
+      data.renewalDate = ''; data.oldPolicyNumber = '';
     }
     let newId = id;
     let t;
