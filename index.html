@@ -513,6 +513,14 @@
   .status-badge-open{ background:#faf1dc; color:#b5811f; }
   .status-badge-done{ background:#e5f3e7; color: var(--wa-sage); }
   .status-badge-inward{ background:#ece5f7; color:#5B2C91; }
+  .outcome-pill{ flex-shrink:0; font-size:10.5px; font-weight:800; padding:2px 9px; border-radius:10px; text-transform:uppercase; letter-spacing:.02em; white-space:nowrap; }
+  .outcome-pill.won{ background:#d9f2e0; color:#1d7a3a; }
+  .outcome-pill.lost{ background:#fde5e2; color:#C0392B; }
+  button.outcome-pill{ border:none; cursor:pointer; }
+  .outcome-choice-row{ display:flex; gap:12px; margin:16px 0 12px; }
+  .outcome-choice{ flex:1; padding:16px 10px; border-radius:12px; border:2px solid var(--wa-border); background:#fff; font-size:16px; font-weight:800; cursor:pointer; }
+  .outcome-choice.won{ color:#1d7a3a; } .outcome-choice.won:hover{ background:#d9f2e0; border-color:#1d7a3a; }
+  .outcome-choice.lost{ color:#C0392B; } .outcome-choice.lost:hover{ background:#fde5e2; border-color:#C0392B; }
 
   .chat-row-days{
     display:flex; justify-content:space-between; align-items:center; margin-top:2px;
@@ -1647,6 +1655,21 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="outcomeModalOverlay">
+  <div class="modal" style="max-width:400px;">
+    <h3 style="margin-bottom:4px;">How did this end?</h3>
+    <div id="outcomeModalTask" style="font-size:13px; color:var(--wa-text-soft);"></div>
+    <div class="outcome-choice-row">
+      <button class="outcome-choice won" onclick="submitOutcome('Won')">🏆 Won</button>
+      <button class="outcome-choice lost" onclick="submitOutcome('Lost')">❌ Lost</button>
+    </div>
+    <input type="text" id="outcomeNoteInput" placeholder="Reason / remarks (optional)" style="width:100%;">
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="cancelOutcome()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- Image lightbox -->
 <div class="lightbox" id="imageLightbox" onclick="closeLightbox()">
   <img id="lightboxImg" src="">
@@ -1719,11 +1742,20 @@
         </div>
         <div class="field">
           <label>Status</label>
-          <select id="taskStatusInput">
+          <select id="taskStatusInput" onchange="updateOutcomeFieldVisibility()">
             <option value="open">Open</option>
             <option value="done">Completed</option>
             <option value="inward">Inward</option>
           </select>
+        </div>
+        <div class="field" id="taskOutcomeField" style="display:none;">
+          <label>Outcome <span class="required-star">*</span></label>
+          <div class="pill-toggle-group" id="taskOutcomeToggle">
+            <button type="button" class="pill-toggle-btn" data-value="Won" onclick="selectPillToggle('taskOutcomeToggle','taskOutcomeInput',this)">🏆 Won</button>
+            <button type="button" class="pill-toggle-btn" data-value="Lost" onclick="selectPillToggle('taskOutcomeToggle','taskOutcomeInput',this)">❌ Lost</button>
+          </div>
+          <input type="hidden" id="taskOutcomeInput">
+          <input type="text" id="taskOutcomeNoteInput" placeholder="Reason / remarks (optional)" style="margin-top:8px;">
         </div>
       </div>
 
@@ -2225,6 +2257,7 @@
         'Due Date': t.due || '',
         'Created': t.created ? new Date(t.created).toLocaleString('en-GB') : '',
         'Completed On': t.completedAt ? new Date(t.completedAt).toLocaleString('en-GB') : '',
+        'Outcome': t.outcome || '', 'Outcome Note': t.outcomeNote || '',
         'Customer Name': t.customerName || '',
         'Customer Mobile': t.customerMobile || '',
         'Agent Name': t.agentName || '',
@@ -2942,6 +2975,7 @@
         'Priority': t.priority, 'Due Date': t.due || '',
         'Created': t.created ? new Date(t.created).toLocaleString('en-GB') : '',
         'Completed On': t.completedAt ? new Date(t.completedAt).toLocaleString('en-GB') : '',
+        'Outcome': t.outcome || '', 'Outcome Note': t.outcomeNote || '',
         'Archived On': t.archivedAt ? new Date(t.archivedAt).toLocaleString('en-GB') : '',
         'Customer Name': t.customerName || '', 'Customer Mobile': t.customerMobile || '',
         'Agent Name': t.agentName || '', 'Relationship Manager': t.relationshipManager || '',
@@ -3696,7 +3730,7 @@
           <div class="chat-row-body">
             <div class="chat-row-top">
               <span class="chat-row-name">${escapeHtml(heading)}</span>
-              <span class="row-status-badge ${statusBadgeClass[t.status] || ''}">${meta.label}</span>
+              <span style="display:flex; gap:5px; align-items:center;">${outcomePillHtml(t, false)}<span class="row-status-badge ${statusBadgeClass[t.status] || ''}">${meta.label}</span></span>
             </div>
             <div class="chat-row-days">
               ${dayInfo ? `<span class="${dayInfo.overdue?'overdue':''}" title="${t.due?formatDate(t.due):''}">${dayInfo.text}</span>` : '<span></span>'}
@@ -3902,6 +3936,7 @@
               <option value="inward" ${t.status==='inward'?'selected':''}>Inward</option>
             </select>
           </div>
+          ${outcomePillHtml(t, canChangeStatus(t))}
           <span class="prio-pill prio-${t.priority.toLowerCase()}">${t.priority}</span>
           ${t.convertedToInwardId ? `<span class="converted-badge" title="Converted to Inward entry ${escapeHtml(t.convertedToInwardId)}">✓ In Inward</span>` : ''}
           <div class="task-bottom-spacer"></div>
@@ -4279,11 +4314,64 @@
       renderAll();
       return;
     }
+    if(status === 'done' && t.status !== 'done' && outcomeApplies(t.taskType)){
+      openOutcomeModal(id, false);   // New / Renewal: ask Won or Lost before completing
+      renderAll();                   // keep the dropdown on its current value until they choose
+      return;
+    }
     t.status = status;
     t.completedAt = status === 'done' ? Date.now() : null;
+    if(status !== 'done'){ t.outcome = null; t.outcomeNote = ''; }
     syncCompletedLabel(t);
     renderAll();
     saveBoard();
+  }
+
+  // ---- Won / Lost outcome (New and Renewal tasks, asked only when completing) ----
+  function outcomeApplies(taskType){ return taskType === 'New' || taskType === 'Renewal'; }
+  function updateOutcomeFieldVisibility(){
+    const f = document.getElementById('taskOutcomeField');
+    if(!f) return;
+    const show = outcomeApplies(document.getElementById('taskTypeInput').value) && document.getElementById('taskStatusInput').value === 'done';
+    f.style.display = show ? '' : 'none';
+  }
+  let pendingOutcomeTaskId = null, pendingOutcomeEditOnly = false;
+  function openOutcomeModal(id, editOnly){
+    const t = tasks.find(x => x.id === id);
+    if(!t) return;
+    pendingOutcomeTaskId = id; pendingOutcomeEditOnly = !!editOnly;
+    document.getElementById('outcomeModalTask').textContent = t.title + ' · ' + (t.taskType || '');
+    document.getElementById('outcomeNoteInput').value = editOnly ? (t.outcomeNote || '') : '';
+    document.getElementById('outcomeModalOverlay').classList.add('open');
+  }
+  function cancelOutcome(){
+    pendingOutcomeTaskId = null;
+    document.getElementById('outcomeModalOverlay').classList.remove('open');
+    renderAll();
+  }
+  function submitOutcome(val){
+    const t = tasks.find(x => x.id === pendingOutcomeTaskId);
+    if(!t){ cancelOutcome(); return; }
+    t.outcome = val;
+    t.outcomeNote = document.getElementById('outcomeNoteInput').value.trim();
+    if(!pendingOutcomeEditOnly){
+      t.status = 'done';
+      t.completedAt = Date.now();
+      syncCompletedLabel(t);
+    }
+    pendingOutcomeTaskId = null;
+    document.getElementById('outcomeModalOverlay').classList.remove('open');
+    renderAll();
+    saveBoard();
+  }
+  function outcomePillHtml(t, clickable){
+    if(!t.outcome || t.status !== 'done') return '';
+    const cls = t.outcome === 'Won' ? 'won' : 'lost';
+    const label = (t.outcome === 'Won' ? '🏆 Won' : '❌ Lost');
+    const tip = t.outcomeNote ? escapeHtml(t.outcomeNote) : (clickable ? 'Click to change outcome' : '');
+    return clickable
+      ? `<button class="outcome-pill ${cls}" title="${tip}" onclick="openOutcomeModal('${t.id}', true)">${label}</button>`
+      : `<span class="outcome-pill ${cls}" title="${tip}">${label}</span>`;
   }
 
   function deleteTask(id){
@@ -4418,6 +4506,7 @@
     document.getElementById(groupId).querySelectorAll('.pill-toggle-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.value === hidden.value);
     });
+    if(groupId === 'taskTypeToggle') updateOutcomeFieldVisibility();
   }
   function setPillToggleValue(groupId, hiddenInputId, value){
     document.getElementById(hiddenInputId).value = value || '';
@@ -4631,6 +4720,8 @@
       document.getElementById('taskDueInput').value = t.due || '';
       document.getElementById('taskStatusInput').value = t.status;
       document.getElementById('taskStatusInput').disabled = !canChangeStatus(t);
+      setPillToggleValue('taskOutcomeToggle', 'taskOutcomeInput', t.outcome || '');
+      document.getElementById('taskOutcomeNoteInput').value = t.outcomeNote || '';
       document.getElementById('taskCustomerNameInput').value = t.customerName || '';
       document.getElementById('taskCustomerMobileInput').value = t.customerMobile || '';
       pendingTaskAttachments = getAttachments(t).slice();
@@ -4649,6 +4740,8 @@
       document.getElementById('taskDueInput').value = '';
       document.getElementById('taskStatusInput').value = 'open';
       document.getElementById('taskStatusInput').disabled = true;
+      setPillToggleValue('taskOutcomeToggle', 'taskOutcomeInput', '');
+      document.getElementById('taskOutcomeNoteInput').value = '';
       document.getElementById('taskCustomerNameInput').value = '';
       document.getElementById('taskCustomerMobileInput').value = '';
       pendingTaskAttachments = [];
@@ -4656,6 +4749,7 @@
       renderTaskLabelPicker([]);
     }
     document.getElementById('taskImageInput').value = '';
+    updateOutcomeFieldVisibility();
     document.getElementById('taskTitleInput').focus();
   }
   function closeTaskModal(){ document.getElementById('taskModalOverlay').classList.remove('open'); }
@@ -4686,6 +4780,17 @@
       pdfFile: null,
       attachments: pendingTaskAttachments.slice(),
     };
+    // Won / Lost is only asked for when a New or Renewal task is being marked Completed.
+    const existingForOutcome = id ? tasks.find(x => x.id === id) : null;
+    if(outcomeApplies(taskType) && data.status === 'done'){
+      const outcomeVal = document.getElementById('taskOutcomeInput').value;
+      const freshlyCompleting = !existingForOutcome || existingForOutcome.status !== 'done';
+      if(!outcomeVal && freshlyCompleting){ alert('This is a ' + taskType + ' task — please mark the Outcome as Won or Lost before completing it.'); return; }
+      data.outcome = outcomeVal || (existingForOutcome && existingForOutcome.outcome) || null;
+      data.outcomeNote = outcomeVal ? document.getElementById('taskOutcomeNoteInput').value.trim() : ((existingForOutcome && existingForOutcome.outcomeNote) || '');
+    } else {
+      data.outcome = null; data.outcomeNote = '';
+    }
     let newId = id;
     let t;
     if(id){
@@ -5314,8 +5419,27 @@
 
     const clearTagBtn = dashTagFilter ? `<button class="dash-clear-tag" onclick="setDashTagFilter('${dashTagFilter}')">Clear</button>` : '';
 
+    // Won / Lost for completed New & Renewal tasks (follows the same person / time / tag filters)
+    const outcomeRows = ['New','Renewal'].map(type => {
+      const done = scopedTasks.filter(t => t.status === 'done' && t.taskType === type);
+      const won = done.filter(t => t.outcome === 'Won').length, lost = done.filter(t => t.outcome === 'Lost').length;
+      const decided = won + lost;
+      const rate = decided ? Math.round(won / decided * 100) : null;
+      const unmarked = done.length - decided;
+      return `
+        <div style="margin-bottom:12px;">
+          <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:700; margin-bottom:4px;">
+            <span>${type}</span><span>${rate !== null ? rate + '% won' : '—'}</span>
+          </div>
+          ${barRow('🏆 Won', won, Math.max(1, won, lost), '#1d7a3a')}
+          ${barRow('❌ Lost', lost, Math.max(1, won, lost), '#C0392B')}
+          ${unmarked ? `<div style="font-size:11.5px; color:var(--wa-text-soft);">${unmarked} completed earlier without an outcome</div>` : ''}
+        </div>`;
+    }).join('');
+
     document.getElementById('dashboardBody').innerHTML = `
       ${kpiHtml}
+      <div class="dash-section"><h3>Won vs Lost (completed New &amp; Renewal)</h3>${outcomeRows}</div>
       <div class="dash-grid-2">
         <div class="dash-section"><h3>Tasks by status</h3>${statusHtml}</div>
         <div class="dash-section"><h3>Tasks by priority</h3>${priorityHtml}</div>
