@@ -1234,6 +1234,105 @@
     .mobile-only-icons .icon-btn-round{ width:30px; height:30px; font-size:15px; }
     .sidebar-title h1{ font-size:15px; }
   }
+
+  /* ---------- Calendar ---------- */
+  .home-tile-icon.calendar{ background:#3b6fb6; }
+  .cal-title-block{ display:flex; flex-direction:column; line-height:1.2; }
+  .cal-title-block b{ font-size:15px; }
+  .cal-title-block span{ font-size:11px; opacity:.85; }
+  .cal-toolbar{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px 16px; padding:14px 24px 6px; max-width:1240px; margin:0 auto; width:100%; flex-shrink:0; }
+  .cal-nav{ display:flex; align-items:center; gap:6px; }
+  .cal-nav-btn{ width:32px; height:32px; border-radius:50%; border:1px solid var(--wa-border); background:#fff; color:var(--wa-text); font-size:18px; line-height:1; cursor:pointer; }
+  .cal-nav-btn:hover{ background:#f0f2f3; }
+  .cal-month-title{ font-size:17px; font-weight:700; color:var(--wa-text); min-width:148px; text-align:center; }
+  .cal-today-btn{ margin-left:6px; padding:6px 14px; border-radius:16px; border:1px solid var(--wa-header); background:#fff; color:var(--wa-header); font-size:12.5px; font-weight:700; cursor:pointer; }
+  .cal-toolbar-right{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+  .cal-seg{ display:inline-flex; border:1px solid var(--wa-border); border-radius:8px; overflow:hidden; background:#fff; }
+  .cal-seg button{ border:none; background:transparent; padding:6px 11px; font-size:12px; font-weight:600; color:var(--wa-text-soft); cursor:pointer; }
+  .cal-seg button.active{ background:var(--wa-header); color:#fff; }
+  .cal-select{ padding:6px 8px; border:1px solid var(--wa-border); border-radius:8px; font-size:12px; font-weight:600; color:var(--wa-text); background:#fff; }
+  .cal-people{ display:none; gap:6px; overflow-x:auto; padding:6px 24px 4px; max-width:1240px; margin:0 auto; width:100%; flex-shrink:0; scrollbar-width:thin; }
+  .cal-person-chip{ display:inline-flex; align-items:center; gap:6px; flex-shrink:0; padding:5px 11px; border-radius:16px; border:1.5px solid var(--wa-border); background:#fff; font-size:12px; font-weight:600; color:var(--wa-text-soft); cursor:pointer; white-space:nowrap; }
+  .cal-person-chip b{ font-size:11px; background:#eef1f2; color:var(--wa-text); border-radius:9px; padding:1px 7px; }
+  .cal-person-chip.zero{ opacity:.55; }
+  .cal-person-chip.active{ background:var(--wa-header); border-color:var(--wa-header); color:#fff; opacity:1; }
+  .cal-person-chip.active b{ background:rgba(255,255,255,.22); color:#fff; }
+  .cal-dot{ display:inline-block; width:9px; height:9px; border-radius:50%; flex-shrink:0; margin-right:2px; }
+  .cal-body{ flex:1; min-height:0; overflow-y:auto; padding:10px 24px 28px; max-width:1240px; margin:0 auto; width:100%; }
+  .cal-scope-note{ font-size:11.5px; color:var(--wa-text-soft); margin-bottom:10px; }
+  .cal-stats{ display:grid; grid-template-columns:repeat(auto-fit, minmax(118px, 1fr)); gap:10px; margin-bottom:14px; }
+  .cal-stat{ background:#fff; border:1px solid var(--wa-border); border-radius:10px; padding:10px 12px; }
+  .cal-stat b{ display:block; font-size:22px; line-height:1.15; color:var(--wa-text); }
+  .cal-stat span{ font-size:11.5px; color:var(--wa-text-soft); }
+  .cal-stat.today b{ color:#b27a00; }
+  .cal-stat.overdue b{ color:var(--wa-rust); }
+  .cal-stat.done b{ color:var(--wa-sage); }
+  .cal-stat.none{ cursor:pointer; border-style:dashed; }
+  .cal-stat.none.selected{ border-color:var(--wa-header); background:#f0faf7; }
+  .cal-layout{ display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:16px; align-items:start; }
+  .cal-grid{ display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); border:1px solid var(--wa-border); border-radius:10px; overflow:hidden; background:#fff; }
+  .cal-dow{ padding:7px 4px; text-align:center; font-size:11px; font-weight:700; color:var(--wa-text-soft); text-transform:uppercase; letter-spacing:.03em; background:#f6f7f7; border-bottom:1px solid var(--wa-border); }
+  .cal-cell{ min-height:108px; padding:4px 5px 5px; border-right:1px solid var(--wa-border); border-bottom:1px solid var(--wa-border); cursor:pointer; overflow:hidden; min-width:0; }
+  .cal-cell:nth-child(7n){ border-right:none; }
+  .cal-cell:hover{ background:#f7fbfa; }
+  .cal-cell.other-month{ background:#fbfbfb; }
+  .cal-cell.other-month .cal-daynum span{ color:#b4bcc1; }
+  .cal-cell.selected{ outline:2px solid var(--wa-header); outline-offset:-2px; background:#f0faf7; }
+  .cal-daynum{ display:flex; align-items:center; justify-content:space-between; margin-bottom:3px; }
+  .cal-daynum span:first-child{ font-size:12px; font-weight:700; color:var(--wa-text); min-width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; }
+  .cal-cell.today .cal-daynum span:first-child{ background:var(--wa-header); color:#fff; }
+  .cal-count{ display:none; font-size:10.5px; font-weight:700; min-width:18px; height:18px; padding:0 5px; border-radius:9px; align-items:center; justify-content:center; color:#fff; }
+  .cal-count.open{ background:var(--wa-amber); }
+  .cal-count.overdue{ background:var(--wa-rust); }
+  .cal-count.done{ background:var(--wa-sage); }
+  .cal-chip{ font-size:11px; line-height:1.25; padding:2px 5px; margin-bottom:2px; border-radius:4px; border-left:3px solid var(--wa-header); background:#f1f5f4; color:var(--wa-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; }
+  .cal-chip:hover{ background:#e3efec; }
+  .cal-chip.is-done{ color:#8a979d; text-decoration:line-through; background:#f6f7f7; }
+  .cal-chip.is-overdue{ background:#fdf0ee; color:var(--wa-rust); }
+  .cal-more{ font-size:10.5px; font-weight:700; color:var(--wa-header); padding:1px 4px; }
+  .cal-panel{ background:#fff; border:1px solid var(--wa-border); border-radius:10px; padding:12px; position:sticky; top:0; max-height:calc(100dvh - 250px); overflow-y:auto; }
+  .cal-panel-head{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size:14px; font-weight:700; color:var(--wa-text); margin-bottom:8px; }
+  .cal-panel-head span{ font-size:11.5px; font-weight:600; color:var(--wa-text-soft); white-space:nowrap; }
+  .cal-panel-empty{ font-size:12.5px; color:var(--wa-text-soft); text-align:center; padding:14px 0; }
+  .cal-group-head{ display:flex; align-items:center; gap:6px; font-size:11.5px; font-weight:700; color:var(--wa-text-soft); text-transform:uppercase; letter-spacing:.03em; margin:10px 0 4px; }
+  .cal-group-head span{ margin-left:auto; font-weight:600; }
+  .cal-row{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; padding:8px 9px; margin-bottom:6px; border:1px solid var(--wa-border); border-left:4px solid var(--wa-header); border-radius:8px; background:#fff; cursor:pointer; }
+  .cal-row:hover{ background:#f7fbfa; }
+  .cal-row-main{ min-width:0; flex:1; }
+  .cal-row-title{ font-size:13px; font-weight:600; color:var(--wa-text); overflow-wrap:anywhere; }
+  .cal-row.is-done .cal-row-title{ text-decoration:line-through; color:#8a979d; }
+  .cal-row-sub{ font-size:11.5px; color:var(--wa-text-soft); margin-top:2px; overflow-wrap:anywhere; }
+  .cal-row-side{ display:flex; flex-direction:column; align-items:flex-end; gap:4px; flex-shrink:0; }
+  .cal-row-status{ font-size:11px; font-weight:600; color:var(--wa-text-soft); white-space:nowrap; }
+  .cal-row-status.overdue{ color:var(--wa-rust); }
+  .cal-row-status.today{ color:#b27a00; }
+  .cal-row-status.done{ color:var(--wa-sage); }
+  .cal-agenda{ max-width:760px; }
+  .cal-agenda-day{ margin-bottom:14px; }
+  .cal-agenda-head{ display:flex; justify-content:space-between; font-size:13px; font-weight:700; color:var(--wa-text); padding:6px 2px; border-bottom:2px solid var(--wa-border); margin-bottom:8px; }
+  .cal-agenda-day.today .cal-agenda-head{ color:var(--wa-header); border-bottom-color:var(--wa-header); }
+  .cal-agenda-head span{ font-size:11.5px; font-weight:600; color:var(--wa-text-soft); }
+  @media (max-width: 960px){
+    .cal-layout{ grid-template-columns:1fr; }
+    .cal-panel{ position:static; max-height:none; }
+  }
+  @media (max-width: 640px){
+    .cal-toolbar{ padding:10px 12px 4px; }
+    .cal-people{ padding:6px 12px 4px; }
+    .cal-body{ padding:8px 12px 24px; }
+    .cal-cell{ min-height:52px; padding:3px; }
+    .cal-chip, .cal-more{ display:none; }
+    .cal-count{ display:inline-flex; }
+    .cal-month-title{ min-width:118px; font-size:15px; }
+    .cal-toolbar-right{ width:100%; }
+    .cal-title-block span{ display:none; }
+    #calScopeTabs{ margin-left:2px !important; }
+    #calScopeTabs .dash-tab-btn{ padding:6px 9px; font-size:12px; }
+    .cal-stats{ grid-template-columns:repeat(3, 1fr); gap:6px; margin-bottom:10px; }
+    .cal-stat{ padding:7px 9px; }
+    .cal-stat b{ font-size:18px; }
+    .cal-stat span{ font-size:10.5px; }
+  }
 </style>
 </head>
 <body>
@@ -1274,6 +1373,10 @@
         <div class="home-tile-icon renewals"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></div>
         <div class="home-tile-label">Renewals</div>
       </div>
+      <div class="home-tile" onclick="openCalendar()">
+        <div class="home-tile-icon calendar"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+        <div class="home-tile-label">Calendar</div>
+      </div>
       <div class="home-tile" onclick="toggleHomeFabMenu(event)">
         <div class="home-tile-icon add"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
         <div class="home-tile-label">Add New</div>
@@ -1312,6 +1415,7 @@
       <button class="icon-btn-round rail-btn" onclick="showHomeScreen()" title="Home"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></button>
       <button class="icon-btn-round rail-btn admin-only" onclick="openDashboard()" title="Dashboard">📊</button>
       <button class="icon-btn-round rail-btn member-only" onclick="openDashboard(session.memberId)" title="My dashboard">📊</button>
+      <button class="icon-btn-round rail-btn" onclick="openCalendar()" title="Calendar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></button>
       <button class="icon-btn-round rail-btn admin-only" onclick="openLabelManageModal()" title="Manage labels"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 12.42 21.58a2 2 0 0 1-2.83 0L2.42 14.4a2 2 0 0 1 0-2.83L10.58 3.4A2 2 0 0 1 12 2.83L21 3l.17 9a2 2 0 0 1-.58 1.41z"/><circle cx="16.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/></svg></button>
       <button class="icon-btn-round rail-btn admin-only" onclick="exportToExcel()" title="Export to Excel"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
       <button class="icon-btn-round rail-btn admin-only" onclick="openStorageArchiveModal()" title="Storage & archive"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg></button>
@@ -1342,6 +1446,7 @@
         <button class="icon-btn-round" onclick="showHomeScreen()" title="Home"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></button>
         <button class="icon-btn-round admin-only" onclick="openDashboard()" title="Dashboard">📊</button>
         <button class="icon-btn-round member-only" onclick="openDashboard(session.memberId)" title="My dashboard">📊</button>
+        <button class="icon-btn-round" onclick="openCalendar()" title="Calendar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></button>
         <button class="icon-btn-round admin-only" onclick="openLabelManageModal()" title="Manage labels"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 12.42 21.58a2 2 0 0 1-2.83 0L2.42 14.4a2 2 0 0 1 0-2.83L10.58 3.4A2 2 0 0 1 12 2.83L21 3l.17 9a2 2 0 0 1-.58 1.41z"/><circle cx="16.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/></svg></button>
         <button class="icon-btn-round admin-only" onclick="exportToExcel()" title="Export to Excel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
         <button class="icon-btn-round admin-only" onclick="openBulkUploadModal()" title="Bulk upload tasks"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></button>
@@ -1382,6 +1487,7 @@
     <div class="icon-rail-group">
       <button class="icon-btn-round rail-btn" onclick="closeDashboard(); showHomeScreen();" title="Home"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></button>
       <button class="icon-btn-round rail-btn" onclick="closeDashboard(); goToTasks();" title="Tasks"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></button>
+      <button class="icon-btn-round rail-btn" onclick="closeDashboard(); openCalendar();" title="Calendar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></button>
       <button class="icon-btn-round rail-btn" onclick="closeDashboard(); goToInward();" title="Inward"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></button>
       <button class="icon-btn-round rail-btn admin-only" onclick="openLabelManageModal()" title="Manage labels"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 12.42 21.58a2 2 0 0 1-2.83 0L2.42 14.4a2 2 0 0 1 0-2.83L10.58 3.4A2 2 0 0 1 12 2.83L21 3l.17 9a2 2 0 0 1-.58 1.41z"/><circle cx="16.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/></svg></button>
       <button class="icon-btn-round rail-btn admin-only" onclick="exportToExcel()" title="Export to Excel"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
@@ -1425,6 +1531,37 @@
   </div>
 </div>
 
+<!-- Calendar overlay -->
+<div class="dashboard-overlay" id="calendarOverlay">
+  <div class="icon-rail" id="calendarIconRail">
+    <div class="icon-rail-avatar-wrap" id="calendarRailAvatarSlot" title="Team Tasks"></div>
+    <div class="icon-rail-group">
+      <button class="icon-btn-round rail-btn" onclick="closeCalendar(); showHomeScreen();" title="Home"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></button>
+      <button class="icon-btn-round rail-btn" onclick="closeCalendar(); goToTasks();" title="Tasks"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></button>
+      <button class="icon-btn-round rail-btn admin-only" onclick="closeCalendar(); openDashboard();" title="Dashboard">📊</button>
+      <button class="icon-btn-round rail-btn member-only" onclick="closeCalendar(); openDashboard(session.memberId);" title="My dashboard">📊</button>
+      <button class="icon-btn-round rail-btn" onclick="closeCalendar(); openTaskModal();" title="New task"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+    </div>
+    <div class="icon-rail-spacer"></div>
+    <div class="icon-rail-group">
+      <button class="icon-btn-round rail-btn" onclick="manualRefresh()" title="Refresh"><svg class="refresh-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
+      <button class="icon-btn-round rail-btn" onclick="logout()" title="Log out"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg></button>
+    </div>
+  </div>
+  <div class="dashboard-main">
+    <div class="dashboard-header">
+      <button class="icon-btn-round" onclick="closeCalendar()" title="Back">←</button>
+      <div class="cal-title-block"><b>Calendar</b><span id="calendarSubtitle"></span></div>
+      <div class="dash-tabs" id="calScopeTabs" style="margin-left:10px;"></div>
+      <div style="flex:1;"></div>
+      <button class="icon-btn-round" onclick="renderCalendar()" title="Refresh"><svg class="refresh-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
+    </div>
+    <div class="cal-toolbar" id="calToolbar"></div>
+    <div class="cal-people" id="calPeopleBar"></div>
+    <div class="cal-body" id="calBody"></div>
+  </div>
+</div>
+
 <!-- Inward screen -->
 <div class="dashboard-overlay" id="inwardScreen">
   <div class="icon-rail" id="inwardIconRail">
@@ -1434,6 +1571,7 @@
       <button class="icon-btn-round rail-btn" onclick="closeInwardScreen(); goToTasks();" title="Tasks"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></button>
       <button class="icon-btn-round rail-btn admin-only" onclick="closeInwardScreen(); openDashboard();" title="Dashboard">📊</button>
       <button class="icon-btn-round rail-btn member-only" onclick="closeInwardScreen(); openDashboard(session.memberId);" title="My dashboard">📊</button>
+      <button class="icon-btn-round rail-btn" onclick="closeInwardScreen(); openCalendar();" title="Calendar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></button>
       <button class="icon-btn-round rail-btn" onclick="closeInwardScreen(); openInwardDashboard();" title="Inward dashboard"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></button>
       <button class="icon-btn-round rail-btn" onclick="openInwardModal()" title="New inward entry"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
     </div>
@@ -2204,7 +2342,7 @@
   function renderHeaderIdentity(){
     const slot = document.getElementById('headerAvatarSlot');
     const nameEl = document.getElementById('headerUserName');
-    const railSlots = [document.getElementById('railAvatarSlot'), document.getElementById('dashboardRailAvatarSlot'), document.getElementById('inwardRailAvatarSlot')].filter(Boolean);
+    const railSlots = [document.getElementById('railAvatarSlot'), document.getElementById('dashboardRailAvatarSlot'), document.getElementById('calendarRailAvatarSlot'), document.getElementById('inwardRailAvatarSlot')].filter(Boolean);
     if(!slot || !nameEl) return;
     if(!session){
       slot.innerHTML = '✓'; slot.style.background = 'rgba(0,0,0,0.12)'; nameEl.textContent = 'Team Tasks';
@@ -3789,12 +3927,12 @@
   }
   function clockTime(ts){ return new Date(ts).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}); }
   function formatDate(iso){ return new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', {day:'2-digit', month:'short'}); }
-  function isOverdue(due, status){ if(!due || status==='done') return false; return due < new Date().toISOString().slice(0,10); }
+  function isOverdue(due, status){ if(!due || status==='done') return false; return due < calTodayIso(); }
 
   function daysInHandLabel(due, status){
     if(!due) return null;
     if(status === 'done') return { text: 'Completed', overdue:false, done:true };
-    const today = new Date().toISOString().slice(0,10);
+    const today = calTodayIso();   // local date, so 'today' is right for IST users in the early morning
     const diffDays = Math.round((new Date(due+'T00:00:00') - new Date(today+'T00:00:00')) / 86400000);
     if(diffDays < 0) return { text: `Overdue by ${Math.abs(diffDays)}d`, overdue:true };
     if(diffDays === 0) return { text: 'Due today', overdue:false, today:true };
@@ -4228,6 +4366,10 @@
   window.addEventListener('popstate', () => {
     if(selectedTaskId){
       closeTaskView();
+      return;
+    }
+    if(document.getElementById('calendarOverlay').classList.contains('open')){
+      document.getElementById('calendarOverlay').classList.remove('open');
       return;
     }
     if(document.getElementById('dashboardOverlay').classList.contains('open')){
@@ -4822,6 +4964,7 @@
     renderChatPanel();
     renderSidebar();
     if(document.getElementById('dashboardOverlay').classList.contains('open')) refreshActiveDashboardTab();
+    if(document.getElementById('calendarOverlay').classList.contains('open')) renderCalendar();
     if(document.getElementById('inwardScreen').classList.contains('open')) renderInwardScreen();
     if(document.getElementById('homeScreen').style.display !== 'none') renderHomeRenewalsSection();
   }
@@ -5583,6 +5726,287 @@
   }
 
   // ---------- Dashboard ----------
+  // ---------- Calendar (tasks by due date) ----------
+  // Everyone gets "My tasks" (tasks assigned to them or given by them — the same visibility as the
+  // Tasks list). The Super Admin and team leaders also get "Consolidated": the Super Admin sees
+  // every task, a team leader sees their own tasks plus those of their direct reports (the same
+  // scope as the Team Dashboard). Scope is always worked out from the logged-in session, never
+  // from a stored value, so it cannot widen by switching tabs or users.
+  const CAL_MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const CAL_DOW = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const CAL_PRIO_COLORS = { Urgent: 'var(--wa-rust)', High: '#e07a3f', Medium: 'var(--wa-amber)', Low: 'var(--wa-sage)' };
+  const CAL_PRIO_ORDER = { Urgent: 0, High: 1, Medium: 2, Low: 3 };
+
+  let calScope = 'my';          // 'my' | 'team'
+  let calView = 'month';        // 'month' | 'agenda'
+  let calYear = new Date().getFullYear();
+  let calMonthIdx = new Date().getMonth();
+  let calSelected = null;       // 'YYYY-MM-DD', 'none' (no due date) or null
+  let calPerson = '';           // Consolidated only: '' = everyone in scope, else a person id
+  let calStatus = 'all';        // 'all' | 'open' | 'done'
+  let calType = '';             // '' | New | Renewal | Endo | Others
+  let calDirection = 'all';     // My tasks only: 'all' | 'received' | 'given'
+
+  function calPad(n){ return String(n).padStart(2, '0'); }
+  function calIso(y, m, d){ return `${y}-${calPad(m + 1)}-${calPad(d)}`; }
+  function calTodayIso(){ const n = new Date(); return calIso(n.getFullYear(), n.getMonth(), n.getDate()); }
+  function calViewerId(){ return session ? (session.type === 'admin' ? 'admin' : session.memberId) : null; }
+
+  // null = unrestricted (Super Admin) · [] = no Consolidated view (regular member) · [ids] = team leader
+  function calTeamScopeIds(){
+    if(!session) return [];
+    if(session.type === 'admin') return null;
+    const reports = getDirectReports(session.memberId);
+    return reports.length ? [session.memberId, ...reports.map(r => r.id)] : [];
+  }
+  function calCanSeeTeam(){ const s = calTeamScopeIds(); return s === null || s.length > 0; }
+
+  function calPersonEntity(id){
+    if(id === 'admin') return { id: 'admin', name: adminName || 'Super Admin', color: 'var(--wa-header)' };
+    const m = memberById(id);
+    return m ? { id: m.id, name: m.name, color: m.color } : null;
+  }
+
+  // Tasks this viewer may see in the current scope (before the person / status / type filters).
+  function calScopeTasks(){
+    const me = calViewerId();
+    if(calScope === 'team' && calCanSeeTeam()){
+      const scope = calTeamScopeIds();
+      return scope === null ? tasks.slice() : tasks.filter(t => scope.includes(t.assignee));
+    }
+    let list = tasks.filter(t => t.assignee === me || t.assignorId === me);
+    if(calDirection === 'received') list = list.filter(t => t.assignee === me);
+    else if(calDirection === 'given') list = list.filter(t => t.assignorId === me && t.assignee !== me);
+    return list;
+  }
+  function calApplyFilters(list, skipPerson){
+    if(!skipPerson && calScope === 'team' && calPerson) list = list.filter(t => t.assignee === calPerson);
+    if(calStatus === 'open') list = list.filter(t => t.status === 'open');
+    else if(calStatus === 'done') list = list.filter(t => t.status !== 'open');
+    if(calType) list = list.filter(t => t.taskType === calType);
+    return list;
+  }
+  function calSortTasks(list){
+    return list.slice().sort((a, b) => {
+      const ad = a.status !== 'open' ? 1 : 0, bd = b.status !== 'open' ? 1 : 0;
+      if(ad !== bd) return ad - bd;
+      const pa = CAL_PRIO_ORDER[a.priority] ?? 9, pb = CAL_PRIO_ORDER[b.priority] ?? 9;
+      if(pa !== pb) return pa - pb;
+      return String(a.title).localeCompare(String(b.title));
+    });
+  }
+
+  function openCalendar(scope){
+    calScope = (scope === 'team' && calCanSeeTeam()) ? 'team' : 'my';
+    calView = 'month'; calPerson = ''; calStatus = 'all'; calType = ''; calDirection = 'all';
+    const now = new Date();
+    calYear = now.getFullYear(); calMonthIdx = now.getMonth();
+    calSelected = calTodayIso();
+    const overlay = document.getElementById('calendarOverlay');
+    if(!overlay.classList.contains('open')) history.pushState({ navLevel: 'calendar' }, '');
+    overlay.classList.add('open');
+    renderCalendar();
+  }
+  function closeCalendar(){ document.getElementById('calendarOverlay').classList.remove('open'); }
+  function calOpenTask(taskId){
+    closeCalendar();
+    goToTasks();
+    openTaskRow(taskId);
+  }
+
+  function calSetScope(s){ if(s === 'team' && !calCanSeeTeam()) return; calScope = s; calPerson = ''; renderCalendar(); }
+  function calSetView(v){ calView = v; renderCalendar(); }
+  function calSetPerson(id){ calPerson = (calPerson === id) ? '' : id; renderCalendar(); }
+  function calSetStatus(v){ calStatus = v; renderCalendar(); }
+  function calSetType(v){ calType = v; renderCalendar(); }
+  function calSetDirection(v){ calDirection = v; renderCalendar(); }
+  function calShiftMonth(delta){
+    const d = new Date(calYear, calMonthIdx + delta, 1);
+    calYear = d.getFullYear(); calMonthIdx = d.getMonth();
+    const now = new Date();
+    calSelected = (calYear === now.getFullYear() && calMonthIdx === now.getMonth()) ? calTodayIso() : null;
+    renderCalendar();
+  }
+  function calGoToday(){
+    const now = new Date();
+    calYear = now.getFullYear(); calMonthIdx = now.getMonth(); calSelected = calTodayIso();
+    renderCalendar();
+  }
+  function calSelectDay(iso){ calSelected = iso; renderCalendar(); }
+
+  function calRowHtml(t, mode){   // mode: 'person' (show assignee) | 'direction' (from/to) | 'none'
+    const me = calViewerId();
+    const ent = getAssigneeEntity(t);
+    const done = t.status !== 'open';
+    const dayInfo = t.due ? daysInHandLabel(t.due, t.status) : null;
+    const assignorName = t.assignorId === 'admin' ? (adminName || 'Super Admin') : ((memberById(t.assignorId) || {}).name || '');
+    const bits = [];
+    if(t.customerName) bits.push(escapeHtml(t.customerName));
+    if(t.taskType) bits.push(escapeHtml(t.taskType));
+    if(mode === 'person' && ent) bits.push('👤 ' + escapeHtml(ent.name));
+    else if(mode === 'direction'){
+      if(t.assignee === me && assignorName && t.assignorId !== me) bits.push('from ' + escapeHtml(assignorName));
+      else if(t.assignee !== me && ent) bits.push('to ' + escapeHtml(ent.name));
+    }
+    const statusText = t.status === 'inward' ? 'Inward' : (done ? (t.outcome ? 'Completed · ' + escapeHtml(t.outcome) : 'Completed') : (dayInfo ? escapeHtml(dayInfo.text) : 'No due date'));
+    const statusCls = done ? 'done' : (dayInfo && dayInfo.overdue ? 'overdue' : (dayInfo && dayInfo.today ? 'today' : ''));
+    return `<div class="cal-row ${done ? 'is-done' : ''}" style="border-left-color:${CAL_PRIO_COLORS[t.priority] || 'var(--wa-header)'}" onclick="calOpenTask('${t.id}')">
+      <div class="cal-row-main">
+        <div class="cal-row-title">${escapeHtml(t.title)}</div>
+        ${bits.length ? `<div class="cal-row-sub">${bits.join(' · ')}</div>` : ''}
+      </div>
+      <div class="cal-row-side">
+        <span class="prio-pill prio-${String(t.priority || 'Medium').toLowerCase()}">${escapeHtml(t.priority || 'Medium')}</span>
+        <span class="cal-row-status ${statusCls}">${statusText}</span>
+      </div>
+    </div>`;
+  }
+
+  function calDayPanelHtml(byDate, noDue, showPerson){
+    if(!calSelected){
+      return `<div class="cal-panel"><div class="cal-panel-empty">Select a day to see its tasks.</div></div>`;
+    }
+    let title, list;
+    if(calSelected === 'none'){ title = 'No due date'; list = noDue; }
+    else {
+      const [y, m, d] = calSelected.split('-').map(Number);
+      title = new Date(y, m - 1, d).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
+      list = byDate.get(calSelected) || [];
+    }
+    list = calSortTasks(list);
+    let body;
+    if(!list.length){
+      body = `<div class="cal-panel-empty">Nothing due.</div>`;
+    } else if(showPerson){
+      const groups = new Map();
+      list.forEach(t => { const k = t.assignee; if(!groups.has(k)) groups.set(k, []); groups.get(k).push(t); });
+      body = Array.from(groups.entries()).map(([pid, items]) => {
+        const p = calPersonEntity(pid);
+        return `<div class="cal-group-head"><i class="cal-dot" style="background:${p ? p.color : '#999'}"></i>${escapeHtml(p ? p.name : 'Unassigned')} <span>${items.length}</span></div>` + items.map(t => calRowHtml(t, 'none')).join('');
+      }).join('');
+    } else {
+      body = list.map(t => calRowHtml(t, 'direction')).join('');
+    }
+    return `<div class="cal-panel"><div class="cal-panel-head">${escapeHtml(title)}<span>${list.length} task${list.length !== 1 ? 's' : ''}</span></div>${body}</div>`;
+  }
+
+  function renderCalendar(){
+    const overlay = document.getElementById('calendarOverlay');
+    if(!overlay || !overlay.classList.contains('open')) return;
+    if(calScope === 'team' && !calCanSeeTeam()) calScope = 'my';     // permissions are re-checked every render
+    const isTeam = calScope === 'team';
+    const todayIso = calTodayIso();
+    const monthPrefix = `${calYear}-${calPad(calMonthIdx + 1)}-`;
+
+    // Header tabs
+    const teamScope = calTeamScopeIds();
+    const tabs = document.getElementById('calScopeTabs');
+    tabs.innerHTML = `<button class="dash-tab-btn ${!isTeam ? 'active' : ''}" onclick="calSetScope('my')">My tasks</button>` +
+      (calCanSeeTeam() ? `<button class="dash-tab-btn ${isTeam ? 'active' : ''}" onclick="calSetScope('team')">Consolidated${teamScope === null ? '' : ' (my team)'}</button>` : '');
+
+    // Tasks
+    const scoped = calScopeTasks();
+    const forChips = calApplyFilters(scoped, true);          // before the person filter, so each person's count stays visible
+    const list = calApplyFilters(scoped, false);
+    const byDate = new Map(); const noDue = [];
+    list.forEach(t => {
+      if(!t.due){ noDue.push(t); return; }
+      if(!byDate.has(t.due)) byDate.set(t.due, []);
+      byDate.get(t.due).push(t);
+    });
+
+    // Toolbar
+    const typeOpts = ['New', 'Renewal', 'Endo', 'Others'].map(v => `<option value="${v}" ${calType === v ? 'selected' : ''}>${v}</option>`).join('');
+    const statusSeg = [['all', 'All'], ['open', 'Open'], ['done', 'Completed']].map(([v, l]) => `<button class="${calStatus === v ? 'active' : ''}" onclick="calSetStatus('${v}')">${l}</button>`).join('');
+    const dirSeg = isTeam ? '' : `<div class="cal-seg">${[['all', 'All'], ['received', 'Received'], ['given', 'Given']].map(([v, l]) => `<button class="${calDirection === v ? 'active' : ''}" onclick="calSetDirection('${v}')">${l}</button>`).join('')}</div>`;
+    document.getElementById('calToolbar').innerHTML = `
+      <div class="cal-nav">
+        <button class="cal-nav-btn" onclick="calShiftMonth(-1)" title="Previous month">‹</button>
+        <div class="cal-month-title">${CAL_MONTH_NAMES[calMonthIdx]} ${calYear}</div>
+        <button class="cal-nav-btn" onclick="calShiftMonth(1)" title="Next month">›</button>
+        <button class="cal-today-btn" onclick="calGoToday()">Today</button>
+      </div>
+      <div class="cal-toolbar-right">
+        ${dirSeg}
+        <div class="cal-seg">${statusSeg}</div>
+        <select class="cal-select" onchange="calSetType(this.value)"><option value="">All types</option>${typeOpts}</select>
+        <div class="cal-seg"><button class="${calView === 'month' ? 'active' : ''}" onclick="calSetView('month')">Month</button><button class="${calView === 'agenda' ? 'active' : ''}" onclick="calSetView('agenda')">Agenda</button></div>
+      </div>`;
+
+    // People strip (Consolidated only)
+    const peopleBar = document.getElementById('calPeopleBar');
+    if(isTeam){
+      const ids = teamScope === null ? ['admin', ...members.map(m => m.id)] : teamScope;
+      const counts = {};
+      forChips.forEach(t => { if(t.due && t.due.startsWith(monthPrefix)) counts[t.assignee] = (counts[t.assignee] || 0) + 1; });
+      const monthTotal = Object.values(counts).reduce((a, b) => a + b, 0);
+      peopleBar.style.display = 'flex';
+      peopleBar.innerHTML = `<button class="cal-person-chip ${calPerson === '' ? 'active' : ''}" onclick="calSetPerson('')">${teamScope === null ? 'Everyone' : 'My team'} <b>${monthTotal}</b></button>` +
+        ids.map(id => { const p = calPersonEntity(id); if(!p) return ''; const n = counts[id] || 0;
+          return `<button class="cal-person-chip ${calPerson === id ? 'active' : ''} ${n === 0 ? 'zero' : ''}" onclick="calSetPerson('${id}')"><i class="cal-dot" style="background:${p.color}"></i>${escapeHtml(p.name)} <b>${n}</b></button>`; }).join('');
+    } else {
+      peopleBar.style.display = 'none'; peopleBar.innerHTML = '';
+    }
+
+    // Summary cards
+    const open = list.filter(t => t.status === 'open');
+    const dueMonth = list.filter(t => t.due && t.due.startsWith(monthPrefix));
+    const stats = [
+      { label: 'Due this month', n: dueMonth.length, cls: '' },
+      { label: 'Due today', n: open.filter(t => t.due === todayIso).length, cls: 'today' },
+      { label: 'Overdue', n: open.filter(t => t.due && t.due < todayIso).length, cls: 'overdue' },
+      { label: 'Completed (this month)', n: dueMonth.filter(t => t.status !== 'open').length, cls: 'done' },
+    ];
+    let statsHtml = `<div class="cal-stats">${stats.map(s => `<div class="cal-stat ${s.cls}"><b>${s.n}</b><span>${s.label}</span></div>`).join('')}` +
+      (noDue.length ? `<div class="cal-stat none ${calSelected === 'none' ? 'selected' : ''}" onclick="calSelectDay('none')"><b>${noDue.length}</b><span>No due date</span></div>` : '') + `</div>`;
+    const scopeNote = isTeam
+      ? `<div class="cal-scope-note">${teamScope === null ? 'Showing every team member’s tasks.' : 'Showing you and your direct reports.'}${calPerson ? ' Filtered to ' + escapeHtml((calPersonEntity(calPerson) || {}).name || '') + '.' : ''}</div>`
+      : `<div class="cal-scope-note">Showing tasks assigned to you or given by you.</div>`;
+
+    let main;
+    if(calView === 'agenda'){
+      const dates = Array.from(byDate.keys()).filter(k => k.startsWith(monthPrefix)).sort();
+      main = dates.length ? dates.map(iso => {
+        const [y, m, d] = iso.split('-').map(Number);
+        const label = new Date(y, m - 1, d).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' });
+        const items = calSortTasks(byDate.get(iso));
+        return `<div class="cal-agenda-day ${iso === todayIso ? 'today' : ''}"><div class="cal-agenda-head">${escapeHtml(label)}${iso === todayIso ? ' · Today' : ''}<span>${items.length}</span></div>${items.map(t => calRowHtml(t, isTeam ? 'person' : 'direction')).join('')}</div>`;
+      }).join('') : `<div class="cal-panel-empty" style="padding:30px 0;">No tasks due in ${CAL_MONTH_NAMES[calMonthIdx]} ${calYear}.</div>`;
+      main = `<div class="cal-agenda">${main}</div>`;
+    } else {
+      const first = new Date(calYear, calMonthIdx, 1);
+      const offset = (first.getDay() + 6) % 7;                      // Monday-first
+      const daysInMonth = new Date(calYear, calMonthIdx + 1, 0).getDate();
+      const weeks = Math.ceil((offset + daysInMonth) / 7);
+      let cells = CAL_DOW.map(d => `<div class="cal-dow">${d}</div>`).join('');
+      for(let i = 0; i < weeks * 7; i++){
+        const dt = new Date(calYear, calMonthIdx, 1 - offset + i);
+        const iso = calIso(dt.getFullYear(), dt.getMonth(), dt.getDate());
+        const inMonth = dt.getMonth() === calMonthIdx;
+        const items = calSortTasks(byDate.get(iso) || []);
+        const hasOverdue = items.some(t => t.status === 'open' && iso < todayIso);
+        const hasOpen = items.some(t => t.status === 'open');
+        const chips = items.slice(0, 3).map(t => {
+          const ent = isTeam ? getAssigneeEntity(t) : null;
+          const done = t.status !== 'open';
+          const overdue = !done && iso < todayIso;
+          return `<div class="cal-chip ${done ? 'is-done' : ''} ${overdue ? 'is-overdue' : ''}" style="border-left-color:${CAL_PRIO_COLORS[t.priority] || 'var(--wa-header)'}" title="${escapeHtml(t.title)}" onclick="event.stopPropagation(); calOpenTask('${t.id}')">${ent ? `<i class="cal-dot" style="background:${ent.color}"></i>` : ''}${escapeHtml(t.title)}</div>`;
+        }).join('');
+        const more = items.length > 3 ? `<div class="cal-more">+${items.length - 3} more</div>` : '';
+        const badge = items.length ? `<span class="cal-count ${hasOverdue ? 'overdue' : (hasOpen ? 'open' : 'done')}">${items.length}</span>` : '';
+        cells += `<div class="cal-cell ${inMonth ? '' : 'other-month'} ${iso === todayIso ? 'today' : ''} ${calSelected === iso ? 'selected' : ''}" onclick="calSelectDay('${iso}')">
+          <div class="cal-daynum"><span>${dt.getDate()}</span>${badge}</div>${chips}${more}</div>`;
+      }
+      main = `<div class="cal-layout"><div class="cal-grid">${cells}</div>${calDayPanelHtml(byDate, noDue, isTeam)}</div>`;
+    }
+    if(calView === 'agenda' && calSelected === 'none'){
+      main += calDayPanelHtml(byDate, noDue, isTeam);
+    }
+
+    document.getElementById('calendarSubtitle').textContent = (isTeam ? (teamScope === null ? 'Consolidated · all users' : 'Consolidated · my team') : 'My tasks') + ' · by due date · as of ' + timeNow();
+    document.getElementById('calBody').innerHTML = scopeNote + statsHtml + main;
+  }
+
   let dashPersonFilter = ''; // '' = Overall (within scope), or a memberId, or 'admin'
   let dashTimeRange = 'all'; // 'all' | 'today' | 'week' | 'month'
   let dashTagFilter = '';
