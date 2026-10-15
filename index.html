@@ -1278,6 +1278,20 @@
   .cal-stats-slim{ grid-template-columns:repeat(auto-fit, minmax(130px, 190px)); }
   .cal-stats-slim .cal-stat{ padding:7px 12px; display:flex; align-items:baseline; gap:8px; }
   .cal-stats-slim .cal-stat b{ font-size:18px; }
+  .cal-filter-row{ flex-basis:100%; display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+  .cal-select.active{ border-color:var(--wa-header); background:#e7f8f2; color:var(--wa-header); }
+  .cal-clear-btn{ padding:6px 12px; border-radius:16px; border:1px solid var(--wa-rust); background:#fff; color:var(--wa-rust); font-size:12px; font-weight:700; cursor:pointer; }
+  .cal-pills{ display:flex; flex-direction:column; gap:3px; margin-top:4px; }
+  .cal-pill{ display:flex; align-items:center; gap:6px; padding:2px 7px; border-radius:6px; font-size:11px; font-weight:600; line-height:1.35; }
+  .cal-pill b{ font-size:12.5px; }
+  .cal-pill em{ font-style:normal; }
+  .cal-pill.done{ background:#e5f3e8; color:#2f7a42; }
+  .cal-pill.open{ background:#fbf0d6; color:#8a6500; }
+  .cal-pill.over{ background:#fce8e4; color:var(--wa-rust); }
+  .cal-legend{ display:flex; flex-wrap:wrap; align-items:center; gap:14px; font-size:11.5px; color:var(--wa-text-soft); margin-bottom:8px; }
+  .cal-legend i{ display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:5px; vertical-align:-1px; }
+  .cal-legend i.done{ background:var(--wa-sage); } .cal-legend i.open{ background:var(--wa-amber); } .cal-legend i.over{ background:var(--wa-rust); }
+  .cal-legend em{ margin-left:auto; font-style:normal; }
   .cal-layout{ display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:16px; align-items:start; }
   .cal-grid{ display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); border:1px solid var(--wa-border); border-radius:10px; overflow:hidden; background:#fff; }
   .cal-dow{ padding:7px 4px; text-align:center; font-size:11px; font-weight:700; color:var(--wa-text-soft); text-transform:uppercase; letter-spacing:.03em; background:#f6f7f7; border-bottom:1px solid var(--wa-border); }
@@ -1331,7 +1345,12 @@
     .cal-body{ padding:8px 12px 24px; }
     .cal-cell{ min-height:52px; padding:3px; }
     .cal-chip, .cal-more{ display:none; }
-    .cal-count{ display:inline-flex; }
+    .cal-pills{ flex-direction:row; flex-wrap:wrap; justify-content:center; gap:2px; margin-top:2px; }
+    .cal-pill{ padding:1px 4px; font-size:10px; gap:0; }
+    .cal-pill b{ font-size:10.5px; }
+    .cal-pill em{ display:none; }
+    .cal-legend em{ display:none; }
+    .cal-select{ font-size:11.5px; padding:5px 6px; max-width:48%; }
     .cal-month-title{ min-width:118px; font-size:15px; }
     .cal-toolbar-right{ width:100%; }
     .cal-title-block span{ display:none; }
@@ -5762,6 +5781,7 @@
   let calStatus = 'all';        // 'all' | 'open' | 'done'
   let calType = '';             // '' | New | Renewal | Endo | Others
   let calDirection = 'all';     // My tasks only: 'all' | 'received' | 'given'
+  let calTag = '', calCategory = '', calLob = '', calPriority = '';   // same filters as the task dashboard / task list
 
   function calPad(n){ return String(n).padStart(2, '0'); }
   function calIso(y, m, d){ return `${y}-${calPad(m + 1)}-${calPad(d)}`; }
@@ -5800,6 +5820,10 @@
     if(calStatus === 'open') list = list.filter(t => t.status === 'open');
     else if(calStatus === 'done') list = list.filter(t => t.status !== 'open');
     if(calType) list = list.filter(t => t.taskType === calType);
+    if(calTag) list = list.filter(t => (t.labels || []).includes(calTag));
+    if(calCategory) list = list.filter(t => t.category === calCategory);
+    if(calLob) list = list.filter(t => t.lineOfBusiness === calLob);
+    if(calPriority) list = list.filter(t => t.priority === calPriority);
     return list;
   }
   function calSortTasks(list){
@@ -5814,7 +5838,7 @@
 
   function openCalendar(scope){
     calScope = (scope === 'team' && calCanSeeTeam()) ? 'team' : 'my';
-    calView = 'month'; calPerson = ''; calStatus = 'all'; calType = ''; calDirection = 'all';
+    calView = 'month'; calPerson = ''; calStatus = 'all'; calType = ''; calDirection = 'all'; calTag = calCategory = calLob = calPriority = '';
     const now = new Date();
     calYear = now.getFullYear(); calMonthIdx = now.getMonth();
     calSelected = calRefIso = calTodayIso(); calPeriod = 'day';
@@ -5835,6 +5859,11 @@
   function calSetPerson(id){ calPerson = (calPerson === id) ? '' : id; renderCalendar(); }
   function calSetStatus(v){ calStatus = v; renderCalendar(); }
   function calSetType(v){ calType = v; renderCalendar(); }
+  function calSetTag(v){ calTag = v; renderCalendar(); }
+  function calSetCategory(v){ calCategory = v; renderCalendar(); }
+  function calSetLob(v){ calLob = v; renderCalendar(); }
+  function calSetPriority(v){ calPriority = v; renderCalendar(); }
+  function calClearFilters(){ calStatus = 'all'; calType = calTag = calCategory = calLob = calPriority = ''; calPerson = ''; renderCalendar(); }
   function calSetDirection(v){ calDirection = v; renderCalendar(); }
   function calShiftMonth(delta){
     const d = new Date(calYear, calMonthIdx + delta, 1);
@@ -5955,9 +5984,19 @@
     });
 
     // Toolbar
-    const typeOpts = ['New', 'Renewal', 'Endo', 'Others'].map(v => `<option value="${v}" ${calType === v ? 'selected' : ''}>${v}</option>`).join('');
     const statusSeg = [['all', 'All'], ['open', 'Open'], ['done', 'Completed']].map(([v, l]) => `<button class="${calStatus === v ? 'active' : ''}" onclick="calSetStatus('${v}')">${l}</button>`).join('');
     const dirSeg = isTeam ? '' : `<div class="cal-seg">${[['all', 'All'], ['received', 'Received'], ['given', 'Given']].map(([v, l]) => `<button class="${calDirection === v ? 'active' : ''}" onclick="calSetDirection('${v}')">${l}</button>`).join('')}</div>`;
+    // Dropdown filters — the same ones the task list / task dashboard use (type, tag, category, line of business) plus priority.
+    const sel = (cur, setter, allLabel, opts) => `<select class="cal-select ${cur ? 'active' : ''}" onchange="${setter}(this.value)"><option value="">${allLabel}</option>${opts.map(([v, l]) => `<option value="${escapeHtml(v)}" ${cur === v ? 'selected' : ''}>${escapeHtml(l)}</option>`).join('')}</select>`;
+    const anyFilter = calStatus !== 'all' || calType || calTag || calCategory || calLob || calPriority || (isTeam && calPerson);
+    const filterRow = `<div class="cal-filter-row">
+        ${sel(calType, 'calSetType', 'All types', ['New', 'Renewal', 'Endo', 'Others'].map(v => [v, v]))}
+        ${sel(calTag, 'calSetTag', 'All tags', labels.map(l => [l.id, l.name]))}
+        ${sel(calCategory, 'calSetCategory', 'All categories', CATEGORY_OPTIONS.map(v => [v, v]))}
+        ${sel(calLob, 'calSetLob', 'All lines of business', LOB_OPTIONS.map(v => [v, v]))}
+        ${sel(calPriority, 'calSetPriority', 'All priorities', ['Urgent', 'High', 'Medium', 'Low'].map(v => [v, v]))}
+        ${anyFilter ? `<button class="cal-clear-btn" onclick="calClearFilters()">✕ Clear filters</button>` : ''}
+      </div>`;
     document.getElementById('calToolbar').innerHTML = `
       <div class="cal-nav">
         <button class="cal-nav-btn" onclick="calShiftMonth(-1)" title="Previous month">‹</button>
@@ -5968,9 +6007,9 @@
       <div class="cal-toolbar-right">
         ${dirSeg}
         <div class="cal-seg">${statusSeg}</div>
-        <select class="cal-select" onchange="calSetType(this.value)"><option value="">All types</option>${typeOpts}</select>
         <div class="cal-seg"><button class="${calView === 'month' ? 'active' : ''}" onclick="calSetView('month')">Month</button><button class="${calView === 'agenda' ? 'active' : ''}" onclick="calSetView('agenda')">Agenda</button></div>
-      </div>`;
+      </div>
+      ${filterRow}`;
 
     // People strip (Consolidated only)
     const peopleBar = document.getElementById('calPeopleBar');
@@ -6035,20 +6074,16 @@
         const iso = calIso(dt.getFullYear(), dt.getMonth(), dt.getDate());
         const inMonth = dt.getMonth() === calMonthIdx;
         const items = calSortTasks(byDate.get(iso) || []);
-        const hasOverdue = items.some(t => t.status === 'open' && iso < todayIso);
-        const hasOpen = items.some(t => t.status === 'open');
-        const chips = items.slice(0, 3).map(t => {
-          const ent = isTeam ? getAssigneeEntity(t) : null;
-          const done = t.status !== 'open';
-          const overdue = !done && iso < todayIso;
-          return `<div class="cal-chip ${done ? 'is-done' : ''} ${overdue ? 'is-overdue' : ''}" style="border-left-color:${CAL_PRIO_COLORS[t.priority] || 'var(--wa-header)'}" title="${escapeHtml(t.title)}" onclick="event.stopPropagation(); calOpenTask('${t.id}')">${ent ? `<i class="cal-dot" style="background:${ent.color}"></i>` : ''}${escapeHtml(t.title)}</div>`;
-        }).join('');
-        const more = items.length > 3 ? `<div class="cal-more">+${items.length - 3} more</div>` : '';
-        const badge = items.length ? `<span class="cal-count ${hasOverdue ? 'overdue' : (hasOpen ? 'open' : 'done')}">${items.length}</span>` : '';
+        const nOpen = items.filter(t => t.status === 'open').length;
+        const nOver = items.filter(t => t.status === 'open' && iso < todayIso).length;
+        const nDone = items.length - nOpen;
+        const pill = (cls, n, label) => `<span class="cal-pill ${cls}" title="${n} ${label.toLowerCase()}"><b>${n}</b><em>${label}</em></span>`;
+        const pills = items.length
+          ? `<div class="cal-pills">${nDone ? pill('done', nDone, 'Completed') : ''}${nOpen ? pill('open', nOpen, 'Open') : ''}${nOver ? pill('over', nOver, 'Overdue') : ''}</div>` : '';
         cells += `<div class="cal-cell ${inMonth ? '' : 'other-month'} ${iso === todayIso ? 'today' : ''} ${calSelected === iso ? 'selected' : ''}" onclick="calSelectDay('${iso}')">
-          <div class="cal-daynum"><span>${dt.getDate()}</span>${badge}</div>${chips}${more}</div>`;
+          <div class="cal-daynum"><span>${dt.getDate()}</span></div>${pills}</div>`;
       }
-      main = `<div class="cal-layout"><div class="cal-grid">${cells}</div>${calDayPanelHtml(byDate, noDue, isTeam)}</div>`;
+      main = `<div class="cal-legend"><span><i class="done"></i>Completed</span><span><i class="open"></i>Open</span><span><i class="over"></i>Overdue (open, past due date)</span><em>Click a day to see its tasks</em></div><div class="cal-layout"><div class="cal-grid">${cells}</div>${calDayPanelHtml(byDate, noDue, isTeam)}</div>`;
     }
     if(calView === 'agenda' && calSelected === 'none'){
       main += calDayPanelHtml(byDate, noDue, isTeam);
