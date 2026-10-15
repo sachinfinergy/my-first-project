@@ -1269,6 +1269,15 @@
   .cal-stat.done b{ color:var(--wa-sage); }
   .cal-stat.none{ cursor:pointer; border-style:dashed; }
   .cal-stat.none.selected{ border-color:var(--wa-header); background:#f0faf7; }
+  .cal-periods{ display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px; margin-bottom:12px; }
+  .cal-period-card{ cursor:pointer; text-align:left; padding:12px 14px; transition:box-shadow .12s, transform .12s; }
+  .cal-period-card:hover{ transform:translateY(-1px); }
+  .cal-period-card.active{ box-shadow:0 0 0 2px var(--wa-header); background:#f6fbf9; }
+  .cal-period-detail{ font-size:12px; color:var(--wa-text-soft); margin-top:6px; }
+  .cal-period-detail .over{ color:var(--wa-rust); font-weight:700; }
+  .cal-stats-slim{ grid-template-columns:repeat(auto-fit, minmax(130px, 190px)); }
+  .cal-stats-slim .cal-stat{ padding:7px 12px; display:flex; align-items:baseline; gap:8px; }
+  .cal-stats-slim .cal-stat b{ font-size:18px; }
   .cal-layout{ display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:16px; align-items:start; }
   .cal-grid{ display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); border:1px solid var(--wa-border); border-radius:10px; overflow:hidden; background:#fff; }
   .cal-dow{ padding:7px 4px; text-align:center; font-size:11px; font-weight:700; color:var(--wa-text-soft); text-transform:uppercase; letter-spacing:.03em; background:#f6f7f7; border-bottom:1px solid var(--wa-border); }
@@ -1328,7 +1337,12 @@
     .cal-title-block span{ display:none; }
     #calScopeTabs{ margin-left:2px !important; }
     #calScopeTabs .dash-tab-btn{ padding:6px 9px; font-size:12px; }
-    .cal-stats{ grid-template-columns:repeat(3, 1fr); gap:6px; margin-bottom:10px; }
+    .cal-periods{ gap:6px; }
+    .cal-period-card{ padding:8px 9px; }
+    .cal-period-card .kpi-value{ font-size:20px; }
+    .cal-period-card .kpi-label{ font-size:10.5px; }
+    .cal-period-detail{ font-size:10.5px; }
+    .cal-stats{ grid-template-columns:repeat(2, 1fr); gap:6px; margin-bottom:10px; }
     .cal-stat{ padding:7px 9px; }
     .cal-stat b{ font-size:18px; }
     .cal-stat span{ font-size:10.5px; }
@@ -5741,7 +5755,9 @@
   let calView = 'month';        // 'month' | 'agenda'
   let calYear = new Date().getFullYear();
   let calMonthIdx = new Date().getMonth();
-  let calSelected = null;       // 'YYYY-MM-DD', 'none' (no due date) or null
+  let calSelected = null;       // 'YYYY-MM-DD' or 'none' (the "no due date" list)
+  let calRefIso = null;         // the last real date picked — Day card = this date, Week card = its Mon–Sun week
+  let calPeriod = 'day';        // which card the counts beside the names follow: 'day' | 'week' | 'month'
   let calPerson = '';           // Consolidated only: '' = everyone in scope, else a person id
   let calStatus = 'all';        // 'all' | 'open' | 'done'
   let calType = '';             // '' | New | Renewal | Endo | Others
@@ -5801,7 +5817,7 @@
     calView = 'month'; calPerson = ''; calStatus = 'all'; calType = ''; calDirection = 'all';
     const now = new Date();
     calYear = now.getFullYear(); calMonthIdx = now.getMonth();
-    calSelected = calTodayIso();
+    calSelected = calRefIso = calTodayIso(); calPeriod = 'day';
     const overlay = document.getElementById('calendarOverlay');
     if(!overlay.classList.contains('open')) history.pushState({ navLevel: 'calendar' }, '');
     overlay.classList.add('open');
@@ -5824,15 +5840,38 @@
     const d = new Date(calYear, calMonthIdx + delta, 1);
     calYear = d.getFullYear(); calMonthIdx = d.getMonth();
     const now = new Date();
-    calSelected = (calYear === now.getFullYear() && calMonthIdx === now.getMonth()) ? calTodayIso() : null;
+    // There is always a selected day: today when it is in this month, otherwise the 1st.
+    calSelected = calRefIso = (calYear === now.getFullYear() && calMonthIdx === now.getMonth()) ? calTodayIso() : calIso(calYear, calMonthIdx, 1);
     renderCalendar();
   }
   function calGoToday(){
     const now = new Date();
-    calYear = now.getFullYear(); calMonthIdx = now.getMonth(); calSelected = calTodayIso();
+    calYear = now.getFullYear(); calMonthIdx = now.getMonth(); calSelected = calRefIso = calTodayIso();
     renderCalendar();
   }
-  function calSelectDay(iso){ calSelected = iso; renderCalendar(); }
+  function calSelectDay(iso){ calSelected = iso; if(iso !== 'none') calRefIso = iso; renderCalendar(); }
+  function calSetPeriod(p){ calPeriod = p; renderCalendar(); }
+
+  // Date range (inclusive, as YYYY-MM-DD) for the Day / Week / Month cards.
+  function calWeekRange(iso){
+    const [y, m, d] = iso.split('-').map(Number);
+    const off = (new Date(y, m - 1, d).getDay() + 6) % 7;                 // Monday-first, same as the grid
+    const s = new Date(y, m - 1, d - off), e = new Date(y, m - 1, d - off + 6);
+    return [calIso(s.getFullYear(), s.getMonth(), s.getDate()), calIso(e.getFullYear(), e.getMonth(), e.getDate())];
+  }
+  function calPeriodRange(p){
+    const ref = calRefIso || calTodayIso();
+    if(p === 'week') return calWeekRange(ref);
+    if(p === 'month') return [calIso(calYear, calMonthIdx, 1), calIso(calYear, calMonthIdx, new Date(calYear, calMonthIdx + 1, 0).getDate())];
+    return [ref, ref];
+  }
+  function calPeriodLabel(p){
+    const fmt = (iso, o) => { const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString('en-GB', o); };
+    const [a, b] = calPeriodRange(p);
+    if(p === 'month') return CAL_MONTH_NAMES[calMonthIdx] + ' ' + calYear;
+    if(p === 'week') return fmt(a, { day: 'numeric', month: 'short' }) + ' – ' + fmt(b, { day: 'numeric', month: 'short' });
+    return (a === calTodayIso() ? 'Today · ' : '') + fmt(a, { weekday: 'short', day: 'numeric', month: 'short' });
+  }
 
   function calRowHtml(t, mode){   // mode: 'person' (show assignee) | 'direction' (from/to) | 'none'
     const me = calViewerId();
@@ -5938,7 +5977,8 @@
     if(isTeam){
       const ids = teamScope === null ? ['admin', ...members.map(m => m.id)] : teamScope;
       const counts = {};
-      forChips.forEach(t => { if(t.due && t.due.startsWith(monthPrefix)) counts[t.assignee] = (counts[t.assignee] || 0) + 1; });
+      const [pFrom, pTo] = calPeriodRange(calPeriod);
+      forChips.forEach(t => { if(t.due && t.due >= pFrom && t.due <= pTo) counts[t.assignee] = (counts[t.assignee] || 0) + 1; });
       const monthTotal = Object.values(counts).reduce((a, b) => a + b, 0);
       peopleBar.style.display = 'flex';
       peopleBar.innerHTML = `<button class="cal-person-chip ${calPerson === '' ? 'active' : ''}" onclick="calSetPerson('')">${teamScope === null ? 'Everyone' : 'My team'} <b>${monthTotal}</b></button>` +
@@ -5948,19 +5988,30 @@
       peopleBar.style.display = 'none'; peopleBar.innerHTML = '';
     }
 
-    // Summary cards
+    // Period cards (Day / Week / Month), styled like the Inward dashboard cards. They follow the
+    // person / status / type filters, and the active one decides what the counts beside names show.
     const open = list.filter(t => t.status === 'open');
-    const dueMonth = list.filter(t => t.due && t.due.startsWith(monthPrefix));
-    const stats = [
-      { label: 'Due this month', n: dueMonth.length, cls: '' },
-      { label: 'Due today', n: open.filter(t => t.due === todayIso).length, cls: 'today' },
-      { label: 'Overdue', n: open.filter(t => t.due && t.due < todayIso).length, cls: 'overdue' },
-      { label: 'Completed (this month)', n: dueMonth.filter(t => t.status !== 'open').length, cls: 'done' },
+    const periodDefs = [['day', 'Day', 'var(--wa-header)'], ['week', 'Week', 'var(--wa-amber)'], ['month', 'Month', 'var(--wa-sage)']];
+    const periodCards = periodDefs.map(([p, title, color]) => {
+      const [from, to] = calPeriodRange(p);
+      const items = list.filter(t => t.due && t.due >= from && t.due <= to);
+      const nOpen = items.filter(t => t.status === 'open').length;
+      const nDone = items.length - nOpen;
+      const nOver = items.filter(t => t.status === 'open' && t.due < todayIso).length;
+      return `<div class="kpi-card cal-period-card ${calPeriod === p ? 'active' : ''}" style="border-top:4px solid ${color};" onclick="calSetPeriod('${p}')" title="Show the counts beside names for this ${title.toLowerCase()}">
+        <div class="kpi-label" style="font-weight:800; margin:0 0 6px;">${title} · ${escapeHtml(calPeriodLabel(p))}</div>
+        <div class="kpi-value">${items.length}</div>
+        <div class="kpi-label">task${items.length !== 1 ? 's' : ''} due</div>
+        <div class="cal-period-detail">${nOpen} open · ${nDone} done${nOver ? ` · <span class="over">${nOver} overdue</span>` : ''}</div>
+      </div>`;
+    }).join('');
+    const extras = [
+      { label: 'Overdue (all dates)', n: open.filter(t => t.due && t.due < todayIso).length, cls: 'overdue' },
     ];
-    let statsHtml = `<div class="cal-stats">${stats.map(s => `<div class="cal-stat ${s.cls}"><b>${s.n}</b><span>${s.label}</span></div>`).join('')}` +
+    let statsHtml = `<div class="cal-periods">${periodCards}</div><div class="cal-stats cal-stats-slim">${extras.map(s => `<div class="cal-stat ${s.cls}"><b>${s.n}</b><span>${s.label}</span></div>`).join('')}` +
       (noDue.length ? `<div class="cal-stat none ${calSelected === 'none' ? 'selected' : ''}" onclick="calSelectDay('none')"><b>${noDue.length}</b><span>No due date</span></div>` : '') + `</div>`;
     const scopeNote = isTeam
-      ? `<div class="cal-scope-note">${teamScope === null ? 'Showing every team member’s tasks.' : 'Showing you and your direct reports.'}${calPerson ? ' Filtered to ' + escapeHtml((calPersonEntity(calPerson) || {}).name || '') + '.' : ''}</div>`
+      ? `<div class="cal-scope-note">${teamScope === null ? 'Showing every team member’s tasks.' : 'Showing you and your direct reports.'}${calPerson ? ' Filtered to ' + escapeHtml((calPersonEntity(calPerson) || {}).name || '') + '.' : ''} Numbers beside names count tasks due for the <b>${calPeriod}</b> (${escapeHtml(calPeriodLabel(calPeriod))}) — click the Day, Week or Month card to change it.</div>`
       : `<div class="cal-scope-note">Showing tasks assigned to you or given by you.</div>`;
 
     let main;
