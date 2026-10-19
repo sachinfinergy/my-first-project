@@ -2694,6 +2694,19 @@
     return [cust, String(title || '').trim().toLowerCase(), type || '', String(oldPolicy || '').trim().toLowerCase()].join('|');
   }
 
+  // Old Policy Number identity: ignore case, spaces, dashes, slashes and Excel's ".0" on numbers
+  function bulkPolicyKey(v){
+    let x = String(v == null ? '' : v).trim().replace(/\.0+$/, '');
+    return x.toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+  // Mobile: keep the last 10 digits when a +91 / 0 prefix is present; returns '' if it isn't a valid Indian mobile
+  function bulkCleanMobile(v){
+    let d = String(v == null ? '' : v).replace(/\.0+$/, '').replace(/\D/g, '');
+    if(d.length === 12 && d.startsWith('91')) d = d.slice(2);
+    else if(d.length === 11 && d.startsWith('0')) d = d.slice(1);
+    return /^[6-9]\d{9}$/.test(d) ? d : '';
+  }
+
   function downloadTaskTemplate(){
     if(typeof XLSX === 'undefined'){ alert('The template tool failed to load — please check your internet connection and try again.'); return; }
     const sampleAssignee = members[0] ? members[0].name : 'Team Member Name';
@@ -2869,6 +2882,10 @@
     const col = parsed.colIndex;
     const existingKeys = new Set(tasks.map(t => bulkDupKey(t.customerName, t.customerMobile, t.title, t.taskType, t.oldPolicyNumber)).filter(Boolean));
     const seenKeys = new Set();
+    const existingPolicies = new Map();   // normalised old policy no. -> task title already on the board
+    tasks.forEach(t => { const k = bulkPolicyKey(t.oldPolicyNumber); if(k && !existingPolicies.has(k)) existingPolicies.set(k, t.title || '(untitled)'); });
+    const seenPolicies = new Map();       // normalised old policy no. -> Excel row in this file
+    const todayIso = calTodayIso();
     const newLabelByLower = new Map();   // lower-case name -> display name
     const memberNames = () => [adminName || 'Super Admin', ...members.map(m => m.name)];
 
@@ -2993,8 +3010,19 @@
       let renewalDate = '', oldPolicyNumber = '';
       const renewalRaw = bulkCellText(get('Renewal Date')), oldPolRaw = txt('Old Policy Number');
       if(taskType === 'Renewal'){
-        renewalDate = dateField('Renewal Date', 'Renewal Date');
-        oldPolicyNumber = oldPolRaw;
+        if(!renewalRaw) errors.push('Renewal Date is required for Renewal tasks.');
+        else {
+          renewalDate = dateField('Renewal Date', 'Renewal Date');
+          if(renewalDate){
+            const diffDays = Math.round((Date.parse(renewalDate) - Date.parse(todayIso)) / 86400000);
+            if(diffDays < -30) errors.push(`Renewal Date ${renewalDate.split('-').reverse().join('/')} is more than 30 days in the past — please check the date.`);
+            else if(diffDays > 400) errors.push(`Renewal Date ${renewalDate.split('-').reverse().join('/')} is more than a year away — please check the year.`);
+            else if(due && due > renewalDate) errors.push('Due Date is after the Renewal Date — a renewal task should be due before the policy expires.');
+          }
+        }
+        if(!oldPolRaw) errors.push('Old Policy Number is required for Renewal tasks (it is used to stop duplicates).');
+        else if(bulkPolicyKey(oldPolRaw).length < 5) errors.push(`Old Policy Number "${oldPolRaw}" looks too short to be real.`);
+        oldPolicyNumber = oldPolRaw.replace(/\s+/g, ' ');
       } else if(renewalRaw || oldPolRaw){
         warnings.push('Renewal Date / Old Policy Number ignored because Type is not Renewal.');
       }
@@ -3024,14 +3052,27 @@
         warnings.push('Outcome / Completed On ignored because the task is not Completed.');
       }
 
+      if(status === 'open' && due && due < todayIso) warnings.push(`Due Date ${due.split('-').reverse().join('/')} is already in the past — the task will show as overdue.`);
+
       const customerName = txt('Customer Name');
-      let customerMobile = txt('Customer Mobile').replace(/\.0+$/, '');
-      const digits = customerMobile.replace(/\D/g, '');
-      if(customerMobile && (digits.length < 10 || digits.length > 13)) warnings.push(`Mobile "${customerMobile}" doesn't look like a 10-digit number (imported as given).`);
+      let customerMobile = txt('Customer Mobile');
+      if(customerMobile){
+        const clean = bulkCleanMobile(customerMobile);
+        if(!clean) errors.push(`Customer Mobile "${customerMobile}" isn't a valid 10-digit mobile number.`);
+        else customerMobile = clean;
+      }
+      if(taskType === 'Renewal' && !customerName) errors.push('Customer Name is required for Renewal tasks.');
 
       if(errors.length){ res.skipped.push({ rowNum: r.rowNum, raw, reasons: errors }); return; }
 
-      // Duplicate check — against the board and against earlier rows of this same file
+      // Duplicate check 1 — same Old Policy Number (always enforced)
+      const pKey = taskType === 'Renewal' ? bulkPolicyKey(oldPolicyNumber) : '';
+      if(pKey){
+        if(existingPolicies.has(pKey)){ res.duplicates.push({ rowNum: r.rowNum, raw, reasons: [`Old Policy Number "${oldPolicyNumber}" already exists on the board (task "${existingPolicies.get(pKey)}").`] }); return; }
+        if(seenPolicies.has(pKey)){ res.duplicates.push({ rowNum: r.rowNum, raw, reasons: [`Old Policy Number "${oldPolicyNumber}" is repeated — already used in Excel row ${seenPolicies.get(pKey)} of this file.`] }); return; }
+        seenPolicies.set(pKey, r.rowNum);
+      }
+      // Duplicate check 2 — against the board and against earlier rows of this same file
       const key = bulkDupKey(customerName, customerMobile, title, taskType, oldPolicyNumber);
       if(key && opts.skipDupes){
         const where = existingKeys.has(key) ? 'a task already on the board' : (seenKeys.has(key) ? 'an earlier row in this file' : '');
