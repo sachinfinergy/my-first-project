@@ -6381,7 +6381,7 @@
   }
   function openRenewalBoard(){
     rbSlot = ''; rbPerson = '';
-    rbMonth = rbDefaultMonth(rbVisibleRenewals());
+    rbMonth = '';                       // open on every month so nothing is hidden by default
     const overlay = document.getElementById('renewalBoardOverlay');
     if(!overlay.classList.contains('open')) history.pushState({ navLevel: 'renewalBoard' }, '');
     overlay.classList.add('open');
@@ -6426,7 +6426,8 @@
     const noSlot = list.filter(t => !SLOT_OPTIONS.includes(t.slot));
     const shown = rbSlot === '__none' ? noSlot : (rbSlot ? bySlot[rbSlot] : list);
 
-    document.getElementById('rbSubtitle').textContent = `${list.length} renewal${list.length !== 1 ? 's' : ''}${rbMonth ? ' · ' + rbMonthLabel(rbMonth) : ' · all months'}`;
+    const hiddenByFilters = all.length - list.length;
+    document.getElementById('rbSubtitle').textContent = `${list.length} renewal${list.length !== 1 ? 's' : ''}${rbMonth ? ' · ' + rbMonthLabel(rbMonth) : ' · all months'}${hiddenByFilters ? ' · ' + hiddenByFilters + ' hidden by filters' : ''}`;
 
     const monthOpts = `<option value="">All months</option>` + months.map(m => `<option value="${m}" ${m === rbMonth ? 'selected' : ''}>${escapeHtml(rbMonthLabel(m))}</option>`).join('');
     const personOpts = people.length > 1 ? `<select class="cal-select" onchange="rbSetPerson(this.value)"><option value="">Everyone</option>${people.map(id => { const e = calPersonEntity(id); return e ? `<option value="${id}" ${id === rbPerson ? 'selected' : ''}>${escapeHtml(e.name)}</option>` : ''; }).join('')}</select>` : '';
