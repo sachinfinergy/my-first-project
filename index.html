@@ -4335,7 +4335,7 @@
       renewalsViewMode = false;
       renderAll();
     } else {
-      goToRenewals();
+      openRenewalBoard();
     }
   }
   document.addEventListener('click', (e) => {
@@ -6431,7 +6431,7 @@
     const monthOpts = `<option value="">All months</option>` + months.map(m => `<option value="${m}" ${m === rbMonth ? 'selected' : ''}>${escapeHtml(rbMonthLabel(m))}</option>`).join('');
     const personOpts = people.length > 1 ? `<select class="cal-select" onchange="rbSetPerson(this.value)"><option value="">Everyone</option>${people.map(id => { const e = calPersonEntity(id); return e ? `<option value="${id}" ${id === rbPerson ? 'selected' : ''}>${escapeHtml(e.name)}</option>` : ''; }).join('')}</select>` : '';
     document.getElementById('rbToolbar').innerHTML = `<div class="cal-toolbar-right"><select class="cal-select" onchange="rbSetMonth(this.value)">${monthOpts}</select>${personOpts}</div>
-      <div class="cal-toolbar-right"><button class="cal-today-btn" onclick="closeRenewalBoard(); goToRenewals();">Open as task list</button></div>`;
+      <div class="cal-toolbar-right"><button class="cal-today-btn" onclick="closeRenewalBoard(); goToRenewalsList();">Open as task list</button></div>`;
 
     // Slot cards act as filters
     const openCount = arr => arr.filter(t => t.status !== 'done').length;
@@ -6956,7 +6956,8 @@
     renderAll();
   }
 
-  function goToRenewals(){
+  function goToRenewals(){ openRenewalBoard(); }          // the Renewals board is now the main Renewals screen
+  function goToRenewalsList(){
     activeTypeFilter = '';
     activeStatusFilter = 'open'; // start on a clean, actionable view — user can still switch to Completed
     goToTasks(true);
