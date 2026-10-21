@@ -6400,6 +6400,19 @@
     t.renewalStage = val;
     renderAll(); saveBoard();
   }
+  // The month a renewal belongs to on the board: slot 31-40 means "1-10 of next month", so it sits in the month before its renewal date.
+  function rbCycleMonth(t){
+    const ym = (t.renewalDate || '').slice(0, 7);
+    if(!ym) return '';
+    if(t.slot !== '31-40') return ym;
+    const [y, m] = ym.split('-').map(Number);
+    const d = new Date(y, m - 2, 1);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  }
+  function rbMonthShort(ym, offset){
+    const [y, m] = ym.split('-').map(Number);
+    return new Date(y, m - 1 + (offset || 0), 1).toLocaleString('en-GB', { month: 'short' });
+  }
   function rbMonthLabel(ym){
     const [y, m] = ym.split('-').map(Number);
     return new Date(y, m - 1, 1).toLocaleString('en-GB', { month: 'long', year: 'numeric' });
@@ -6413,13 +6426,13 @@
     const overlay = document.getElementById('renewalBoardOverlay');
     if(!overlay || !overlay.classList.contains('open')) return;
     const all = rbVisibleRenewals();
-    const months = Array.from(new Set(all.map(t => (t.renewalDate || '').slice(0, 7)).filter(Boolean))).sort();
+    const months = Array.from(new Set(all.map(rbCycleMonth).filter(Boolean))).sort();
     if(rbMonth && !months.includes(rbMonth)) rbMonth = '';
     const people = Array.from(new Set(all.map(t => t.assignee)));
     if(rbPerson && !people.includes(rbPerson)) rbPerson = '';
 
     let list = all;
-    if(rbMonth) list = list.filter(t => (t.renewalDate || '').slice(0, 7) === rbMonth);
+    if(rbMonth) list = list.filter(t => rbCycleMonth(t) === rbMonth);
     if(rbPerson) list = list.filter(t => t.assignee === rbPerson);
     const bySlot = {};
     SLOT_OPTIONS.forEach(v => { bySlot[v] = list.filter(t => t.slot === v); });
@@ -6438,7 +6451,12 @@
     const openCount = arr => arr.filter(t => t.status !== 'done').length;
     const slotCard = (key, name, arr) => `<button class="rb-slot ${rbSlot === key ? 'active' : ''} ${arr.length ? '' : 'zero'}" onclick="rbSetSlot('${key}')"><span class="rb-slot-name">${name}</span><b>${arr.length}</b><span class="rb-sub">${openCount(arr)} open</span></button>`;
     let slotsHtml = `<button class="rb-slot ${rbSlot === '' ? 'active' : ''}" onclick="rbSetSlot('')"><span class="rb-slot-name">All slots</span><b>${list.length}</b><span class="rb-sub">${openCount(list)} open</span></button>`;
-    slotsHtml += SLOT_OPTIONS.map(v => slotCard(v, 'Slot ' + v, bySlot[v])).join('');
+    const slotName = v => {
+      if(!rbMonth) return 'Slot ' + v;
+      if(v === '31-40') return rbMonthShort(rbMonth, 1) + ' 1-10';       // spills into next month
+      return rbMonthShort(rbMonth) + ' ' + v;
+    };
+    slotsHtml += SLOT_OPTIONS.map(v => slotCard(v, slotName(v), bySlot[v])).join('');
     if(noSlot.length) slotsHtml += slotCard('__none', 'No slot', noSlot);
 
     // KPIs for what is shown
