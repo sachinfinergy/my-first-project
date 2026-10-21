@@ -6434,6 +6434,17 @@
     const d = new Date(y, m - 2, 1);
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
   }
+  // Days 1-10 of the month after the selected one (the "Nov 1-10" box): slot 31-40, or simply a renewal date in that window.
+  function rbSpill(t){
+    if(!rbMonth) return false;
+    if(t.slot === '31-40' && rbCycleMonth(t) === rbMonth) return true;
+    const rd = t.renewalDate || '';
+    if(rd.length < 10) return false;
+    const [y, m] = rbMonth.split('-').map(Number);
+    const nd = new Date(y, m, 1);
+    const next = nd.getFullYear() + '-' + String(nd.getMonth() + 1).padStart(2, '0');
+    return rd.slice(0, 7) === next && Number(rd.slice(8, 10)) <= 10;
+  }
   function rbMonthShort(ym, offset){
     const [y, m] = ym.split('-').map(Number);
     return new Date(y, m - 1 + (offset || 0), 1).toLocaleString('en-GB', { month: 'short' });
@@ -6457,11 +6468,14 @@
     if(rbPerson && !people.includes(rbPerson)) rbPerson = '';
 
     let list = all;
-    if(rbMonth) list = list.filter(t => rbCycleMonth(t) === rbMonth);
+    if(rbMonth) list = list.filter(t => rbCycleMonth(t) === rbMonth || rbSpill(t));
     if(rbPerson) list = list.filter(t => t.assignee === rbPerson);
     const bySlot = {};
-    SLOT_OPTIONS.forEach(v => { bySlot[v] = list.filter(t => t.slot === v); });
-    const noSlot = list.filter(t => !SLOT_OPTIONS.includes(t.slot));
+    SLOT_OPTIONS.forEach(v => {
+      bySlot[v] = !rbMonth ? list.filter(t => t.slot === v)
+        : (v === '31-40' ? list.filter(t => rbSpill(t)) : list.filter(t => t.slot === v && !rbSpill(t)));
+    });
+    const noSlot = list.filter(t => !SLOT_OPTIONS.includes(t.slot) && !rbSpill(t));
     const shown = rbSlot === '__none' ? noSlot : (rbSlot ? bySlot[rbSlot] : list);
 
     const hiddenByFilters = all.length - list.length;
