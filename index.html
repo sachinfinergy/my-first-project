@@ -4578,6 +4578,9 @@
       history.pushState({ appView: 'task' }, '');
     }
     renderAll();
+    // Keep the open task visible in the list, even when it is far down.
+    const activeRow = document.querySelector('#chatList .chat-row.active');
+    if(activeRow) activeRow.scrollIntoView({ block: 'center' });
   }
 
   function onSearchInput(){
@@ -6375,14 +6378,14 @@
     return list.filter(t => t.taskType === 'Renewal');
   }
   function rbDefaultMonth(all){
-    const months = Array.from(new Set(all.map(t => (t.renewalDate || '').slice(0, 7)).filter(Boolean))).sort();
+    const months = Array.from(new Set(all.map(rbCycleMonth).filter(Boolean))).sort();
     const cur = calTodayIso().slice(0, 7);
     if(months.includes(cur)) return cur;
     return months.find(m => m > cur) || '';
   }
   function openRenewalBoard(){
     rbSlot = ''; rbPerson = '';
-    rbMonth = '';                       // open on every month so nothing is hidden by default
+    rbMonth = rbDefaultMonth(rbVisibleRenewals());      // current month (or the next one that has renewals)
     const overlay = document.getElementById('renewalBoardOverlay');
     if(!overlay.classList.contains('open')) history.pushState({ navLevel: 'renewalBoard' }, '');
     overlay.classList.add('open');
