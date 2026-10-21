@@ -1251,7 +1251,15 @@
   .rb-kpi span{ font-size:11.5px; color:var(--wa-text-soft); }
   .rb-reasons{ display:flex; flex-wrap:wrap; gap:6px; margin:-2px 0 12px; font-size:12px; align-items:center; }
   .rb-reasons span.chip{ background:#fde5e2; color:#a02b1f; border-radius:12px; padding:3px 10px; font-weight:700; }
-  .rb-board{ display:grid; grid-auto-flow:column; grid-auto-columns:minmax(220px, 1fr); gap:10px; overflow-x:auto; padding-bottom:10px; align-items:start; }
+  .rb-stages{ display:grid; grid-template-columns:repeat(6, minmax(86px, 1fr)); gap:8px; margin-bottom:8px; overflow-x:auto; }
+  .rb-stage{ background:#fff; border:1px solid var(--wa-border); border-radius:10px; padding:8px 10px; text-align:center; }
+  .rb-stage b{ display:block; font-size:22px; line-height:1.15; color:var(--wa-text); }
+  .rb-stage span{ font-size:11.5px; font-weight:700; color:var(--wa-text-soft); white-space:nowrap; }
+  .rb-stage.won{ background:#dff3e7; border-color:#a6dcb9; } .rb-stage.won b{ color:#1d7a3a; }
+  .rb-stage.lost{ background:#fbe6e3; border-color:#f0b5ae; } .rb-stage.lost b{ color:var(--wa-rust); }
+  .rb-summary{ display:flex; flex-wrap:wrap; gap:6px 18px; font-size:12.5px; color:var(--wa-text-soft); margin-bottom:10px; }
+  .rb-summary b{ color:var(--wa-text); }
+  .rb-board{ display:grid; grid-template-columns:repeat(6, minmax(150px, 1fr)); gap:10px; overflow-x:auto; padding-bottom:10px; align-items:start; }
   .rb-col{ background:#e9eeed; border-radius:12px; padding:8px; display:flex; flex-direction:column; gap:8px; min-height:80px; }
   .rb-col.won{ background:#dff3e7; } .rb-col.lost{ background:#fbe6e3; }
   .rb-col-head{ display:flex; justify-content:space-between; font-size:13px; font-weight:800; padding:2px 4px; color:var(--wa-text); }
@@ -6484,13 +6492,13 @@
     const reasonCount = {};
     lost.forEach(t => { const r = t.lostReason || 'No reason recorded'; reasonCount[r] = (reasonCount[r] || 0) + 1; });
     const reasons = Object.entries(reasonCount).sort((a, b) => b[1] - a[1]);
-    const kpis = `<div class="rb-kpis">
-      <div class="rb-kpi"><b>${shown.length}</b><span>renewals in view</span></div>
-      <div class="rb-kpi"><b style="color:#1d7a3a;">${retention === null ? '—' : retention + '%'}</b><span>retention (Won ÷ Won+Lost)</span></div>
-      <div class="rb-kpi"><b style="color:#1d7a3a;">${won.length}</b><span>won</span></div>
-      <div class="rb-kpi"><b style="color:var(--wa-rust);">${lost.length}</b><span>lost</span></div>
-      <div class="rb-kpi"><b>${premium ? escapeHtml(formatRupees(premium)) : '—'}</b><span>new premium (won)</span></div>
-    </div>` + (reasons.length ? `<div class="rb-reasons"><b>Lost reasons:</b> ${reasons.map(([r, n]) => `<span class="chip">${escapeHtml(r)} · ${n}</span>`).join('')}</div>` : '');
+    // Stage counts for what is shown (computed here so the boxes and the board agree)
+    const stageCols = [...RENEWAL_STAGES, 'Won', 'Lost'];
+    const stageCount = {}; stageCols.forEach(c => { stageCount[c] = 0; });
+    shown.forEach(t => { const st = renewalStageOf(t); if(st in stageCount) stageCount[st]++; });
+    const stageTone = { 'Quote pending':'', 'Quote sent':'', 'Follow up':'', 'Expected':'', 'Won':'won', 'Lost':'lost' };
+    const kpis = `<div class="rb-stages">${stageCols.map(c => `<div class="rb-stage ${stageTone[c]}"><b>${stageCount[c]}</b><span>${c}</span></div>`).join('')}</div>
+      <div class="rb-summary"><span><b>${shown.length}</b> in view</span><span>Retention <b style="color:#1d7a3a;">${retention === null ? '—' : retention + '%'}</b></span><span>New premium <b>${premium ? escapeHtml(formatRupees(premium)) : '—'}</b></span></div>` + (reasons.length ? `<div class="rb-reasons"><b>Lost reasons:</b> ${reasons.map(([r, n]) => `<span class="chip">${escapeHtml(r)} · ${n}</span>`).join('')}</div>` : '');
 
     // Stage board
     const cols = [...RENEWAL_STAGES, 'Won', 'Lost'];
