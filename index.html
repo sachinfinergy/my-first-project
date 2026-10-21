@@ -4578,8 +4578,21 @@
       history.pushState({ appView: 'task' }, '');
     }
     renderAll();
-    // Keep the open task visible in the list, even when it is far down.
-    const activeRow = document.querySelector('#chatList .chat-row.active');
+    // Keep the open task visible in the list: switch to its own tab (Open / Completed / Inward) if needed,
+    // clear filters that would hide it, then scroll it into view.
+    let activeRow = document.querySelector('#chatList .chat-row.active');
+    if(!activeRow && activeStatusFilter && t.status !== activeStatusFilter){
+      activeStatusFilter = t.status;
+      renderAll();
+      activeRow = document.querySelector('#chatList .chat-row.active');
+    }
+    if(!activeRow){
+      activeCategoryFilter = ''; activeTypeFilter = ''; activeLobFilter = ''; activeLabelFilter = ''; activeMemberFilter = '';
+      activeDirectionFilter = null; renewalsViewMode = false; searchQuery = '';
+      const si = document.getElementById('searchInput'); if(si) si.value = '';
+      renderAll();
+      activeRow = document.querySelector('#chatList .chat-row.active');
+    }
     if(activeRow) activeRow.scrollIntoView({ block: 'center' });
   }
 
