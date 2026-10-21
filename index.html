@@ -1444,6 +1444,10 @@
         <div class="home-tile-icon renewals"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></div>
         <div class="home-tile-label">Renewals</div>
       </div>
+      <div class="home-tile" onclick="openNewBoard()">
+        <div class="home-tile-icon" style="background:#7b4fb8; font-size:28px;">✨</div>
+        <div class="home-tile-label">New</div>
+      </div>
       <div class="home-tile" onclick="openCalendar()">
         <div class="home-tile-icon calendar"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
         <div class="home-tile-label">Calendar</div>
@@ -1653,7 +1657,7 @@
   <div class="dashboard-main">
     <div class="dashboard-header">
       <button class="icon-btn-round" onclick="closeRenewalBoard()" title="Back">←</button>
-      <div class="cal-title-block"><b>Renewals</b><span id="rbSubtitle"></span></div>
+      <div class="cal-title-block"><b id="rbTitle">Renewals</b><span id="rbSubtitle"></span></div>
       <div style="flex:1;"></div>
       <button class="icon-btn-round" onclick="renderRenewalBoard()" title="Refresh"><svg class="refresh-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
     </div>
@@ -2023,6 +2027,14 @@
         </div>
       </div>
 
+      <div class="form-section" id="taskStageSection">
+        <div class="form-section-title">Pipeline stage</div>
+        <div class="section-hint" id="taskStageHint">Active for New and Renewal tasks. Won / Lost is set when the task is completed.</div>
+        <div class="field">
+          <select id="taskStageInput"><option value="Quote pending">Quote pending</option><option value="Quote sent">Quote sent</option><option value="Follow up">Follow up</option><option value="Expected">Expected</option></select>
+        </div>
+      </div>
+
       <div class="form-section" id="taskRenewalSection">
         <div class="form-section-title">Renewal details</div>
         <div class="section-hint" id="taskRenewalHint">Active when Type is Renewal.</div>
@@ -2041,10 +2053,7 @@
             <label>Slot</label>
             <select id="taskSlotInput"><option value="">— Select —</option><option value="1-10">1-10</option><option value="11-20">11-20</option><option value="21-31">21-31</option><option value="31-40">31-40</option></select>
           </div>
-          <div class="field">
-            <label>Stage</label>
-            <select id="taskStageInput"><option value="Quote pending">Quote pending</option><option value="Quote sent">Quote sent</option><option value="Follow up">Follow up</option><option value="Expected">Expected</option></select>
-          </div>
+
         </div>
       </div>
 
@@ -2583,7 +2592,7 @@
         'Completed On': t.completedAt ? new Date(t.completedAt).toLocaleString('en-GB') : '',
         'Outcome': t.outcome || '', 'Outcome Note': t.outcomeNote || '',
         'Renewal Date': t.renewalDate || '', 'Old Policy Number': t.oldPolicyNumber || '',
-        'Slot': t.slot || '', 'Stage': t.taskType === 'Renewal' ? renewalStageOf(t) : '',
+        'Slot': t.slot || '', 'Stage': (t.taskType === 'Renewal' || t.taskType === 'New') ? renewalStageOf(t) : '',
         'New Company': t.newCompany || '', 'New Premium': t.newPremium != null ? t.newPremium : '', 'Lost Reason': t.lostReason || '',
         'Customer Name': t.customerName || '',
         'Customer Mobile': t.customerMobile || '',
@@ -3154,14 +3163,15 @@
       // Slot and Stage (Renewal tasks)
       let slot = '', renewalStage = '', stageOutcome = '';
       const slotRaw0 = txt('Slot'), stageRaw = txt('Stage');
-      if(taskType === 'Renewal'){
-        if(slotRaw0){
+      if(taskType === 'Renewal' || taskType === 'New'){
+        if(taskType === 'New' && slotRaw0) warnings.push('Slot ignored — it only applies to Renewal tasks.');
+        if(taskType === 'Renewal' && slotRaw0){
           let sv = slotRaw0.replace(/\s+/g, '').replace(/[–—]|to/gi, '-');
           const dm = sv.match(/^\d{4}-(\d{2})-(\d{2})$/);          // Excel turned "1-10" into the date 1 Oct
           if(dm) sv = `${+dm[2]}-${+dm[1]}`;
           if(SLOT_OPTIONS.includes(sv)) slot = sv;
           else errors.push(`Slot "${slotRaw0}" isn't valid — use ${SLOT_OPTIONS.join(', ')}.`);
-        } else warnings.push('No Slot given — this renewal will only show under "All slots" on the Renewals board.');
+        } else if(taskType === 'Renewal') warnings.push('No Slot given — this renewal will only show under "All slots" on the Renewals board.');
         if(stageRaw){
           const key = stageRaw.toLowerCase().replace(/[^a-z]/g, '');
           const stageMap = { quotepending:'Quote pending', quotesent:'Quote sent', followup:'Follow up', expected:'Expected' };
@@ -3172,7 +3182,7 @@
         }
         if(!renewalStage) renewalStage = 'Quote pending';
       } else if(slotRaw0 || stageRaw){
-        warnings.push('Slot / Stage ignored because Type is not Renewal.');
+        warnings.push('Slot / Stage ignored because Type is not New or Renewal.');
       }
 
       // Status, completion and outcome
@@ -4227,7 +4237,7 @@
     let html = `
       <div class="type-quick-group">
         <button class="type-quick-btn ${(!renewalsViewMode && !activeTypeFilter)?'active':''}" onclick="showAllTypes()" title="Show tasks of every Type">All</button>
-        <button class="type-quick-btn ${(!renewalsViewMode && activeTypeFilter==='New')?'active':''}" onclick="goToNewQuickFilter()" title="Jump to every task with Type: New">
+        <button class="type-quick-btn ${(!renewalsViewMode && activeTypeFilter==='New')?'active':''}" onclick="openNewBoard()" title="Open the New business board">
           <span class="go-to-renewals-icon">✨</span>Go to New
         </button>
         <button class="go-to-renewals-btn ${renewalsViewMode?'active':''}" onclick="toggleRenewalsQuickFilter()" title="Jump to every open task with Type: Renewal">
@@ -4743,7 +4753,7 @@
             ${t.renewalDate ? `<span><b>Renewal date:</b> ${escapeHtml(formatInwardDateDisplay(t.renewalDate))}</span>` : ''}
             ${t.oldPolicyNumber ? `<span><b>Old policy no.:</b> ${escapeHtml(t.oldPolicyNumber)}</span>` : ''}
             ${t.slot ? `<span><b>Slot:</b> ${escapeHtml(t.slot)}</span>` : ''}
-            ${(t.taskType === 'Renewal' && t.status !== 'done') ? `<span><b>Stage:</b> ${escapeHtml(renewalStageOf(t))}</span>` : ''}
+            ${((t.taskType === 'Renewal' || t.taskType === 'New') && t.status !== 'done') ? `<span><b>Stage:</b> ${escapeHtml(renewalStageOf(t))}</span>` : ''}
             ${(t.outcome && t.status === 'done') ? `<span><b>Outcome:</b> ${t.outcome === 'Won' ? '🏆 Won' : '❌ Lost'}${t.outcomeNote ? ' — ' + escapeHtml(t.outcomeNote) : ''}</span>` : ''}
             ${(t.status === 'done' && t.outcome === 'Won' && t.newCompany) ? `<span><b>New company:</b> ${escapeHtml(t.newCompany)}</span>` : ''}
             ${(t.status === 'done' && t.outcome === 'Won' && t.newPremium != null) ? `<span><b>New premium:</b> ${escapeHtml(formatRupees(t.newPremium))}</span>` : ''}
@@ -5169,13 +5179,14 @@
       s.classList.toggle('section-inactive', !on);
       inputIds.forEach(id => { const el = document.getElementById(id); if(el) el.disabled = !on; });
     };
-    setActive('taskRenewalSection', renewalOn, ['taskRenewalDateInput','taskOldPolicyInput','taskSlotInput','taskStageInput']);
+    setActive('taskRenewalSection', renewalOn, ['taskRenewalDateInput','taskOldPolicyInput','taskSlotInput']);
+    setActive('taskStageSection', (type === 'Renewal' || type === 'New') && status !== 'done', ['taskStageInput']);
     setActive('taskOutcomeSection', outcomeOn, ['taskOutcomeNoteInput','taskNewCompanyInput','taskNewPremiumInput','taskLostReasonInput']);
     const oc = document.getElementById('taskOutcomeInput').value;
     document.getElementById('taskWonFields').style.display = (outcomeOn && oc === 'Won') ? 'block' : 'none';
     document.getElementById('taskLostFields').style.display = (outcomeOn && oc === 'Lost') ? 'block' : 'none';
-    const stageEl = document.getElementById('taskStageInput');
-    if(stageEl) stageEl.parentElement.style.display = (status === 'done') ? 'none' : '';
+    const stageSec = document.getElementById('taskStageSection');
+    if(stageSec) stageSec.style.display = (status === 'done') ? 'none' : '';
     const rh = document.getElementById('taskRenewalHint');
     if(rh) rh.textContent = renewalOn ? 'Fill in the policy being renewed.' : 'Active when Type is Renewal.';
     const oh = document.getElementById('taskOutcomeHint');
@@ -5693,10 +5704,10 @@
       data.renewalDate = document.getElementById('taskRenewalDateInput').value || '';
       data.oldPolicyNumber = document.getElementById('taskOldPolicyInput').value.trim();
       data.slot = document.getElementById('taskSlotInput').value;
-      data.renewalStage = document.getElementById('taskStageInput').value || 'Quote pending';
     } else {
-      data.renewalDate = ''; data.oldPolicyNumber = ''; data.slot = ''; data.renewalStage = '';
+      data.renewalDate = ''; data.oldPolicyNumber = ''; data.slot = '';
     }
+    data.renewalStage = (taskType === 'Renewal' || taskType === 'New') ? (document.getElementById('taskStageInput').value || 'Quote pending') : '';
     let newId = id;
     let t;
     if(id){
@@ -6387,7 +6398,9 @@
 
 
   // ---------- Renewals board ----------
-  let rbSlot = '', rbMonth = '', rbPerson = '';
+  let rbSlot = '', rbMonth = '', rbPerson = '', rbType = 'Renewal';
+  function rbKey(t){ return rbType === 'Renewal' ? rbCycleMonth(t) : ((t.due || '').slice(0, 7) || (t.created ? calIso(new Date(t.created).getFullYear(), new Date(t.created).getMonth(), 1).slice(0, 7) : '')); }
+  function rbWord(){ return rbType === 'New' ? 'New business' : 'Renewals'; }
   function rbVisibleRenewals(){
     if(!session) return [];
     const me = calViewerId();
@@ -6396,15 +6409,17 @@
     if(scope === null) list = tasks.slice();
     else if(scope.length) list = tasks.filter(t => scope.includes(t.assignee) || t.assignorId === me);
     else list = tasks.filter(t => t.assignee === me || t.assignorId === me);
-    return list.filter(t => t.taskType === 'Renewal');
+    return list.filter(t => t.taskType === rbType);
   }
   function rbDefaultMonth(all){
-    const months = Array.from(new Set(all.map(rbCycleMonth).filter(Boolean))).sort();
+    const months = Array.from(new Set(all.map(rbKey).filter(Boolean))).sort();
     const cur = calTodayIso().slice(0, 7);
     if(months.includes(cur)) return cur;
     return months.find(m => m > cur) || '';
   }
-  function openRenewalBoard(){
+  function openNewBoard(){ openRenewalBoard('New'); }
+  function openRenewalBoard(type){
+    rbType = (type === 'New') ? 'New' : 'Renewal';
     rbSlot = ''; rbPerson = '';
     rbMonth = rbDefaultMonth(rbVisibleRenewals());      // current month (or the next one that has renewals)
     const overlay = document.getElementById('renewalBoardOverlay');
@@ -6437,6 +6452,7 @@
   // Days 1-10 of the month after the selected one (the "Nov 1-10" box): slot 31-40, or simply a renewal date in that window.
   function rbSpill(t){
     if(!rbMonth) return false;
+    if(rbType !== 'Renewal') return false;
     if(t.slot === '31-40' && rbCycleMonth(t) === rbMonth) return true;
     const rd = t.renewalDate || '';
     if(rd.length < 10) return false;
@@ -6462,13 +6478,13 @@
     const overlay = document.getElementById('renewalBoardOverlay');
     if(!overlay || !overlay.classList.contains('open')) return;
     const all = rbVisibleRenewals();
-    const months = Array.from(new Set(all.map(rbCycleMonth).filter(Boolean))).sort();
+    const months = Array.from(new Set(all.map(rbKey).filter(Boolean))).sort();
     if(rbMonth && !months.includes(rbMonth)) rbMonth = '';
     const people = Array.from(new Set(all.map(t => t.assignee)));
     if(rbPerson && !people.includes(rbPerson)) rbPerson = '';
 
     let list = all;
-    if(rbMonth) list = list.filter(t => rbCycleMonth(t) === rbMonth || rbSpill(t));
+    if(rbMonth) list = list.filter(t => rbKey(t) === rbMonth || rbSpill(t));
     if(rbPerson) list = list.filter(t => t.assignee === rbPerson);
     const bySlot = {};
     SLOT_OPTIONS.forEach(v => {
@@ -6479,12 +6495,13 @@
     const shown = rbSlot === '__none' ? noSlot : (rbSlot ? bySlot[rbSlot] : list);
 
     const hiddenByFilters = all.length - list.length;
-    document.getElementById('rbSubtitle').textContent = `${list.length} renewal${list.length !== 1 ? 's' : ''}${rbMonth ? ' · ' + rbMonthLabel(rbMonth) : ' · all months'}${hiddenByFilters ? ' · ' + hiddenByFilters + ' hidden by filters' : ''}`;
+    document.getElementById('rbTitle').textContent = rbWord();
+    document.getElementById('rbSubtitle').textContent = `${list.length} ${rbType === 'New' ? 'new task' : 'renewal'}${list.length !== 1 ? 's' : ''}${rbMonth ? ' · ' + rbMonthLabel(rbMonth) : ' · all months'}${hiddenByFilters ? ' · ' + hiddenByFilters + ' hidden by filters' : ''}`;
 
     const monthOpts = `<option value="">All months</option>` + months.map(m => `<option value="${m}" ${m === rbMonth ? 'selected' : ''}>${escapeHtml(rbMonthLabel(m))}</option>`).join('');
     const personOpts = people.length > 1 ? `<select class="cal-select" onchange="rbSetPerson(this.value)"><option value="">Everyone</option>${people.map(id => { const e = calPersonEntity(id); return e ? `<option value="${id}" ${id === rbPerson ? 'selected' : ''}>${escapeHtml(e.name)}</option>` : ''; }).join('')}</select>` : '';
     document.getElementById('rbToolbar').innerHTML = `<div class="cal-toolbar-right"><select class="cal-select" onchange="rbSetMonth(this.value)">${monthOpts}</select>${personOpts}</div>
-      <div class="cal-toolbar-right"><button class="cal-today-btn" onclick="closeRenewalBoard(); goToRenewalsList();">Open as task list</button></div>`;
+      <div class="cal-toolbar-right"><button class="cal-today-btn" onclick="closeRenewalBoard(); ${rbType === 'New' ? 'goToNewQuickFilter()' : 'goToRenewalsList()'};">Open as task list</button></div>`;
 
     // Slot cards act as filters
     const openCount = arr => arr.filter(t => t.status !== 'done').length;
@@ -6512,7 +6529,7 @@
     shown.forEach(t => { const st = renewalStageOf(t); if(st in stageCount) stageCount[st]++; });
     const stageTone = { 'Quote pending':'', 'Quote sent':'', 'Follow up':'', 'Expected':'', 'Won':'won', 'Lost':'lost' };
     const kpis = `<div class="rb-stages">${stageCols.map(c => `<div class="rb-stage ${stageTone[c]}"><b>${stageCount[c]}</b><span>${c}</span></div>`).join('')}</div>
-      <div class="rb-summary"><span><b>${shown.length}</b> in view</span><span>Retention <b style="color:#1d7a3a;">${retention === null ? '—' : retention + '%'}</b></span><span>New premium <b>${premium ? escapeHtml(formatRupees(premium)) : '—'}</b></span></div>` + (reasons.length ? `<div class="rb-reasons"><b>Lost reasons:</b> ${reasons.map(([r, n]) => `<span class="chip">${escapeHtml(r)} · ${n}</span>`).join('')}</div>` : '');
+      <div class="rb-summary"><span><b>${shown.length}</b> in view</span><span>${rbType === 'New' ? 'Win rate' : 'Retention'} <b style="color:#1d7a3a;">${retention === null ? '—' : retention + '%'}</b></span><span>New premium <b>${premium ? escapeHtml(formatRupees(premium)) : '—'}</b></span></div>` + (reasons.length ? `<div class="rb-reasons"><b>Lost reasons:</b> ${reasons.map(([r, n]) => `<span class="chip">${escapeHtml(r)} · ${n}</span>`).join('')}</div>` : '');
 
     // Stage board
     const cols = [...RENEWAL_STAGES, 'Won', 'Lost'];
@@ -6524,25 +6541,27 @@
       const who = getAssigneeEntity(t);
       const initials = who ? who.name.split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase() : '';
       let foot = '';
-      if(t.renewalDate && !done){
-        const d = rbDaysLeft(t.renewalDate);
+      const keyDate = rbType === 'Renewal' ? t.renewalDate : t.due;
+      if(keyDate && !done){
+        const d = rbDaysLeft(keyDate);
         const cls = d < 0 ? 'late' : (d <= 7 ? 'soon' : 'ok');
-        foot = `<span class="rb-days ${cls}">${d < 0 ? 'Expired ' + (-d) + ' d ago' : (d === 0 ? 'Expires today' : 'In ' + d + ' d')}</span>`;
+        const word = rbType === 'Renewal' ? ['Expired ', ' d ago', 'Expires today'] : ['Overdue by ', ' d', 'Due today'];
+        foot = `<span class="rb-days ${cls}">${d < 0 ? word[0] + (-d) + word[1] : (d === 0 ? word[2] : (rbType === 'Renewal' ? 'In ' : 'Due in ') + d + ' d')}</span>`;
       } else if(done && t.outcome === 'Won'){
-        foot = `<span class="rb-days ok">${[t.newCompany, t.newPremium != null ? formatRupees(t.newPremium) : ''].filter(Boolean).map(escapeHtml).join(' · ') || 'Renewed'}</span>`;
+        foot = `<span class="rb-days ok">${[t.newCompany, t.newPremium != null ? formatRupees(t.newPremium) : ''].filter(Boolean).map(escapeHtml).join(' · ') || (rbType === 'New' ? 'Won' : 'Renewed')}</span>`;
       } else if(done && t.outcome === 'Lost'){
         foot = `<span class="rb-days late">${escapeHtml(t.lostReason || 'No reason recorded')}</span>`;
       }
       const sel = (!done && canChangeStatus(t)) ? `<select onclick="event.stopPropagation()" onchange="rbSetStage('${t.id}', this.value)" aria-label="Move stage">${[...RENEWAL_STAGES].map(v => `<option value="${v}" ${v === renewalStageOf(t) ? 'selected' : ''}>${v}</option>`).join('')}<option value="Won">🏆 Mark Won…</option><option value="Lost">❌ Mark Lost…</option></select>` : '';
       return `<div class="rb-card" onclick="rbOpenTask('${t.id}')">
         <div class="rb-name">${escapeHtml(t.customerName || t.title)}</div>
-        <div class="rb-meta">${[t.productDetails || t.productType, t.oldPolicyNumber, t.renewalDate ? formatInwardDateDisplay(t.renewalDate) : ''].filter(Boolean).map(escapeHtml).join(' · ')}</div>
+        <div class="rb-meta">${[t.productDetails || t.productType, rbType === 'Renewal' ? t.oldPolicyNumber : '', (rbType === 'Renewal' ? t.renewalDate : t.due) ? formatInwardDateDisplay(rbType === 'Renewal' ? t.renewalDate : t.due) : ''].filter(Boolean).map(escapeHtml).join(' · ')}</div>
         <div class="rb-foot">${foot || '<span></span>'}${initials ? `<span class="rb-who" title="${escapeHtml(who.name)}">${escapeHtml(initials)}</span>` : ''}</div>${sel}</div>`;
     };
-    const sortR = arr => arr.slice().sort((a, b) => String(a.renewalDate || '9999').localeCompare(String(b.renewalDate || '9999')));
+    const sortR = arr => arr.slice().sort((a, b) => String((rbType === 'Renewal' ? a.renewalDate : a.due) || '9999').localeCompare(String((rbType === 'Renewal' ? b.renewalDate : b.due) || '9999')));
     const board = `<div class="rb-board">${cols.map(c => `<div class="rb-col ${c === 'Won' ? 'won' : (c === 'Lost' ? 'lost' : '')}"><div class="rb-col-head"><span>${c}</span><span>${byStage[c].length}</span></div>${byStage[c].length ? sortR(byStage[c]).map(card).join('') : '<div class="rb-empty">Nothing here</div>'}</div>`).join('')}</div>`;
-    const note = unmarked ? `<div class="cal-scope-note">${unmarked} completed renewal${unmarked !== 1 ? 's have' : ' has'} no Won / Lost outcome and ${unmarked !== 1 ? 'are' : 'is'} not shown on the board.</div>` : '';
-    document.getElementById('rbBody').innerHTML = `<div class="rb-slots">${slotsHtml}</div>${kpis}${board}${note}`;
+    const note = unmarked ? `<div class="cal-scope-note">${unmarked} completed task${unmarked !== 1 ? 's have' : ' has'} no Won / Lost outcome and ${unmarked !== 1 ? 'are' : 'is'} not shown on the board.</div>` : '';
+    document.getElementById('rbBody').innerHTML = `${rbType === 'Renewal' ? `<div class="rb-slots">${slotsHtml}</div>` : ''}${kpis}${board}${note}`;
   }
 
   let dashPersonFilter = ''; // '' = Overall (within scope), or a memberId, or 'admin'
