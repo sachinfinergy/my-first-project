@@ -1238,6 +1238,8 @@
   }
 
   /* ---------- Renewals board ---------- */
+  .stage-select{ font-family:inherit; font-size:12px; font-weight:700; color:#5a3d8f; background:#f1ebfa; border:1px solid #d9cdee; border-radius:14px; padding:4px 8px; cursor:pointer; max-width:150px; }
+  .stage-select:disabled{ opacity:.6; cursor:default; }
   .rb-slots{ display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:10px; margin-bottom:12px; }
   .rb-slot{ text-align:left; background:#fff; border:2px solid var(--wa-border); border-radius:12px; padding:10px 14px; cursor:pointer; font-family:inherit; }
   .rb-slot b{ display:block; font-size:26px; line-height:1.1; color:var(--wa-text); }
@@ -4777,6 +4779,7 @@
           </div>
           ${outcomePillHtml(t, canChangeStatus(t))}
           <span class="prio-pill prio-${t.priority.toLowerCase()}">${t.priority}</span>
+          ${((t.taskType === 'New' || t.taskType === 'Renewal') && t.status === 'open') ? `<select class="stage-select" title="Pipeline stage" aria-label="Pipeline stage" onchange="rbSetStage('${t.id}', this.value)" ${canChangeStatus(t) ? '' : 'disabled'}>${RENEWAL_STAGES.map(v => `<option value="${v}" ${v === renewalStageOf(t) ? 'selected' : ''}>${v}</option>`).join('')}<option value="Won">🏆 Mark Won…</option><option value="Lost">❌ Mark Lost…</option></select>` : ''}
           ${t.convertedToInwardId ? `<span class="converted-badge" title="Converted to Inward entry ${escapeHtml(t.convertedToInwardId)}">✓ In Inward</span>` : ''}
           <div class="task-bottom-spacer"></div>
           ${shouldShowInwardButton(t) ? `<button class="pill-toggle-btn convert-to-inward-pill" ${canConvertTaskToInward(t) ? `onclick="openConvertTaskModal('${t.id}')" title="Convert to Inward entry"` : `disabled title="Mark this task as Completed first"`}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg> Inward This</button>` : ''}
