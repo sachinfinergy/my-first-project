@@ -3015,10 +3015,12 @@
   function validateBulkRows(parsed, opts){
     const res = { ready: [], skipped: [], duplicates: [], blank: 0, examples: 0, newLabelNames: [], warnings: [], ignoredHeaders: parsed.ignored, personProblem: false, tooMany: false, fileName: parsed.fileName };
     const col = parsed.colIndex;
-    const existingKeys = new Set(tasks.map(t => bulkDupKey(t.customerName, t.customerMobile, t.title, t.taskType, t.oldPolicyNumber)).filter(Boolean));
-    const seenKeys = new Set();
+    const existingKeys = new Map();       // duplicate key -> the task already on the board
+    tasks.forEach(t => { const k = bulkDupKey(t.customerName, t.customerMobile, t.title, t.taskType, t.oldPolicyNumber); if(k && !existingKeys.has(k)) existingKeys.set(k, t); });
+    const seenKeys = new Map();           // duplicate key -> Excel row in this file
+    const describeTask = t => `${t.id} · ${t.title || '(untitled)'} · ${t.customerName || 'no customer'} · ${(t.status === 'done' ? 'Completed' : (t.status === 'inward' ? 'Inward' : 'Open'))}`;
     const existingPolicies = new Map();   // normalised old policy no. -> task title already on the board
-    tasks.forEach(t => { const k = bulkPolicyKey(t.oldPolicyNumber); if(k && !existingPolicies.has(k)) existingPolicies.set(k, t.title || '(untitled)'); });
+    tasks.forEach(t => { const k = bulkPolicyKey(t.oldPolicyNumber); if(k && !existingPolicies.has(k)) existingPolicies.set(k, t); });
     const seenPolicies = new Map();       // normalised old policy no. -> Excel row in this file
     const todayIso = calTodayIso();
     const newLabelByLower = new Map();   // lower-case name -> display name
@@ -3250,17 +3252,23 @@
       // Duplicate check 1 — same Old Policy Number (always enforced)
       const pKey = taskType === 'Renewal' ? bulkPolicyKey(oldPolicyNumber) : '';
       if(pKey){
-        if(existingPolicies.has(pKey)){ res.duplicates.push({ rowNum: r.rowNum, raw, reasons: [`Old Policy Number "${oldPolicyNumber}" already exists on the board (task "${existingPolicies.get(pKey)}").`] }); return; }
-        if(seenPolicies.has(pKey)){ res.duplicates.push({ rowNum: r.rowNum, raw, reasons: [`Old Policy Number "${oldPolicyNumber}" is repeated — already used in Excel row ${seenPolicies.get(pKey)} of this file.`] }); return; }
+        if(existingPolicies.has(pKey)){ const mt = existingPolicies.get(pKey); res.duplicates.push({ rowNum: r.rowNum, raw, duplicateOf: 'Already on the board', match: describeTask(mt), reasons: [`Old Policy Number "${oldPolicyNumber}" already exists on the board (task ${mt.id} "${mt.title || ''}").`] }); return; }
+        if(seenPolicies.has(pKey)){ res.duplicates.push({ rowNum: r.rowNum, raw, duplicateOf: 'Earlier row in this file', match: 'Excel row ' + seenPolicies.get(pKey), reasons: [`Old Policy Number "${oldPolicyNumber}" is repeated — already used in Excel row ${seenPolicies.get(pKey)} of this file.`] }); return; }
         seenPolicies.set(pKey, r.rowNum);
       }
       // Duplicate check 2 — against the board and against earlier rows of this same file
       const key = bulkDupKey(customerName, customerMobile, title, taskType, oldPolicyNumber);
       if(key && opts.skipDupes){
-        const where = existingKeys.has(key) ? 'a task already on the board' : (seenKeys.has(key) ? 'an earlier row in this file' : '');
-        if(where){ res.duplicates.push({ rowNum: r.rowNum, raw, reasons: [`Looks like a duplicate of ${where} (same customer, title and type).`] }); return; }
+        const onBoard = existingKeys.get(key), inFile = seenKeys.get(key);
+        if(onBoard || inFile){
+          res.duplicates.push({ rowNum: r.rowNum, raw,
+            duplicateOf: onBoard ? 'Already on the board' : 'Earlier row in this file',
+            match: onBoard ? describeTask(onBoard) : 'Excel row ' + inFile,
+            reasons: [`Looks like a duplicate of ${onBoard ? 'a task already on the board' : 'an earlier row in this file'} (same customer, title and type).`] });
+          return;
+        }
       }
-      if(key) seenKeys.add(key);
+      if(key) seenKeys.set(key, r.rowNum);
       warnings.forEach(w => res.warnings.push({ rowNum: r.rowNum, text: w }));
 
       res.ready.push({
@@ -3324,7 +3332,7 @@
       </div>`;
     }
     if(nDup){
-      html += `<div class="bulk-warn-box"><b>${plural(nDup, 'duplicate')} skipped</b> (same customer, title and type already exist). Untick “Skip duplicates” above if you really want them imported.</div>`;
+      html += `<div class="bulk-warn-box"><b>${plural(nDup, 'duplicate')} skipped</b> (same Old Policy Number, or same customer + title + type, already exists). Untick “Skip duplicates” above if you really want them imported.<br><button class="btn-ghost" style="margin-top:8px;" onclick="downloadBulkDuplicates()">⬇ Download the ${nDup} duplicate${nDup !== 1 ? 's' : ''} as Excel</button></div>`;
     }
     if(res.warnings.length){
       const shownW = res.warnings.slice(0, 8);
@@ -3357,6 +3365,20 @@
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Skipped rows');
     XLSX.writeFile(wb, `task-upload-skipped-rows-${new Date().toISOString().slice(0,10)}.xlsx`);
+  }
+
+  // A separate Excel listing only the duplicates, with what each one matches.
+  function downloadBulkDuplicates(){
+    if(!bulkResult || !bulkParsed || !bulkResult.duplicates.length) return;
+    if(typeof XLSX === 'undefined'){ alert('The export tool failed to load — please check your internet connection and try again.'); return; }
+    const dups = bulkResult.duplicates.slice().sort((a, b) => a.rowNum - b.rowNum);
+    const headers = ['Excel Row', 'Duplicate Of', 'Matching Task / Row', 'Reason', ...bulkParsed.headers];
+    const aoa = [headers, ...dups.map(d => [d.rowNum, d.duplicateOf || '', d.match || '', d.reasons.join(' | '), ...d.raw])];
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = headers.map((h, i) => ({ wch: i === 2 ? 55 : (i === 3 ? 70 : Math.max(14, String(h).length + 4)) }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Duplicates');
+    XLSX.writeFile(wb, `task-upload-duplicates-${new Date().toISOString().slice(0,10)}.xlsx`);
   }
 
   async function confirmBulkImport(){
