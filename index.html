@@ -2142,6 +2142,7 @@
       </label>
     </div>
     <div id="bulkUploadResult"></div>
+    <button class="btn-ghost" id="bulkFixTagsBtn" onclick="fixMissingCategoryTags()" style="width:100%; margin-top:10px;">🏷 Fix tags on existing tasks (add the tag that matches each task's Category)</button>
     <div class="modal-actions">
       <button class="btn-ghost" onclick="closeBulkUploadModal()">Close</button>
       <button class="btn-primary" id="bulkUploadConfirmBtn" style="display:none;" onclick="confirmBulkImport()">Import tasks</button>
@@ -2856,6 +2857,27 @@
       if((existing[key] || '') !== to) out.push({ key, label, from: existing[key] || '', to });
     });
     return out;
+  }
+
+  const CATEGORY_TAG_NAMES = { 'Quote':['quote'], 'Claims':['claims','claim'], 'Policy Issuance':['policy','policy issuance'], 'Admin':['admin'] };
+  async function fixMissingCategoryTags(){
+    if(!(session && session.type === 'admin')){ alert('Only the Super Admin can do this.'); return; }
+    const need = tasks.filter(t => t.category && CATEGORY_TAG_NAMES[t.category] &&
+      !(t.labels||[]).some(id => { const l = labels.find(x => x.id === id); return l && CATEGORY_TAG_NAMES[t.category].includes(l.name.toLowerCase()); }));
+    if(!need.length){ alert('All tasks already have the tag that matches their Category.'); return; }
+    if(!confirm(`${need.length} task(s) have a Category but not the matching tag. Add the tag to them now?`)) return;
+    need.forEach(t => {
+      const names = CATEGORY_TAG_NAMES[t.category];
+      let l = labels.find(x => names.includes(x.name.toLowerCase()));
+      if(!l){
+        l = { id: 'l' + (labelCounter++), name: t.category === 'Policy Issuance' ? 'Policy' : t.category, color: '#6C5CE7' };
+        labels.push(l);
+      }
+      t.labels = [...(t.labels||[]), l.id];
+    });
+    await saveBoard();
+    renderAll();
+    alert(`Done — tag added to ${need.length} task(s).`);
   }
 
   function downloadTaskTemplate(){
