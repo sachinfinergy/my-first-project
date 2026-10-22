@@ -998,6 +998,7 @@
   .bulk-stats{ display:flex; gap:8px; margin-top:12px; }
   .bulk-stat{ flex:1; border-radius:8px; padding:9px 6px; text-align:center; font-size:11.5px; line-height:1.3; border:1px solid transparent; }
   .bulk-stat b{ display:block; font-size:22px; line-height:1.2; }
+  .bulk-stat.info{ background:#e8f0fb; border-color:#bcd0f0; color:#2c5aa0; }
   .bulk-stat.ok{ background:#e7f8f2; border-color:#b8e6d3; color: var(--wa-header); }
   .bulk-stat.bad{ background:#fdf2ef; border-color:#f0d4cf; color: var(--wa-rust); }
   .bulk-stat.warn{ background:#fff8e6; border-color:#f1dfa8; color:#8a6500; }
@@ -2128,7 +2129,8 @@
     </div>
     <div class="bulk-options">
       <label><input type="checkbox" id="bulkOptCreateLabels" checked onchange="rerunBulkValidation()"> Create labels that don't exist yet</label>
-      <label><input type="checkbox" id="bulkOptSkipDupes" checked onchange="rerunBulkValidation()"> Skip duplicates (same customer, title and type already on the board)</label>
+      <label><input type="checkbox" id="bulkOptSkipDupes" checked onchange="rerunBulkValidation()"> Skip duplicates (same Old Policy Number, or same customer, title and type, already on the board)</label>
+      <label><input type="checkbox" id="bulkOptUpdate" checked onchange="rerunBulkValidation()"> Update matching tasks that haven't been worked on yet (still open, no notes, stage not changed) instead of skipping them</label>
       <label class="bulk-opt-row">If a row has no Type:
         <select id="bulkOptDefaultType" onchange="rerunBulkValidation()">
           <option value="">skip that row</option>
@@ -2837,6 +2839,25 @@
     return /^[6-9]\d{9}$/.test(d) ? d : '';
   }
 
+  // A task nobody has worked on yet: still open, no chat notes, no attachments, stage never moved, no outcome.
+  function bulkIsUntouched(t){
+    return t.status === 'open' && !(t.notes && t.notes.length) && !(t.attachments && t.attachments.length) &&
+      (!t.renewalStage || t.renewalStage === 'Quote pending') && !t.outcome && !t.convertedToInwardId;
+  }
+  const BULK_UPDATE_FIELDS = [['title','Title'],['desc','Description'],['assignee','Assign To'],['assignorId','Assigned By'],['priority','Priority'],['due','Due Date'],['customerName','Customer Name'],['customerMobile','Customer Mobile'],['agentName','Agent Name'],['relationshipManager','Relationship Manager'],['productType','Product Type'],['productDetails','Product Details'],['category','Category'],['lineOfBusiness','Line of Business'],['renewalDate','Renewal Date'],['slot','Slot'],['renewalStage','Stage']];
+  // What would change on an existing task: only fields the file actually fills in.
+  function bulkDiff(existing, row){
+    const out = [];
+    BULK_UPDATE_FIELDS.forEach(([key, label]) => {
+      const to = row[key];
+      if(to === '' || to === null || to === undefined) return;
+      if(key === 'assignorId' && !row._assignorGiven) return;
+      if(key === 'priority' && !row._priorityGiven) return;
+      if((existing[key] || '') !== to) out.push({ key, label, from: existing[key] || '', to });
+    });
+    return out;
+  }
+
   function downloadTaskTemplate(){
     if(typeof XLSX === 'undefined'){ alert('The template tool failed to load — please check your internet connection and try again.'); return; }
     const sampleAssignee = members[0] ? members[0].name : 'Team Member Name';
@@ -2898,7 +2919,7 @@
 
   function bulkSetBusy(on, message){
     bulkImporting = on;
-    ['bulkUploadFileInput','bulkOptCreateLabels','bulkOptSkipDupes','bulkOptDefaultType','bulkUploadTemplateBtn'].forEach(id => { const el = document.getElementById(id); if(el) el.disabled = on; });
+    ['bulkUploadFileInput','bulkOptCreateLabels','bulkOptSkipDupes','bulkOptUpdate','bulkOptDefaultType','bulkUploadTemplateBtn'].forEach(id => { const el = document.getElementById(id); if(el) el.disabled = on; });
     const btn = document.getElementById('bulkUploadConfirmBtn');
     if(btn){ btn.disabled = on; if(on && message) btn.textContent = message; }
   }
@@ -2910,6 +2931,7 @@
     document.getElementById('bulkUploadConfirmBtn').style.display = 'none';
     document.getElementById('bulkOptCreateLabels').checked = true;
     document.getElementById('bulkOptSkipDupes').checked = true;
+    document.getElementById('bulkOptUpdate').checked = true;
     document.getElementById('bulkOptDefaultType').value = '';
     bulkParsed = null; bulkResult = null;
     bulkSetBusy(false);
@@ -3006,6 +3028,7 @@
     const opts = {
       createLabels: document.getElementById('bulkOptCreateLabels').checked,
       skipDupes: document.getElementById('bulkOptSkipDupes').checked,
+      updateUntouched: document.getElementById('bulkOptUpdate').checked,
       defaultType: document.getElementById('bulkOptDefaultType').value
     };
     bulkResult = validateBulkRows(bulkParsed, opts);
@@ -3013,7 +3036,7 @@
   }
 
   function validateBulkRows(parsed, opts){
-    const res = { ready: [], skipped: [], duplicates: [], blank: 0, examples: 0, newLabelNames: [], warnings: [], ignoredHeaders: parsed.ignored, personProblem: false, tooMany: false, fileName: parsed.fileName };
+    const res = { ready: [], updates: [], skipped: [], duplicates: [], blank: 0, examples: 0, newLabelNames: [], warnings: [], ignoredHeaders: parsed.ignored, personProblem: false, tooMany: false, fileName: parsed.fileName };
     const col = parsed.colIndex;
     const existingKeys = new Map();       // duplicate key -> the task already on the board
     tasks.forEach(t => { const k = bulkDupKey(t.customerName, t.customerMobile, t.title, t.taskType, t.oldPolicyNumber); if(k && !existingKeys.has(k)) existingKeys.set(k, t); });
@@ -3249,29 +3272,7 @@
 
       if(errors.length){ res.skipped.push({ rowNum: r.rowNum, raw, reasons: errors }); return; }
 
-      // Duplicate check 1 — same Old Policy Number (always enforced)
-      const pKey = taskType === 'Renewal' ? bulkPolicyKey(oldPolicyNumber) : '';
-      if(pKey){
-        if(existingPolicies.has(pKey)){ const mt = existingPolicies.get(pKey); res.duplicates.push({ rowNum: r.rowNum, raw, duplicateOf: 'Already on the board', match: describeTask(mt), reasons: [`Old Policy Number "${oldPolicyNumber}" already exists on the board (task ${mt.id} "${mt.title || ''}").`] }); return; }
-        if(seenPolicies.has(pKey)){ res.duplicates.push({ rowNum: r.rowNum, raw, duplicateOf: 'Earlier row in this file', match: 'Excel row ' + seenPolicies.get(pKey), reasons: [`Old Policy Number "${oldPolicyNumber}" is repeated — already used in Excel row ${seenPolicies.get(pKey)} of this file.`] }); return; }
-        seenPolicies.set(pKey, r.rowNum);
-      }
-      // Duplicate check 2 — against the board and against earlier rows of this same file
-      const key = bulkDupKey(customerName, customerMobile, title, taskType, oldPolicyNumber);
-      if(key && opts.skipDupes){
-        const onBoard = existingKeys.get(key), inFile = seenKeys.get(key);
-        if(onBoard || inFile){
-          res.duplicates.push({ rowNum: r.rowNum, raw,
-            duplicateOf: onBoard ? 'Already on the board' : 'Earlier row in this file',
-            match: onBoard ? describeTask(onBoard) : 'Excel row ' + inFile,
-            reasons: [`Looks like a duplicate of ${onBoard ? 'a task already on the board' : 'an earlier row in this file'} (same customer, title and type).`] });
-          return;
-        }
-      }
-      if(key) seenKeys.set(key, r.rowNum);
-      warnings.forEach(w => res.warnings.push({ rowNum: r.rowNum, text: w }));
-
-      res.ready.push({
+      const rowObj = {
         title, desc: txt('Description'),
         assignee: assigneeId, assignorId,
         priority, due, status,
@@ -3284,16 +3285,60 @@
         renewalDate, oldPolicyNumber,
         slot, renewalStage, newCompany, newPremium, lostReason,
         outcome, outcomeNote,
-        completedAtMs
-      });
+        completedAtMs,
+        _assignorGiven: !!assignedByName, _priorityGiven: !!priorityRaw
+      };
+      const pKey = taskType === 'Renewal' ? bulkPolicyKey(oldPolicyNumber) : '';
+      const key = bulkDupKey(customerName, customerMobile, title, taskType, oldPolicyNumber);
+
+      // A row that matches a task already on the board: update it if nobody has worked on it yet, otherwise skip it.
+      const handleExisting = (mt, why) => {
+        if(opts.updateUntouched && rowObj.status === 'open' && bulkIsUntouched(mt)){
+          const changes = bulkDiff(mt, rowObj);
+          if(changes.length){
+            res.updates.push({ rowNum: r.rowNum, raw, task: mt, row: rowObj, changes });
+            if(pKey) seenPolicies.set(pKey, r.rowNum);
+            if(key) seenKeys.set(key, r.rowNum);
+            warnings.forEach(w => res.warnings.push({ rowNum: r.rowNum, text: w }));
+            return true;
+          }
+          res.duplicates.push({ rowNum: r.rowNum, raw, duplicateOf: 'Already on the board', match: describeTask(mt), reasons: [why + ' Nothing to update — it already has the same details.'] });
+          return true;
+        }
+        const note = (opts.updateUntouched && !bulkIsUntouched(mt)) ? ' It has already been worked on (notes, stage change or outcome), so it was not changed.' : '';
+        res.duplicates.push({ rowNum: r.rowNum, raw, duplicateOf: 'Already on the board', match: describeTask(mt), reasons: [why + note] });
+        return true;
+      };
+
+      // Duplicate check 1 — same Old Policy Number (always enforced)
+      if(pKey){
+        if(seenPolicies.has(pKey)){ res.duplicates.push({ rowNum: r.rowNum, raw, duplicateOf: 'Earlier row in this file', match: 'Excel row ' + seenPolicies.get(pKey), reasons: [`Old Policy Number "${oldPolicyNumber}" is repeated — already used in Excel row ${seenPolicies.get(pKey)} of this file.`] }); return; }
+        if(existingPolicies.has(pKey)){ const mt = existingPolicies.get(pKey); handleExisting(mt, `Old Policy Number "${oldPolicyNumber}" already exists on the board (task ${mt.id} "${mt.title || ''}").`); return; }
+        seenPolicies.set(pKey, r.rowNum);
+      }
+      // Duplicate check 2 — against the board and against earlier rows of this same file
+      if(key && opts.skipDupes){
+        const onBoard = existingKeys.get(key), inFile = seenKeys.get(key);
+        if(inFile){
+          res.duplicates.push({ rowNum: r.rowNum, raw, duplicateOf: 'Earlier row in this file', match: 'Excel row ' + inFile,
+            reasons: ['Looks like a duplicate of an earlier row in this file (same customer, title and type).'] });
+          return;
+        }
+        if(onBoard){ handleExisting(onBoard, 'Looks like a duplicate of a task already on the board (same customer, title and type).'); return; }
+      }
+      if(key) seenKeys.set(key, r.rowNum);
+      warnings.forEach(w => res.warnings.push({ rowNum: r.rowNum, text: w }));
+
+      res.ready.push(rowObj);
     });
 
     res.newLabelNames = Array.from(newLabelByLower.entries()).map(([lower, name]) => ({ lower, name }));
     // A new label only counts if at least one importable row uses it.
     const usedNew = new Set();
     res.ready.forEach(t => t.labelRefs.forEach(x => { if(x.newKey) usedNew.add(x.newKey); }));
+    res.updates.forEach(u => u.row.labelRefs.forEach(x => { if(x.newKey) usedNew.add(x.newKey); }));
     res.newLabelNames = res.newLabelNames.filter(x => usedNew.has(x.lower));
-    if(res.ready.length > BULK_MAX_ROWS) res.tooMany = true;
+    if(res.ready.length + res.updates.length > BULK_MAX_ROWS) res.tooMany = true;
     res.memberNames = memberNames();
     return res;
   }
@@ -3301,8 +3346,8 @@
   function renderBulkPreview(res){
     const box = document.getElementById('bulkUploadResult');
     const confirmBtn = document.getElementById('bulkUploadConfirmBtn');
-    const nReady = res.ready.length, nBad = res.skipped.length, nDup = res.duplicates.length;
-    if(!nReady && !nBad && !nDup){
+    const nReady = res.ready.length, nBad = res.skipped.length, nDup = res.duplicates.length, nUpd = res.updates.length;
+    if(!nReady && !nBad && !nDup && !nUpd){
       box.innerHTML = `<div class="bulk-error-box">That file has no task rows to import.${res.examples ? ' (Only the sample rows were found — add your own rows below the header.)' : ''}</div>`;
       confirmBtn.style.display = 'none';
       return;
@@ -3311,8 +3356,14 @@
     let html = `<div class="bulk-stats">
       <div class="bulk-stat ok"><b>${nReady}</b><span>ready to import</span></div>
       <div class="bulk-stat ${nBad ? 'bad' : 'zero'}"><b>${nBad}</b><span>need fixing — skipped</span></div>
+      ${nUpd ? `<div class="bulk-stat info"><b>${nUpd}</b><span>existing task${nUpd !== 1 ? 's' : ''} will be updated</span></div>` : ''}
       <div class="bulk-stat ${nDup ? 'warn' : 'zero'}"><b>${nDup}</b><span>duplicate${nDup !== 1 ? 's' : ''} — skipped</span></div>
     </div>`;
+    if(nUpd){
+      html += `<div class="bulk-note-box"><b>${plural(nUpd, 'existing task')} will be updated</b> instead of being added again (they match an Old Policy Number already on the board and nobody has worked on them yet). Only fields filled in your file change.<br>` +
+        res.updates.slice(0, 12).map(u => `Row ${u.rowNum} → ${escapeHtml(u.task.id)} ${escapeHtml(u.task.customerName || u.task.title || '')}: ${u.changes.map(c => escapeHtml(c.label)).join(', ')}`).join('<br>') +
+        (nUpd > 12 ? `<br>…and ${nUpd - 12} more.` : '') + `</div>`;
+    }
     const notes = [];
     if(res.blank) notes.push(`${plural(res.blank, 'blank row')} ignored.`);
     if(res.examples) notes.push(`${plural(res.examples, 'sample row')} ignored.`);
@@ -3342,10 +3393,10 @@
       html += `<button class="btn-ghost" style="width:100%; margin-top:10px;" onclick="downloadBulkReport()">⬇ Download the ${nBad + nDup} skipped row${nBad + nDup !== 1 ? 's' : ''} (with the reason) to fix and re-upload</button>`;
     }
     box.innerHTML = html;
-    if(nReady > 0 && !res.tooMany){
+    if((nReady > 0 || nUpd > 0) && !res.tooMany){
       confirmBtn.style.display = 'inline-block';
       confirmBtn.disabled = false;
-      confirmBtn.textContent = `Import ${plural(nReady, 'task')}`;
+      confirmBtn.textContent = [nReady ? `Import ${plural(nReady, 'task')}` : '', nUpd ? `Update ${nUpd}` : ''].filter(Boolean).join(' + ');
     } else {
       confirmBtn.style.display = 'none';
     }
@@ -3382,9 +3433,9 @@
   }
 
   async function confirmBulkImport(){
-    if(!bulkResult || bulkImporting || bulkResult.ready.length === 0 || bulkResult.tooMany) return;
+    if(!bulkResult || bulkImporting || (bulkResult.ready.length + bulkResult.updates.length) === 0 || bulkResult.tooMany) return;
     const res = bulkResult;
-    const count = res.ready.length;
+    const count = res.ready.length, updCount = res.updates.length;
     const skippedTotal = res.skipped.length + res.duplicates.length;
     const reportHeaders = bulkParsed ? bulkParsed.headers : [];
     bulkSetBusy(true, `Importing ${count} task${count !== 1 ? 's' : ''}… please wait`);
@@ -3424,6 +3475,14 @@
       }
     }
     newTasks.forEach(t => { tasks.push(t); syncCompletedLabel(t); });
+    // Existing, untouched tasks: fill in the new details (only fields the file provided).
+    res.updates.forEach(u => {
+      const t = tasks.find(x => x.id === u.task.id);
+      if(!t) return;
+      u.changes.forEach(c => { t[c.key] = c.to; });
+      const addIds = u.row.labelRefs.map(x => x.id || newLabelIds.get(x.newKey)).filter(Boolean);
+      if(addIds.length) t.labels = Array.from(new Set([...(t.labels || []), ...addIds]));
+    });
     renderAll();
     resultBox.innerHTML = `<div class="bulk-note-box">Saving ${count} task${count !== 1 ? 's' : ''} to the shared board — keep this window open…</div>`;
 
@@ -3434,9 +3493,9 @@
     const confirmBtn = document.getElementById('bulkUploadConfirmBtn');
     confirmBtn.style.display = 'none';
     if(ok){
-      bulkResult = { ...res, ready: [] };           // keeps the skipped list available for the report
+      bulkResult = { ...res, ready: [], updates: [] };           // keeps the skipped list available for the report
       bulkParsed = { headers: reportHeaders, colIndex: {}, ignored: [], rows: [], fileName: res.fileName };
-      resultBox.innerHTML = `<div class="bulk-success-box">✅ ${count} task${count !== 1 ? 's' : ''} imported successfully.${res.newLabelNames.length ? `<br><span style="font-weight:500;">Labels created: ${res.newLabelNames.map(x => escapeHtml(x.name)).join(', ')}.</span>` : ''}${skippedTotal ? `<br><span style="font-weight:500;">${skippedTotal} row${skippedTotal !== 1 ? 's were' : ' was'} skipped.</span>` : ''}</div>`
+      resultBox.innerHTML = `<div class="bulk-success-box">✅ ${[count ? count + ' task' + (count !== 1 ? 's' : '') + ' imported' : '', updCount ? updCount + ' existing task' + (updCount !== 1 ? 's' : '') + ' updated' : ''].filter(Boolean).join(' and ')} successfully.${res.newLabelNames.length ? `<br><span style="font-weight:500;">Labels created: ${res.newLabelNames.map(x => escapeHtml(x.name)).join(', ')}.</span>` : ''}${skippedTotal ? `<br><span style="font-weight:500;">${skippedTotal} row${skippedTotal !== 1 ? 's were' : ' was'} skipped.</span>` : ''}</div>`
         + (skippedTotal ? `<button class="btn-ghost" style="width:100%; margin-top:10px;" onclick="downloadBulkReport()">⬇ Download the skipped rows (with the reason)</button>` : '');
     } else {
       resultBox.innerHTML = `<div class="bulk-error-box"><b>The tasks are on your screen but could not be saved to the shared board.</b><br>Check your internet connection, then press the Reset/refresh button at the top and look for the imported tasks. If they are missing, upload the file again.</div>`;
