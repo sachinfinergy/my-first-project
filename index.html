@@ -3166,6 +3166,20 @@
         });
       }
 
+      // Category -> matching tag, so the tag is auto-selected like it would be by hand
+      if(category){
+        const tagNames = { 'Quote':['quote'], 'Claims':['claims','claim'], 'Policy Issuance':['policy','policy issuance'], 'Admin':['admin'] }[category] || [category.toLowerCase()];
+        const hit = labels.find(l => tagNames.includes(l.name.toLowerCase()));
+        if(hit){ if(!labelRefs.some(x => x.id === hit.id)) labelRefs.push({ id: hit.id }); }
+        else if(opts.createLabels){
+          const nm = category === 'Policy Issuance' ? 'Policy' : category, lower = nm.toLowerCase();
+          if(!newLabelByLower.has(lower)) newLabelByLower.set(lower, nm);
+          if(!labelRefs.some(x => x.newKey === lower)) labelRefs.push({ newKey: lower });
+        } else warnings.push(`No "${tagNames[0]}" tag exists, so the tag for Category "${category}" was not added.`);
+      } else if(!labelRefs.length && labels.length){
+        warnings.push('No Category or Labels given — the task will have no tag.');
+      }
+
       // Renewal details (only meaningful for Renewal tasks)
       let renewalDate = '', oldPolicyNumber = '';
       const renewalRaw = bulkCellText(get('Renewal Date')), oldPolRaw = txt('Old Policy Number');
