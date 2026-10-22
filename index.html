@@ -6525,25 +6525,27 @@
     renderAll(); saveBoard();
   }
   // The month a renewal belongs to on the board: slot 31-40 means "1-10 of next month", so it sits in the month before its renewal date.
-  function rbCycleMonth(t){
-    const ym = (t.renewalDate || '').slice(0, 7);
-    if(!ym) return '';
-    if(t.slot !== '31-40') return ym;
-    const [y, m] = ym.split('-').map(Number);
-    const d = new Date(y, m - 2, 1);
-    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-  }
-  // Days 1-10 of the month after the selected one (the "Nov 1-10" box): slot 31-40, or simply a renewal date in that window.
+  // The month a renewal belongs to is simply the month of its renewal date.
+  function rbCycleMonth(t){ return (t.renewalDate || '').slice(0, 7); }
+  // Days 1-10 of the month after the selected one (the "Nov 1-10" box when October is selected).
   function rbSpill(t){
-    if(!rbMonth) return false;
-    if(rbType !== 'Renewal') return false;
-    if(t.slot === '31-40' && rbCycleMonth(t) === rbMonth) return true;
+    if(!rbMonth || rbType !== 'Renewal') return false;
     const rd = t.renewalDate || '';
     if(rd.length < 10) return false;
     const [y, m] = rbMonth.split('-').map(Number);
     const nd = new Date(y, m, 1);
     const next = nd.getFullYear() + '-' + String(nd.getMonth() + 1).padStart(2, '0');
     return rd.slice(0, 7) === next && Number(rd.slice(8, 10)) <= 10;
+  }
+  // Which slot box a renewal sits in. The renewal date decides, so "Nov 1-10" is the same set whether you
+  // are looking at October or November. The Slot field is used only when there is no renewal date.
+  function rbBucket(t){
+    const dayBucket = day => day <= 10 ? '1-10' : (day <= 20 ? '11-20' : '21-31');
+    if(t.renewalDate && t.renewalDate.length >= 10){
+      if(rbMonth) return rbSpill(t) ? '31-40' : dayBucket(Number(t.renewalDate.slice(8, 10)));
+      return SLOT_OPTIONS.includes(t.slot) ? t.slot : dayBucket(Number(t.renewalDate.slice(8, 10)));
+    }
+    return SLOT_OPTIONS.includes(t.slot) ? t.slot : '';
   }
   function rbMonthShort(ym, offset){
     const [y, m] = ym.split('-').map(Number);
@@ -6571,11 +6573,8 @@
     if(rbMonth) list = list.filter(t => rbKey(t) === rbMonth || rbSpill(t));
     if(rbPerson) list = list.filter(t => t.assignee === rbPerson);
     const bySlot = {};
-    SLOT_OPTIONS.forEach(v => {
-      bySlot[v] = !rbMonth ? list.filter(t => t.slot === v)
-        : (v === '31-40' ? list.filter(t => rbSpill(t)) : list.filter(t => t.slot === v && !rbSpill(t)));
-    });
-    const noSlot = list.filter(t => !SLOT_OPTIONS.includes(t.slot) && !rbSpill(t));
+    SLOT_OPTIONS.forEach(v => { bySlot[v] = list.filter(t => rbBucket(t) === v); });
+    const noSlot = list.filter(t => !rbBucket(t));
     const shown = rbSlot === '__none' ? noSlot : (rbSlot ? bySlot[rbSlot] : list);
 
     const hiddenByFilters = all.length - list.length;
