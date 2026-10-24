@@ -1156,6 +1156,26 @@
   .inward-cat-pill.pending{ background:#fff3d6; color:#8a6d1f; }
   .inward-premium{ font-weight:700; text-align:right; }
   .inward-row-actions{ display:flex; gap:6px; }
+  .client-id-link{ font-weight:800; color: var(--wa-header); cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
+  .client-view-toggle{ display:flex; gap:0; margin-right:10px; }
+  .client-view-toggle button{ padding:6px 14px; border:1.5px solid var(--wa-header); background:#fff; color:var(--wa-header); font-weight:700; font-size:12.5px; cursor:pointer; }
+  .client-view-toggle button:first-child{ border-radius:16px 0 0 16px; }
+  .client-view-toggle button:last-child{ border-radius:0 16px 16px 0; border-left:0; }
+  .client-view-toggle button.active{ background: var(--wa-header); color: var(--wa-header-text); }
+  .client-search{ padding:7px 12px; border:1.5px solid var(--wa-border); border-radius:16px; font-size:13px; min-width:220px; }
+  .client-card-head{ display:flex; align-items:center; gap:12px; margin-bottom:14px; }
+  .client-card-avatar{ width:46px; height:46px; border-radius:50%; background: var(--wa-header); color: var(--wa-header-text); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:18px; flex-shrink:0; }
+  .client-stats{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:14px; }
+  .client-stat{ background:#f6f7f6; border-radius:10px; padding:10px 12px; }
+  .client-stat b{ display:block; font-size:16px; color: var(--wa-text); }
+  .client-stat span{ font-size:11px; color: var(--wa-text-soft); font-weight:600; text-transform:uppercase; letter-spacing:.03em; }
+  .client-break{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; }
+  .client-card-modal{ max-width:760px; width:94vw; max-height:90vh; overflow:auto; }
+  .client-card-modal table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+  .client-card-modal th{ text-align:left; background:#f0f0ee; color: var(--wa-text-soft); font-size:10.5px; text-transform:uppercase; padding:7px 8px; }
+  .client-card-modal td{ padding:7px 8px; border-bottom:1px solid var(--wa-border); }
+  .client-card-modal tbody tr{ cursor:pointer; } .client-card-modal tbody tr:hover{ background: var(--wa-hover); }
+  @media (max-width:560px){ .client-stats{ grid-template-columns:repeat(2,1fr); } }
   .inward-empty{ text-align:center; color: var(--wa-text-soft); padding:30px !important; white-space:normal !important; }
 
   .dash-filter-bar{
@@ -1706,12 +1726,12 @@
     </div>
     <div class="inward-category-filter-row" id="inwardCategoryFilterRow"></div>
     <div class="inward-extra-filter-row" id="inwardExtraFilterRow"></div>
-    <div class="inward-table-scroll">
+    <div class="inward-table-scroll" id="inwardEntriesWrap">
       <table class="inward-table">
         <thead>
           <tr>
             <th>SLR</th><th>Issued Month</th><th>Inward Date</th><th>Category</th><th>Office</th><th>Company</th>
-            <th>RM</th><th>Agent</th><th>Customer</th><th>Mobile</th><th>Product</th><th>Other Details</th><th>Type</th>
+            <th>RM</th><th>Agent</th><th>Client ID</th><th>Customer</th><th>Mobile</th><th>Product</th><th>Other Details</th><th>Type</th>
             <th>Gross Premium</th><th>Net Premium</th><th>Payout Premium</th><th>Payment Mode</th>
             <th>Policy No.</th><th>Policy Status</th><th>RSD</th><th>RED</th><th></th>
           </tr>
@@ -1719,6 +1739,20 @@
         <tbody id="inwardTableBody"></tbody>
       </table>
     </div>
+    <div class="inward-table-scroll" id="inwardClientsWrap" style="display:none;">
+      <table class="inward-table" style="min-width:820px;">
+        <thead><tr><th>Client ID</th><th>Client</th><th>Mobile</th><th>Entries</th><th>Categories</th><th style="text-align:right;">Gross Premium</th><th>Last inward</th></tr></thead>
+        <tbody id="inwardClientsBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Client summary card -->
+<div class="modal-overlay" id="clientCardOverlay" onclick="if(event.target===this) closeClientCard()">
+  <div class="modal client-card-modal">
+    <div id="clientCardBody"></div>
+    <div class="modal-actions"><button class="btn-ghost" onclick="closeClientCard()">Close</button></div>
   </div>
 </div>
 
@@ -2643,6 +2677,7 @@
       'Company': e.company || '',
       'RM': e.rm || '',
       'Agent': e.agent || '',
+      'CLIENT ID': inwardClientId(inwardClientKey(e)),
       'CUSTOMER NAME': e.customerName || '',
       'CUSTOMER NUMBER': e.customerMobile || '',
       'PRODUCT TYPE': e.productType || '',
@@ -7575,6 +7610,97 @@
     `;
   }
 
+  // ---------- Clients (one client = one mobile number) ----------
+  let inwardViewMode = 'entries';   // 'entries' | 'clients'
+  let inwardClientSearch = '';
+  function inwardClientKey(e){
+    let d = String((e && e.customerMobile) || '').replace(/\D/g, '');
+    if(d.length > 10) d = d.slice(-10);           // drop +91 / 0 prefixes
+    return d.length >= 6 ? d : '';
+  }
+  function inwardClientId(key){ return key ? 'CL-' + key : ''; }
+  function setInwardViewMode(m){ inwardViewMode = m; renderInwardScreen(); }
+  function setInwardClientSearch(v){ inwardClientSearch = v; renderInwardClients(); const el = document.getElementById('inwardClientSearch'); if(el){ el.focus(); el.setSelectionRange(v.length, v.length); } }
+  function inwardFmtAmt(n){ return Number(n||0).toLocaleString('en-IN'); }
+  function buildInwardClients(entries){
+    const map = new Map();
+    entries.forEach(e => {
+      const k = inwardClientKey(e); if(!k) return;
+      if(!map.has(k)) map.set(k, { key:k, id:inwardClientId(k), entries:[] });
+      map.get(k).entries.push(e);
+    });
+    const list = Array.from(map.values());
+    list.forEach(c => {
+      c.entries.sort((a,b) => (b.inwardDate||'').localeCompare(a.inwardDate||'') || (b.createdAt||0)-(a.createdAt||0));
+      c.name = c.entries[0].customerName || '';
+      c.names = Array.from(new Set(c.entries.map(e => (e.customerName||'').trim()).filter(Boolean)));
+      c.gross = c.entries.reduce((s,e) => s + (Number(e.grossPremium)||0), 0);
+      c.net = c.entries.reduce((s,e) => s + (Number(e.netPremium)||0), 0);
+      c.payout = c.entries.reduce((s,e) => s + (Number(e.payoutPremium)||0), 0);
+      c.last = c.entries[0].inwardDate || '';
+      c.cats = Array.from(new Set(c.entries.map(e => e.category).filter(Boolean)));
+    });
+    list.sort((a,b) => (b.last||'').localeCompare(a.last||''));
+    return list;
+  }
+  function renderInwardClients(){
+    const entries = getVisibleInwardEntries();
+    const all = buildInwardClients(entries);
+    const noPhone = entries.filter(e => !inwardClientKey(e)).length;
+    const q = inwardClientSearch.trim().toLowerCase();
+    const list = q ? all.filter(c => c.id.toLowerCase().includes(q) || c.key.includes(q.replace(/\D/g,'') || '\u0000') || c.names.some(n => n.toLowerCase().includes(q))) : all;
+    document.getElementById('inwardSubtitle').textContent = all.length + ' unique client' + (all.length===1?'':'s') + ' · ' + entries.length + ' entr' + (entries.length===1?'y':'ies') + (noPhone ? ` · ${noPhone} without a valid mobile` : '');
+    const tb = document.getElementById('inwardClientsBody');
+    if(!list.length){ tb.innerHTML = `<tr><td colspan="7" class="inward-empty">${all.length ? 'No client matches your search.' : 'No clients yet — clients appear as inward entries with a mobile number are added.'}</td></tr>`; return; }
+    tb.innerHTML = list.map(c => `
+      <tr onclick="openClientCard('${c.key}')">
+        <td><span class="client-id-link">${c.id}</span></td>
+        <td>${escapeHtml(c.name)}${c.names.length>1 ? ` <span style="color:var(--wa-text-soft);font-size:11px;">+${c.names.length-1} other name${c.names.length>2?'s':''}</span>` : ''}</td>
+        <td>${escapeHtml(c.key)}</td>
+        <td><b>${c.entries.length}</b></td>
+        <td>${c.cats.map(x => `<span class="inward-cat-pill">${escapeHtml(x)}</span>`).join(' ')}</td>
+        <td class="inward-premium">${inwardFmtAmt(c.gross)}</td>
+        <td>${escapeHtml(formatInwardDateDisplay(c.last))}</td>
+      </tr>`).join('');
+  }
+  function openClientCard(key){
+    const c = buildInwardClients(getVisibleInwardEntries()).find(x => x.key === key);
+    if(!c) return;
+    const countBy = (field) => { const m = {}; c.entries.forEach(e => { const v = e[field]; if(v) m[v] = (m[v]||0)+1; }); return Object.entries(m); };
+    const pills = (arr, prefix) => arr.map(([k,n]) => `<span class="inward-cat-pill">${prefix}${escapeHtml(k)}: ${n}</span>`).join('');
+    const initials = (c.name||'?').trim().split(/\s+/).slice(0,2).map(w => w[0]||'').join('').toUpperCase() || '?';
+    document.getElementById('clientCardBody').innerHTML = `
+      <div class="client-card-head">
+        <div class="client-card-avatar">${escapeHtml(initials)}</div>
+        <div>
+          <div style="font-size:17px;font-weight:800;">${escapeHtml(c.name || 'Unnamed client')}</div>
+          <div style="font-size:12.5px;color:var(--wa-text-soft);"><b style="color:var(--wa-header);">${c.id}</b> · 📞 ${escapeHtml(c.key)}</div>
+          ${c.names.length>1 ? `<div style="font-size:11.5px;color:var(--wa-text-soft);margin-top:2px;">Also entered as: ${c.names.filter(n => n !== c.name).map(escapeHtml).join(', ')}</div>` : ''}
+        </div>
+      </div>
+      <div class="client-stats">
+        <div class="client-stat"><b>${c.entries.length}</b><span>Business entries</span></div>
+        <div class="client-stat"><b>₹${inwardFmtAmt(c.gross)}</b><span>Gross premium</span></div>
+        <div class="client-stat"><b>₹${inwardFmtAmt(c.net)}</b><span>Net premium</span></div>
+        <div class="client-stat"><b>₹${inwardFmtAmt(c.payout)}</b><span>Payout premium</span></div>
+      </div>
+      <div class="client-break">${pills(countBy('category'),'')}${pills(countBy('type'),'')}${pills(countBy('company'),'')}</div>
+      <table>
+        <thead><tr><th>Inward</th><th>SLR</th><th>Category</th><th>Type</th><th>Company</th><th>Product</th><th>Policy No.</th><th style="text-align:right;">Gross</th><th>Status</th></tr></thead>
+        <tbody>${c.entries.map(e => `
+          <tr onclick="closeClientCard(); ${canAccessInwardEntry(e) ? `openInwardModal('${e.id}')` : ''}">
+            <td>${escapeHtml(formatInwardDateDisplay(e.inwardDate))}</td><td>${e.slrNo||''}</td>
+            <td>${escapeHtml(e.category||'')}</td><td>${escapeHtml(e.type||'')}</td><td>${escapeHtml(e.company||'')}</td>
+            <td>${escapeHtml(e.productType||'')}${e.productDetails ? ' — '+escapeHtml(e.productDetails) : ''}</td>
+            <td>${escapeHtml(e.policyNo||'')}</td>
+            <td style="text-align:right;font-weight:700;">${(e.grossPremium!==null && e.grossPremium!==undefined && e.grossPremium!=='') ? inwardFmtAmt(e.grossPremium) : ''}</td>
+            <td>${escapeHtml(e.policyStatus||'')}</td>
+          </tr>`).join('')}</tbody>
+      </table>`;
+    document.getElementById('clientCardOverlay').classList.add('open');
+  }
+  function closeClientCard(){ document.getElementById('clientCardOverlay').classList.remove('open'); }
+
   function renderInwardScreen(){
     const tier = getInwardAccessTier();
     const scopedEntries = getVisibleInwardEntries();
@@ -7584,8 +7710,18 @@
     if(exportBtn) exportBtn.style.display = canExportInward() ? '' : 'none';
     updateInwardArchiveBadge();
 
+    const toggleHtml = `<div class="client-view-toggle"><button class="${inwardViewMode==='entries'?'active':''}" onclick="setInwardViewMode('entries')">Entries</button><button class="${inwardViewMode==='clients'?'active':''}" onclick="setInwardViewMode('clients')">Clients</button></div>`;
+    const entriesWrap = document.getElementById('inwardEntriesWrap'), clientsWrap = document.getElementById('inwardClientsWrap');
+    if(inwardViewMode === 'clients'){
+      document.getElementById('inwardCategoryFilterRow').innerHTML = toggleHtml + `<input class="client-search" id="inwardClientSearch" placeholder="Search client name, mobile or ID" value="${escapeHtml(inwardClientSearch)}" oninput="setInwardClientSearch(this.value)">`;
+      document.getElementById('inwardExtraFilterRow').innerHTML = '';
+      entriesWrap.style.display = 'none'; clientsWrap.style.display = '';
+      renderInwardClients();
+      return;
+    }
+    entriesWrap.style.display = ''; clientsWrap.style.display = 'none';
     const catRow = document.getElementById('inwardCategoryFilterRow');
-    catRow.innerHTML = `<button class="category-filter-chip ${activeInwardCategoryFilter===''?'active':''}" onclick="setInwardCategoryFilter('')">All</button>` +
+    catRow.innerHTML = toggleHtml + `<button class="category-filter-chip ${activeInwardCategoryFilter===''?'active':''}" onclick="setInwardCategoryFilter('')">All</button>` +
       INWARD_CATEGORIES.map(c => `<button class="category-filter-chip ${activeInwardCategoryFilter===c?'active':''}" onclick="setInwardCategoryFilter('${c}')">${c}</button>`).join('');
 
     // Entered By options: unique creators among the entries this session can see.
@@ -7621,7 +7757,7 @@
 
     const tbody = document.getElementById('inwardTableBody');
     if(rows.length === 0){
-      tbody.innerHTML = `<tr><td colspan="22" class="inward-empty">No inward entries yet${activeInwardCategoryFilter?' in this category':''}. Tap + to add one.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="23" class="inward-empty">No inward entries yet${activeInwardCategoryFilter?' in this category':''}. Tap + to add one.</td></tr>`;
       return;
     }
     tbody.innerHTML = rows.map(e => { const editable = canAccessInwardEntry(e); return `
@@ -7634,6 +7770,7 @@
         <td>${escapeHtml(e.company||'')}</td>
         <td>${escapeHtml(e.rm||'')}</td>
         <td>${escapeHtml(e.agent||'')}</td>
+        <td onclick="event.stopPropagation()">${inwardClientKey(e) ? `<span class="client-id-link" onclick="openClientCard('${inwardClientKey(e)}')">${inwardClientId(inwardClientKey(e))}</span>` : '<span style="color:var(--wa-text-soft);">—</span>'}</td>
         <td>${escapeHtml(e.customerName||'')}</td>
         <td>${escapeHtml(e.customerMobile||'')}</td>
         <td>${escapeHtml(e.productType||'')}${e.productDetails ? ' — ' + escapeHtml(e.productDetails) : ''}</td>
@@ -7983,6 +8120,7 @@
       'Company': e.company || '',
       'RM': e.rm || '',
       'Agent': e.agent || '',
+      'CLIENT ID': inwardClientId(inwardClientKey(e)),
       'CUSTOMER NAME': e.customerName || '',
       'CUSTOMER NUMBER': e.customerMobile || '',
       'PRODUCT TYPE': e.productType || '',
