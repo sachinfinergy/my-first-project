@@ -1176,6 +1176,56 @@
   .client-card-modal td{ padding:7px 8px; border-bottom:1px solid var(--wa-border); }
   .client-card-modal tbody tr{ cursor:pointer; } .client-card-modal tbody tr:hover{ background: var(--wa-hover); }
   @media (max-width:560px){ .client-stats{ grid-template-columns:repeat(2,1fr); } }
+
+  /* ---------- Client portfolio card ---------- */
+  .client-card-modal{ max-width:880px !important; padding:0 !important; border-radius:18px; }
+  #clientPortfolio{ background:#fff; padding:0 0 18px; font-family:'Mulish','Inter',-apple-system,'Segoe UI',Arial,sans-serif; color:#1b2b27; }
+  .cp-range{ display:flex; gap:8px; padding:12px 18px; background:#fafdfc; border-radius:18px 18px 0 0; border-bottom:1px solid #e4efec; }
+  .cp-range button{ border:1.5px solid #0a8f78; background:#fff; color:#0a6a59; font-weight:800; font-size:12.5px; padding:6px 16px; border-radius:16px; cursor:pointer; font-family:inherit; }
+  .cp-range button.active{ background:#0a8f78; color:#fff; }
+  .cp-hero{ background:linear-gradient(135deg,#006b58 0%,#0a8f78 55%,#2bb39a 100%); color:#fff; padding:24px 26px 56px; display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+  .cp-avatar{ width:62px; height:62px; border-radius:50%; background:rgba(255,255,255,.2); border:2px solid rgba(255,255,255,.55); display:flex; align-items:center; justify-content:center; font-size:23px; font-weight:800; flex-shrink:0; }
+  .cp-name{ font-size:22px; font-weight:800; line-height:1.2; }
+  .cp-sub{ font-size:12.5px; opacity:.92; margin-top:3px; display:flex; gap:12px; flex-wrap:wrap; }
+  .cp-tag{ margin-left:auto; background:rgba(255,255,255,.18); border-radius:12px; padding:8px 14px; font-size:11px; text-transform:uppercase; letter-spacing:.06em; font-weight:700; text-align:right; }
+  .cp-tag b{ display:block; font-size:18px; letter-spacing:0; text-transform:none; }
+  .cp-body{ padding:18px 26px 0; }
+  .cp-stats{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:-34px; padding:0 26px; position:relative; }
+  .cp-stat{ background:#fff; border-radius:14px; padding:12px 14px; box-shadow:0 4px 16px rgba(0,60,50,.13); border:1px solid #e4efec; }
+  .cp-stat b{ display:block; font-size:19px; font-weight:800; color:#0a6a59; }
+  .cp-stat span{ font-size:10.5px; font-weight:700; color:#6b7f79; text-transform:uppercase; letter-spacing:.05em; }
+  .cp-h{ font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:#0a6a59; margin:22px 0 10px; display:flex; align-items:center; gap:8px; }
+  .cp-h::after{ content:''; flex:1; height:1px; background:#dbe8e4; }
+  .cp-two{ display:grid; grid-template-columns:230px 1fr; gap:22px; align-items:center; }
+  .cp-legend{ display:flex; flex-direction:column; gap:7px; font-size:12.5px; }
+  .cp-legend div{ display:flex; align-items:center; gap:8px; }
+  .cp-dot{ width:11px; height:11px; border-radius:4px; flex-shrink:0; }
+  .cp-legend em{ margin-left:auto; font-style:normal; font-weight:800; }
+  .cp-cal{ display:grid; grid-template-columns:repeat(12,1fr); gap:6px; align-items:end; height:128px; }
+  .cp-cal-col{ display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; gap:4px; font-size:10.5px; color:#6b7f79; font-weight:700; }
+  .cp-cal-bar{ width:100%; max-width:34px; border-radius:7px 7px 3px 3px; background:#d6e7e2; min-height:4px; display:flex; align-items:flex-start; justify-content:center; color:#fff; font-weight:800; font-size:11px; padding-top:2px; }
+  .cp-cal-bar.has{ background:linear-gradient(180deg,#2bb39a,#0a8f78); }
+  .cp-cal-bar.soon{ background:linear-gradient(180deg,#f0b43a,#d9892a); }
+  .cp-cal-col.now{ color:#0a6a59; } .cp-cal-col.now span{ border-bottom:2px solid #0a8f78; }
+  .cp-ren{ display:flex; flex-direction:column; gap:6px; margin-top:12px; }
+  .cp-ren-row{ display:flex; align-items:center; gap:10px; font-size:12.5px; background:#f5faf8; border-radius:10px; padding:8px 12px; }
+  .cp-ren-row b{ font-weight:800; } .cp-ren-row small{ color:#6b7f79; }
+  .cp-badge{ margin-left:auto; border-radius:10px; padding:3px 10px; font-size:11px; font-weight:800; white-space:nowrap; }
+  .cp-badge.ok{ background:#e2f5ee; color:#0a6a59; } .cp-badge.soon{ background:#fff1d4; color:#9a6410; }
+  .cp-badge.exp{ background:#fde6e2; color:#b3361f; } .cp-badge.done{ background:#eceff1; color:#5d6b73; }
+  .cp-policies{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+  .cp-pol{ border:1px solid #dfece8; border-radius:14px; padding:13px 15px; background:#fff; box-shadow:0 2px 8px rgba(0,60,50,.05); cursor:pointer; }
+  .cp-pol-top{ display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+  .cp-pol-ico{ width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:14px; flex-shrink:0; }
+  .cp-pol-title{ font-weight:800; font-size:14px; line-height:1.2; } .cp-pol-co{ font-size:11.5px; color:#6b7f79; font-weight:600; }
+  .cp-pol-grid{ display:grid; grid-template-columns:1fr 1fr; gap:6px 12px; font-size:11.5px; margin:8px 0; }
+  .cp-pol-grid span{ display:block; color:#7b8c87; font-size:10px; text-transform:uppercase; letter-spacing:.05em; font-weight:700; }
+  .cp-pol-grid b{ font-weight:800; }
+  .cp-prog{ height:6px; background:#e5eeeb; border-radius:4px; overflow:hidden; margin-top:6px; } .cp-prog i{ display:block; height:100%; border-radius:4px; background:#0a8f78; }
+  .cp-prog.soon i{ background:#e0a030; } .cp-prog.exp i{ background:#d4503a; } .cp-prog.done i{ background:#9aa8ae; }
+  .cp-foot{ padding:16px 26px 0; font-size:10.5px; color:#8a9a95; text-align:center; }
+  .cp-actions{ display:flex; gap:8px; padding:12px 18px; border-top:1px solid #e4efec; justify-content:flex-end; background:#fafdfc; border-radius:0 0 18px 18px; }
+  @media (max-width:640px){ .cp-stats{ grid-template-columns:repeat(2,1fr); } .cp-two{ grid-template-columns:1fr; } .cp-policies{ grid-template-columns:1fr; } .cp-tag{ margin-left:0; text-align:left; } }
   .inward-empty{ text-align:center; color: var(--wa-text-soft); padding:30px !important; white-space:normal !important; }
 
   .dash-filter-bar{
@@ -1752,7 +1802,11 @@
 <div class="modal-overlay" id="clientCardOverlay" onclick="if(event.target===this) closeClientCard()">
   <div class="modal client-card-modal">
     <div id="clientCardBody"></div>
-    <div class="modal-actions"><button class="btn-ghost" onclick="closeClientCard()">Close</button></div>
+    <div class="cp-actions">
+      <button class="btn-ghost" onclick="closeClientCard()">Close</button>
+      <button class="btn-ghost" id="clientCardDlBtn" onclick="shareClientCard(false)">⬇ Download image</button>
+      <button class="btn-primary" id="clientCardShareBtn" onclick="shareClientCard(true)">📤 Share image</button>
+    </div>
   </div>
 </div>
 
@@ -7721,41 +7775,147 @@
         <td>${escapeHtml(formatInwardDateDisplay(c.last))}</td>
       </tr>`).join('');
   }
-  function openClientCard(key){
+  const CP_COLORS = ['#0a8f78','#5B2C91','#e0a030','#c2552d','#2f7dd1','#7a8b6f','#b83280','#64748b'];
+  let clientCardKey = '';
+  function cpDaysLeft(iso){
+    if(!iso) return null;
+    const a = new Date(iso + 'T00:00:00'), t = new Date(); t.setHours(0,0,0,0);
+    return isNaN(a.getTime()) ? null : Math.round((a - t) / 86400000);
+  }
+  function cpMonthLabel(y, m){ return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m] + (y % 100 ? " '" + String(y).slice(2) : ''); }
+  let clientCardRange = 'all';   // 'all' | 'year'
+  function setClientRange(r){ clientCardRange = r; openClientCard(clientCardKey, true); }
+  function openClientCard(key, keepRange){
     const c = buildInwardClients(getVisibleInwardEntries()).find(x => x.key === key);
     if(!c) return;
-    const countBy = (field) => { const m = {}; c.entries.forEach(e => { const v = e[field]; if(v) m[v] = (m[v]||0)+1; }); return Object.entries(m); };
-    const pills = (arr, prefix) => arr.map(([k,n]) => `<span class="inward-cat-pill">${prefix}${escapeHtml(k)}: ${n}</span>`).join('');
-    const initials = (c.name||'?').trim().split(/\s+/).slice(0,2).map(w => w[0]||'').join('').toUpperCase() || '?';
-    document.getElementById('clientCardBody').innerHTML = `
-      <div class="client-card-head">
-        <div class="client-card-avatar">${escapeHtml(initials)}</div>
-        <div>
-          <div style="font-size:17px;font-weight:800;">${escapeHtml(c.name || 'Unnamed client')}</div>
-          <div style="font-size:12.5px;color:var(--wa-text-soft);"><b style="color:var(--wa-header);">${c.id}</b> · 📞 ${escapeHtml(c.key)}</div>
-          ${c.names.length>1 ? `<div style="font-size:11.5px;color:var(--wa-text-soft);margin-top:2px;">Also entered as: ${c.names.filter(n => n !== c.name).map(escapeHtml).join(', ')}</div>` : ''}
+    if(!keepRange) clientCardRange = 'all';
+    clientCardKey = key;
+    const esc = escapeHtml, fmt = inwardFmtAmt;
+    const prodOf = e => String(e.productType||'Other').trim().toUpperCase() || 'OTHER';
+    // A policy is "Renewed" when a later entry exists for the same product.
+    const status = e => {
+      const d = cpDaysLeft(e.red);
+      if(d === null) return { cls:'ok', text:'Active', d:null, kind:'active' };
+      const renewed = c.entries.some(o => o !== e && prodOf(o) === prodOf(e) && (o.red||'') > (e.red||''));
+      if(d < 0) return renewed ? { cls:'done', text:'Renewed', d, kind:'renewed' } : { cls:'exp', text:'Expired ' + (-d) + 'd ago', d, kind:'expired' };
+      if(d <= 30) return { cls:'soon', text:'Due in ' + d + 'd', d, kind:'soon' };
+      return { cls:'ok', text:'Active · ' + d + 'd left', d, kind:'active' };
+    };
+    const allRows = c.entries.map(e => ({ e, st: status(e) }));
+    const cutoff = (() => { const d = new Date(); d.setFullYear(d.getFullYear() - 1); return isoLocal(d); })();
+    const rows = clientCardRange === 'year' ? allRows.filter(r => (r.e.inwardDate || '') >= cutoff) : allRows;
+    const live = rows.filter(r => r.st.kind === 'active' || r.st.kind === 'soon');
+    const activePremium = live.reduce((sum, r) => sum + (Number(r.e.grossPremium)||0), 0);
+    const upcoming = allRows.filter(r => r.e.red && r.st.d !== null && r.st.d >= 0).sort((a,b) => a.e.red.localeCompare(b.e.red));
+    const next = upcoming[0];
+
+    // product mix donut
+    const mix = {};
+    rows.forEach(({ e }) => { const k = prodOf(e); mix[k] = mix[k] || { n:0, prem:0 }; mix[k].n++; mix[k].prem += Number(e.grossPremium)||0; });
+    const mixList = Object.entries(mix).sort((a,b) => b[1].n - a[1].n || b[1].prem - a[1].prem);
+    const colorOf = {}; mixList.forEach(([k], i) => colorOf[k] = CP_COLORS[i % CP_COLORS.length]);
+    const R = 40, CIRC = 2 * Math.PI * R; let off = 0;
+    const arcs = mixList.map(([k, v]) => { const len = v.n / Math.max(1, rows.length) * CIRC; const seg = `<circle r="${R}" cx="60" cy="60" fill="none" stroke="${colorOf[k]}" stroke-width="20" stroke-dasharray="${len.toFixed(2)} ${(CIRC-len).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}" transform="rotate(-90 60 60)"/>`; off += len; return seg; }).join('');
+    const donut = `<svg viewBox="-6 -6 132 132" width="200" height="200" style="display:block;margin:auto;overflow:visible;">${arcs}<text x="60" y="58" text-anchor="middle" font-size="20" font-weight="800" fill="#0a6a59">${rows.length}</text><text x="60" y="73" text-anchor="middle" font-size="8" font-weight="700" fill="#7b8c87">POLICIES</text></svg>`;
+    const legend = mixList.map(([k, v]) => `<div><span class="cp-dot" style="background:${colorOf[k]}"></span>${esc(k)}<em>${v.n} · ₹${fmt(v.prem)}</em></div>`).join('');
+
+    // 12-month renewal calendar (by Renewal/End date)
+    const now = new Date(); const months = [];
+    for(let i = 0; i < 12; i++){ const d = new Date(now.getFullYear(), now.getMonth() + i, 1); months.push({ y:d.getFullYear(), m:d.getMonth(), key: d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'), n:0, items:[] }); }
+    upcoming.forEach(r => { const mo = months.find(x => x.key === r.e.red.slice(0,7)); if(mo){ mo.n++; mo.items.push((r.e.productType||'Policy') + (r.e.company ? ' – ' + r.e.company : '')); } });
+    const maxN = Math.max(1, ...months.map(m => m.n));
+    const later = upcoming.filter(r => !months.some(x => x.key === r.e.red.slice(0,7))).length;
+    const cal = `<div class="cp-cal">${months.map((mo, i) => {
+      const h = mo.n ? 22 + Math.round(mo.n / maxN * 62) : 4;
+      const soon = i < 2 && mo.n;
+      return `<div class="cp-cal-col ${i===0?'now':''}" title="${esc(mo.items.join('; '))}"><div class="cp-cal-bar ${mo.n ? (soon ? 'soon' : 'has') : ''}" style="height:${h}px;">${mo.n || ''}</div><span>${cpMonthLabel(mo.y, mo.m).split(' ')[0]}</span></div>`;
+    }).join('')}</div>` + (later ? `<div style="font-size:11px;color:#7b8c87;margin-top:6px;">+ ${later} renewal${later>1?'s':''} beyond the next 12 months</div>` : '');
+    const renList = upcoming.slice(0, 6).map(r => `<div class="cp-ren-row"><span class="cp-dot" style="background:${colorOf[prodOf(r.e)]}"></span><div><b>${esc(r.e.productType||'Policy')}${r.e.productDetails ? ' — ' + esc(r.e.productDetails) : ''}</b><br><small>${esc(r.e.company||'')} · ${esc(formatInwardDateDisplay(r.e.red))}</small></div><span class="cp-badge ${r.st.cls}">${r.st.text}</span></div>`).join('');
+
+    // policy cards
+    const polCards = rows.map(({ e, st }) => {
+      const k = prodOf(e);
+      const s0 = e.rsd ? new Date(e.rsd + 'T00:00:00').getTime() : NaN, e0 = e.red ? new Date(e.red + 'T00:00:00').getTime() : NaN;
+      const pct = (!isNaN(s0) && !isNaN(e0) && e0 > s0) ? Math.max(0, Math.min(100, Math.round((Date.now() - s0) / (e0 - s0) * 100))) : 0;
+      return `<div class="cp-pol" onclick="closeClientCard(); ${canAccessInwardEntry(e) ? `openInwardModal('${e.id}')` : ''}">
+        <div class="cp-pol-top"><div class="cp-pol-ico" style="background:${colorOf[k]}">${esc(k.charAt(0))}</div>
+          <div><div class="cp-pol-title">${esc(e.productType||'Policy')}${e.productDetails ? ' — ' + esc(e.productDetails) : ''}</div><div class="cp-pol-co">${esc(e.company||'')}${e.category ? ' · ' + esc(e.category) : ''}${e.type ? ' · ' + esc(e.type) : ''}</div></div>
+          <span class="cp-badge ${st.cls}">${st.text}</span></div>
+        <div class="cp-pol-grid">
+          <div><span>Policy no.</span><b>${esc(e.policyNo||'—')}</b></div>
+          <div><span>Premium</span><b>${(e.grossPremium!==null && e.grossPremium!==undefined && e.grossPremium!=='') ? '₹' + fmt(e.grossPremium) : '—'}</b></div>
+          <div><span>Starts</span><b>${esc(formatInwardDateDisplay(e.rsd)||'—')}</b></div>
+          <div><span>Renews / ends</span><b>${esc(formatInwardDateDisplay(e.red)||'—')}</b></div>
         </div>
-      </div>
-      <div class="client-stats">
-        <div class="client-stat"><b>${c.entries.length}</b><span>Business entries</span></div>
-        <div class="client-stat"><b>₹${inwardFmtAmt(c.gross)}</b><span>Gross premium</span></div>
-        <div class="client-stat"><b>₹${inwardFmtAmt(c.net)}</b><span>Net premium</span></div>
-        <div class="client-stat"><b>₹${inwardFmtAmt(c.payout)}</b><span>Payout premium</span></div>
-      </div>
-      <div class="client-break">${pills(countBy('category'),'')}${pills(countBy('type'),'')}${pills(countBy('company'),'')}</div>
-      <table>
-        <thead><tr><th>Inward</th><th>SLR</th><th>Category</th><th>Type</th><th>Company</th><th>Product</th><th>Policy No.</th><th style="text-align:right;">Gross</th><th>Status</th></tr></thead>
-        <tbody>${c.entries.map(e => `
-          <tr onclick="closeClientCard(); ${canAccessInwardEntry(e) ? `openInwardModal('${e.id}')` : ''}">
-            <td>${escapeHtml(formatInwardDateDisplay(e.inwardDate))}</td><td>${e.slrNo||''}</td>
-            <td>${escapeHtml(e.category||'')}</td><td>${escapeHtml(e.type||'')}</td><td>${escapeHtml(e.company||'')}</td>
-            <td>${escapeHtml(e.productType||'')}${e.productDetails ? ' — '+escapeHtml(e.productDetails) : ''}</td>
-            <td>${escapeHtml(e.policyNo||'')}</td>
-            <td style="text-align:right;font-weight:700;">${(e.grossPremium!==null && e.grossPremium!==undefined && e.grossPremium!=='') ? inwardFmtAmt(e.grossPremium) : ''}</td>
-            <td>${escapeHtml(e.policyStatus||'')}</td>
-          </tr>`).join('')}</tbody>
-      </table>`;
+        <div class="cp-prog ${st.cls}"><i style="width:${pct}%"></i></div></div>`;
+    }).join('');
+
+    const initials = (c.name||'?').trim().split(/\s+/).slice(0,2).map(w => w[0]||'').join('').toUpperCase() || '?';
+    const firstDate = c.entries.reduce((m, e) => (e.inwardDate && (!m || e.inwardDate < m)) ? e.inwardDate : m, '');
+    const masked = c.key.slice(0,2) + 'XXXXX' + c.key.slice(-3);
+    document.getElementById('clientCardBody').innerHTML = `
+      <div class="cp-range"><button class="${clientCardRange==='year'?'active':''}" onclick="setClientRange('year')">Last 1 year</button><button class="${clientCardRange==='all'?'active':''}" onclick="setClientRange('all')">All time</button></div>
+      <div id="clientPortfolio">
+        <div class="cp-hero">
+          <div class="cp-avatar">${esc(initials)}</div>
+          <div><div class="cp-name">${esc(c.name || 'Valued client')}</div>
+            <div class="cp-sub"><span>${c.id}</span><span>📞 <span class="cp-mobile" data-full="${esc(c.key)}" data-masked="${masked}">${esc(c.key)}</span></span>${firstDate ? `<span>Client since ${esc(formatInwardDateDisplay(firstDate))}</span>` : ''}</div></div>
+          <div class="cp-tag">Insurance portfolio · ${clientCardRange === 'year' ? 'Last 12 months' : 'All time'}<b>${rows.length} polic${rows.length===1?'y':'ies'}</b></div>
+        </div>
+        <div class="cp-stats">
+          <div class="cp-stat"><b>${live.length}</b><span>Active policies</span></div>
+          <div class="cp-stat"><b>₹${fmt(activePremium)}</b><span>Annual premium (active)</span></div>
+          <div class="cp-stat"><b>${mixList.length}</b><span>Product${mixList.length===1?'':'s'} covered</span></div>
+          <div class="cp-stat"><b>${next ? esc(formatInwardDateDisplay(next.e.red)) : '—'}</b><span>${next ? 'Next renewal · ' + next.st.d + ' days' : 'Next renewal'}</span></div>
+        </div>
+        <div class="cp-body">
+          <div class="cp-h">Product mix</div>
+          <div class="cp-two"><div>${donut}</div><div class="cp-legend">${legend}</div></div>
+          <div class="cp-h">Renewal calendar — next 12 months (all policies)</div>
+          ${cal}
+          ${renList ? `<div class="cp-ren">${renList}</div>` : ''}
+          <div class="cp-h">${clientCardRange === 'year' ? 'Policies in the last 12 months' : 'All policies'}</div>
+          <div class="cp-policies">${polCards || '<div style="grid-column:1/-1;color:#7b8c87;font-size:13px;padding:6px 0;">No policies in this period.</div>'}</div>
+        </div>
+        <div class="cp-foot">Policy summary as of ${esc(formatInwardDateDisplay(isoLocal(new Date())))} · please confirm exact dates and cover on your policy documents</div>
+      </div>`;
     document.getElementById('clientCardOverlay').classList.add('open');
+  }
+  function loadHtml2Canvas(){
+    return new Promise((resolve, reject) => {
+      if(window.html2canvas) return resolve(window.html2canvas);
+      const sc = document.createElement('script');
+      sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+      sc.onload = () => resolve(window.html2canvas); sc.onerror = () => reject(new Error('load failed'));
+      document.head.appendChild(sc);
+    });
+  }
+  async function shareClientCard(share){
+    const el = document.getElementById('clientPortfolio'); if(!el) return;
+    const btns = [document.getElementById('clientCardShareBtn'), document.getElementById('clientCardDlBtn')];
+    btns.forEach(b => b.disabled = true);
+    const mobiles = Array.from(el.querySelectorAll('.cp-mobile'));
+    try{
+      const h2c = await loadHtml2Canvas();
+      mobiles.forEach(m => m.textContent = m.dataset.masked);        // never put the full number in a shared image
+      const canvas = await h2c(el, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+      mobiles.forEach(m => m.textContent = m.dataset.full);
+      const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+      const fname = 'Portfolio-' + (clientCardKey || 'client') + '.png';
+      const file = new File([blob], fname, { type:'image/png' });
+      if(share && navigator.canShare && navigator.canShare({ files:[file] })){
+        try{ await navigator.share({ files:[file], title:'Insurance portfolio' }); return; }catch(err){ if(err && err.name === 'AbortError') return; }
+      }
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fname; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      if(share) alert('Sharing from this device isn\'t available, so the image was downloaded — you can send it from your files.');
+    }catch(err){
+      console.error(err);
+      alert('Could not create the image. Please check your internet connection and try again.');
+    }finally{
+      mobiles.forEach(m => m.textContent = m.dataset.full);
+      btns.forEach(b => b.disabled = false);
+    }
   }
   function closeClientCard(){ document.getElementById('clientCardOverlay').classList.remove('open'); }
 
