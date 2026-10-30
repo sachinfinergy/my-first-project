@@ -7490,6 +7490,8 @@
       </div>`;
   }
 
+  let inwardCoProduct = '';
+  function setInwardCoProduct(v){ inwardCoProduct = v; renderInwardDashboard(); }
   function renderInwardDashboard(){
     const entries = getVisibleInwardEntries();
     const tier = getInwardAccessTier();
@@ -7585,8 +7587,18 @@
       : `<div class="dash-empty">No entries with an RM for these filters.</div>`;
 
     // Company-wise: same filters as above; company names are merged ignoring case/extra spaces.
+    const prodNorm = e => String(e.productType||'').trim().replace(/\s+/g,' ').toUpperCase();
+    const prodCount = {};
+    fl.forEach(e => { if(String(e.company||'').trim()){ const k = prodNorm(e) || '(NO PRODUCT)'; prodCount[k] = (prodCount[k]||0) + 1; } });
+    const prodList = Object.keys(prodCount).sort((a,b) => prodCount[b] - prodCount[a]);
+    if(inwardCoProduct && !prodList.includes(inwardCoProduct)) inwardCoProduct = '';
+    const prodPills = prodList.length ? `<div class="client-view-toggle" style="flex-wrap:wrap; gap:6px; margin:0 0 12px;">
+        <button class="${inwardCoProduct===''?'active':''}" style="border-radius:16px; border-left:1.5px solid var(--wa-header);" onclick="setInwardCoProduct('')">All products</button>
+        ${prodList.map(k => `<button class="${inwardCoProduct===k?'active':''}" style="border-radius:16px; border-left:1.5px solid var(--wa-header);" onclick="setInwardCoProduct(decodeURIComponent('${encodeURIComponent(k)}'))">${escapeHtml(k)} · ${prodCount[k]}</button>`).join('')}
+      </div>` : '';
     const coAgg = {};
     fl.forEach(e => {
+      if(inwardCoProduct && (prodNorm(e) || '(NO PRODUCT)') !== inwardCoProduct) return;
       const raw = String(e.company||'').trim().replace(/\s+/g,' ');
       if(!raw) return;
       const key = raw.toLowerCase();
@@ -7626,7 +7638,7 @@
         </tbody>
       </table></div>`;
     const companyHtml = coSorted.length
-      ? filterNote + rmLegend + coBars + coTable
+      ? filterNote + prodPills + rmLegend + coBars + coTable
       : `<div class="dash-empty">No entries with a company for these filters.</div>`;
 
     const recent = entries.slice().sort((a,b) => (b.createdAt||0) - (a.createdAt||0)).slice(0,8);
@@ -7651,7 +7663,7 @@
         <div class="dash-section"><h3>Policy Status</h3>${statusHtml}</div>
       </div>
       <div class="dash-section"><h3>Relationship Manager wise (Payout · New / Renewal / Endorsement)</h3>${rmHtml}</div>
-      <div class="dash-section"><h3>Company wise (Payout · New / Renewal / Endorsement)</h3>${companyHtml}</div>
+      <div class="dash-section"><h3>Company wise (Payout · New / Renewal / Endorsement)${inwardCoProduct ? ' — ' + escapeHtml(inwardCoProduct) : ''}</h3>${companyHtml}</div>
       <div class="dash-section"><h3>Recent entries</h3>${recentHtml}</div>
     `;
   }
