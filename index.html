@@ -7481,6 +7481,9 @@
     const m = agg(motorList), o = agg(otherList), t = agg(inRange);
     const pct = (a, b) => b > 0 ? Math.round(a / b * 100) : 0;
     const motorShare = pct(m.payout, t.payout);
+    const tpAll = motorList.filter(e => tpCanonical(e));
+    const tp = agg(tpAll), nonTpMotor = agg(motorList.filter(e => !tpCanonical(e)));
+    const tpShare = pct(tp.payout, t.payout), nonTpShare = Math.max(0, motorShare - tpShare), otherShare = 100 - tpShare - nonTpShare;
 
     const card = (title, color, a) => `
       <div class="kpi-card" style="text-align:left; border-top:4px solid ${color};">
@@ -7530,15 +7533,17 @@
         </div>` : ''}
         <div style="font-size:12.5px; color:var(--wa-text-soft); margin-bottom:10px;">${escapeHtml(range.label)} · by Inward Date${lobLabel}</div>
         <div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));">
-          ${card('🚗 Total Motor', 'var(--wa-header)', m)}
+          ${card('🚗 Total Motor (excl. TP)', 'var(--wa-header)', nonTpMotor)}
+          ${card('🛡️ TP Business (Motor Third Party)', '#5B2C91', tp).replace('</div>\n    ', '</div>\n    ').replace(/(Gross [^<]*<\/div>)/, `$1<div style="font-size:12px; font-weight:700; color:#5B2C91; margin-top:4px;">${pct(tp.payout, m.payout)}% of all Motor · Motor incl. TP ${fmtINR(m.payout)}</div>`)}
           ${card('📦 All Other Business', 'var(--wa-amber)', o)}
           ${card('Total Business', 'var(--wa-sage)', t)}
         </div>
         ${t.count ? `
-        <div style="margin:14px 0 4px; font-size:12px; font-weight:700; color:var(--wa-text-soft);">Share of Payout Premium</div>
+        <div style="margin:14px 0 4px; font-size:12px; font-weight:700; color:var(--wa-text-soft);">Share of Payout Premium (Motor excl. TP · TP · Other business)</div>
         <div style="display:flex; height:22px; border-radius:11px; overflow:hidden; background:var(--wa-border);">
-          <div style="width:${motorShare}%; background:var(--wa-header); color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center;">${motorShare >= 8 ? 'Motor ' + motorShare + '%' : ''}</div>
-          <div style="width:${100 - motorShare}%; background:var(--wa-amber); color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center;">${(100 - motorShare) >= 8 ? 'Other ' + (100 - motorShare) + '%' : ''}</div>
+          <div title="Motor excl. TP: ${fmtINR(nonTpMotor.payout)}" style="width:${nonTpShare}%; background:var(--wa-header); color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden;">${nonTpShare >= 10 ? 'Motor ' + nonTpShare + '%' : ''}</div>
+          <div title="TP: ${fmtINR(tp.payout)}" style="width:${tpShare}%; background:#5B2C91; color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden;">${tpShare >= 10 ? 'TP ' + tpShare + '%' : ''}</div>
+          <div title="Other business: ${fmtINR(o.payout)}" style="width:${otherShare}%; background:var(--wa-amber); color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden;">${otherShare >= 8 ? 'Other business ' + otherShare + '%' : ''}</div>
         </div>` : `<div class="dash-empty" style="margin-top:12px;">No Inward entries for this period.</div>`}
         ${buildMotorTpHtml(motorList, fmtINR, range)}
         <div style="margin:16px 0 6px; font-size:12px; font-weight:700; color:var(--wa-text-soft);">What's inside “All Other Business” (Payout · entries)</div>
@@ -7618,8 +7623,8 @@
           <thead><tr style="color:var(--wa-text-soft); font-size:10.5px; text-transform:uppercase;"><th style="padding:6px 8px; text-align:left;">Product details</th><th style="${th}">Entries</th><th style="${th}">Gross</th><th style="${th}">Net</th><th style="${th}">Payout</th><th style="${th}">Share of TP</th></tr></thead>
           <tbody>${tpRows}
             ${sumRow('Total TP', T, true, '2px solid var(--wa-border)')}
-            ${sumRow('Other Motor (comprehensive, OD only, etc.)', N, false)}
-            ${sumRow('Total Motor', M, true, '2px solid var(--wa-border)')}
+            ${sumRow('Motor excl. TP (comprehensive, OD only, etc.)', N, false)}
+            ${sumRow('Total Motor incl. TP', M, true, '2px solid var(--wa-border)')}
           </tbody></table></div>
         <div style="font-size:13px; font-weight:800; margin:20px 0 6px;">Company wise product breakup</div>
         <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">${scopePill('tp','TP business')}${scopePill('motor','All Motor')}<span style="font-size:11.5px; color:var(--wa-text-soft);">Each cell: payout premium and number of entries</span></div>
