@@ -7461,6 +7461,7 @@
       const t = isoLocal(lastDay > today ? today : lastDay);
       return { from:f, to:t, label: MONTH_SHORT[m] + ' ' + y + ' (' + nice(f) + ' to ' + nice(t) + ')' };
     }
+    if(inwardSplitPeriod === 'all'){ return { from:'0000-01-01', to:isoLocal(today), label:'All time (everything inwarded so far)' }; }
     if(inwardSplitPeriod === 'today'){ const s = isoLocal(today); return { from:s, to:s, label:'Today (' + nice(s) + ')' }; }
     if(inwardSplitPeriod === 'last7'){ const f = isoLocal(addDays(-6)), t = isoLocal(today); return { from:f, to:t, label:'Last 7 days (' + nice(f) + ' to ' + nice(t) + ')' }; }
     if(inwardSplitPeriod === 'month'){ const f = isoLocal(new Date(today.getFullYear(), today.getMonth(), 1)), t = isoLocal(today); return { from:f, to:t, label:'This month (' + nice(f) + ' to ' + nice(t) + ')' }; }
@@ -7511,7 +7512,7 @@
       <div class="dash-section">
         <h3>Motor vs All Other Business</h3>
         <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px;">
-          ${chip('yesterday','Yesterday')}${chip('today','Today')}${chip('last7','Last 7 days')}${chip('month','This month')}
+          ${chip('yesterday','Yesterday')}${chip('today','Today')}${chip('last7','Last 7 days')}${chip('month','This month')}${chip('all','All time')}
           <select onchange="setInwardSplitMonth(this.value)" title="Pick a month" style="${ctrlStyle} ${inwardSplitPeriod==='monthpick'?'border-color:var(--wa-header); background:var(--wa-header); color:var(--wa-header-text);':''}">
             <option value="" ${inwardSplitPeriod==='monthpick'?'':'selected'}>Select month</option>
             ${monthOpts}
@@ -7539,8 +7540,90 @@
           <div style="width:${motorShare}%; background:var(--wa-header); color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center;">${motorShare >= 8 ? 'Motor ' + motorShare + '%' : ''}</div>
           <div style="width:${100 - motorShare}%; background:var(--wa-amber); color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center;">${(100 - motorShare) >= 8 ? 'Other ' + (100 - motorShare) + '%' : ''}</div>
         </div>` : `<div class="dash-empty" style="margin-top:12px;">No Inward entries for this period.</div>`}
+        ${buildMotorTpHtml(motorList, fmtINR, range)}
         <div style="margin:16px 0 6px; font-size:12px; font-weight:700; color:var(--wa-text-soft);">What's inside “All Other Business” (Payout · entries)</div>
         ${otherHtml}
+      </div>`;
+  }
+
+  // ---------- Motor: third-party (TP) product details + company-wise product matrix ----------
+  const TP_DETAILS = ['TP-4W TAXI','TP-GCCV-PUBLIC CARRIER','TP-GCCV-PVT CARRIER','TP-PVT CAR','TP-TW','TP- TAXI-BUS','TP-TAXI- SCHOOL BUS','TP TW-TAXI','TP-MISCELLANEOUS'];
+  let inwardMatrixScope = 'tp';   // 'tp' | 'motor' | 'all'
+  function setInwardMatrixScope(v){ inwardMatrixScope = v; renderInwardDashboard(); }
+  const tpKey = v => String(v||'').toUpperCase().replace(/[\s\-]+/g, '');
+  const TP_KEYS = TP_DETAILS.map(tpKey);
+  function tpCanonical(e){
+    const k = tpKey(e.productDetails);
+    const i = TP_KEYS.indexOf(k);
+    if(i >= 0) return TP_DETAILS[i];
+    return k.startsWith('TP') ? String(e.productDetails||'').trim().toUpperCase() : '';   // any other TP-like detail keeps its own row
+  }
+  function buildMotorTpHtml(motorList, fmtINR, range){
+    const num = (e, f) => Number(e[f]) || 0;
+    const agg = list => ({ count:list.length, gross:list.reduce((s,e)=>s+num(e,'grossPremium'),0), net:list.reduce((s,e)=>s+num(e,'netPremium'),0), payout:list.reduce((s,e)=>s+num(e,'payoutPremium'),0) });
+    const tpList = motorList.filter(e => tpCanonical(e)), nonTp = motorList.filter(e => !tpCanonical(e));
+    const T = agg(tpList), N = agg(nonTp), M = agg(motorList);
+    const share = (a, b) => b > 0 ? Math.round(a / b * 100) + '%' : '—';
+    const extra = Array.from(new Set(tpList.map(tpCanonical))).filter(k => !TP_DETAILS.includes(k));
+    const details = TP_DETAILS.concat(extra);
+    const byDetail = {}; details.forEach(k => byDetail[k] = []); tpList.forEach(e => byDetail[tpCanonical(e)].push(e));
+    const maxP = Math.max(1, ...details.map(k => agg(byDetail[k]).payout));
+    const td = 'padding:7px 8px; text-align:right;';
+    const tpRows = details.map(k => { const a = agg(byDetail[k]); const w = Math.round(a.payout / maxP * 100);
+      return `<tr style="border-top:1px solid var(--wa-border); ${a.count ? '' : 'color:var(--wa-text-soft);'}">
+        <td style="padding:7px 8px; font-weight:700;">${escapeHtml(k)}</td><td style="${td}">${a.count}</td><td style="${td}">${fmtINR(a.gross)}</td><td style="${td}">${fmtINR(a.net)}</td>
+        <td style="${td} font-weight:800; background:linear-gradient(90deg, rgba(0,128,105,.16) ${w}%, transparent ${w}%);">${fmtINR(a.payout)}</td><td style="${td}">${share(a.payout, T.payout)}</td></tr>`; }).join('');
+    const sumRow = (label, a, bold, top) => `<tr style="border-top:${top||'1px solid var(--wa-border)'}; ${bold ? 'font-weight:800;' : ''}"><td style="padding:7px 8px;">${label}</td><td style="${td}">${a.count}</td><td style="${td}">${fmtINR(a.gross)}</td><td style="${td}">${fmtINR(a.net)}</td><td style="${td}">${fmtINR(a.payout)}</td><td style="${td}">${bold ? share(a.payout, M.payout) + ' of Motor' : share(a.payout, M.payout)}</td></tr>`;
+    const th = 'padding:6px 8px; text-align:right;';
+
+    // company x product matrix
+    const scopeList = inwardMatrixScope === 'tp' ? tpList : motorList;
+    const colOf = inwardMatrixScope === 'tp' ? tpCanonical : (e => (String(e.productDetails||'').trim().replace(/\s+/g,' ').toUpperCase() || '(NO DETAILS)'));
+    const scopeLabel = inwardMatrixScope === 'tp' ? 'TP business' : 'All Motor';
+    const co = e => String(e.company||'').trim().replace(/\s+/g,' ') || '(No company)';
+    const cells = {}, rowTot = {}, colTot = {}, coName = {};
+    scopeList.forEach(e => { const c = co(e).toLowerCase(), k = colOf(e); coName[c] = coName[c] || co(e);
+      const a = (cells[c] = cells[c] || {}); const x = (a[k] = a[k] || { p:0, n:0 }); x.p += num(e,'payoutPremium'); x.n++;
+      const r = (rowTot[c] = rowTot[c] || { p:0, n:0 }); r.p += num(e,'payoutPremium'); r.n++;
+      const t = (colTot[k] = colTot[k] || { p:0, n:0 }); t.p += num(e,'payoutPremium'); t.n++; });
+    const cols = Object.keys(colTot).sort((a,b) => {
+      const ia = TP_DETAILS.indexOf(a), ib = TP_DETAILS.indexOf(b);
+      if(ia >= 0 || ib >= 0) return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+      return colTot[b].p - colTot[a].p; });
+    const companies = Object.keys(rowTot).sort((a,b) => rowTot[b].p - rowTot[a].p);
+    const maxCell = Math.max(1, ...companies.flatMap(c => Object.values(cells[c]).map(x => x.p)));
+    const scopePill = (v, label) => `<button class="inward-person-chip ${inwardMatrixScope===v?'active':''}" onclick="setInwardMatrixScope('${v}')">${label}</button>`;
+    const matrix = companies.length ? `
+      <div style="overflow-x:auto; margin-top:8px;">
+      <table style="border-collapse:collapse; font-size:12px; min-width:100%;">
+        <thead><tr style="color:var(--wa-text-soft); font-size:10.5px; text-transform:uppercase;">
+          <th style="padding:6px 8px; text-align:left; position:sticky; left:0; background:#fff;">Company</th>
+          ${cols.map(k => `<th style="${th} min-width:92px;">${escapeHtml(k)}</th>`).join('')}<th style="${th}">Total</th></tr></thead>
+        <tbody>${companies.map(c => `<tr style="border-top:1px solid var(--wa-border);">
+          <td style="padding:7px 8px; font-weight:700; position:sticky; left:0; background:#fff; white-space:nowrap;">${escapeHtml(coName[c])}</td>
+          ${cols.map(k => { const x = cells[c][k]; if(!x) return `<td style="${td} color:#c4c9c7;">–</td>`;
+            const a = (0.12 + 0.5 * x.p / maxCell).toFixed(2);
+            return `<td style="${td} background:rgba(0,128,105,${a});" title="${escapeHtml(coName[c])} · ${escapeHtml(k)}: ${fmtINR(x.p)} · ${x.n} entr${x.n===1?'y':'ies'}"><b>${fmtINR(x.p)}</b><br><span style="font-size:10.5px; color:var(--wa-text-soft);">${x.n} entr${x.n===1?'y':'ies'}</span></td>`; }).join('')}
+          <td style="${td} font-weight:800;">${fmtINR(rowTot[c].p)}<br><span style="font-size:10.5px; font-weight:600; color:var(--wa-text-soft);">${rowTot[c].n}</span></td></tr>`).join('')}
+          <tr style="border-top:2px solid var(--wa-border); font-weight:800;"><td style="padding:7px 8px; position:sticky; left:0; background:#fff;">Total</td>
+          ${cols.map(k => `<td style="${td}">${fmtINR(colTot[k].p)}<br><span style="font-size:10.5px; font-weight:600; color:var(--wa-text-soft);">${colTot[k].n}</span></td>`).join('')}
+          <td style="${td}">${fmtINR(scopeList.reduce((s,e)=>s+num(e,'payoutPremium'),0))}<br><span style="font-size:10.5px; font-weight:600; color:var(--wa-text-soft);">${scopeList.length}</span></td></tr>
+        </tbody></table></div>` : `<div class="dash-empty">No ${scopeLabel} entries in this period.</div>`;
+
+    return `
+      <div style="margin-top:22px; padding-top:16px; border-top:2px solid var(--wa-border);">
+        <div style="font-size:14px; font-weight:800; margin-bottom:2px;">🚗 Motor — Third-party (TP) product details</div>
+        <div style="font-size:12px; color:var(--wa-text-soft); margin-bottom:10px;">${escapeHtml(range.label)} · Payout premium · follows the filters above</div>
+        <div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:12.5px; min-width:560px;">
+          <thead><tr style="color:var(--wa-text-soft); font-size:10.5px; text-transform:uppercase;"><th style="padding:6px 8px; text-align:left;">Product details</th><th style="${th}">Entries</th><th style="${th}">Gross</th><th style="${th}">Net</th><th style="${th}">Payout</th><th style="${th}">Share of TP</th></tr></thead>
+          <tbody>${tpRows}
+            ${sumRow('Total TP', T, true, '2px solid var(--wa-border)')}
+            ${sumRow('Other Motor (comprehensive, OD only, etc.)', N, false)}
+            ${sumRow('Total Motor', M, true, '2px solid var(--wa-border)')}
+          </tbody></table></div>
+        <div style="font-size:13px; font-weight:800; margin:20px 0 6px;">Company wise product breakup</div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">${scopePill('tp','TP business')}${scopePill('motor','All Motor')}<span style="font-size:11.5px; color:var(--wa-text-soft);">Each cell: payout premium and number of entries</span></div>
+        ${matrix}
       </div>`;
   }
 
