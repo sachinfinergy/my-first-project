@@ -2499,7 +2499,9 @@
   let activeLabelFilter = ''; // labelId or '' for Any
   let activeTypeFilter = ''; // 'New' | 'Renewal' | '' for Any
   let activeLobFilter = ''; // 'GI' | 'LI' | 'Short term' | '' for Any
-  let activeOutcomeFilter = '';   // '' | 'Won' | 'Lost' | 'Other' — only used on the Completed tab
+  let activeOutcomeFilter = 'Won';   // 'Won' | 'Lost' | 'Other' — only used on the Completed tab
+  const outcomeBucket = t => t.outcome === 'Won' ? 'Won' : (t.outcome === 'Lost' ? 'Lost' : 'Other');   // completed tasks with no outcome count as Other Tasks
+  const effectiveStatus = t => t.convertedToInwardId ? 'inward' : t.status;   // once inwarded, a task lives under Inward
   let activeStatusFilter = 'open'; // 'open' | 'done' — no "All" option anymore
   let activeDirectionFilter = null; // 'given' | 'received' | null for "All" (member self-view only)
   let activeMemberFilter = ''; // memberId or '' for All team members
@@ -2598,9 +2600,10 @@
     const av = currentUserAvatarData();
     const name = currentIdentityName() || 'Team Tasks';
     if(av.photo){
-      slot.innerHTML = `<img src="${av.photo}" style="width:100%;height:100%;object-fit:cover;">`;
+      const imgTag = `<img src="${escapeHtml(av.photo)}" data-label="${escapeHtml(av.label||'?')}" referrerpolicy="no-referrer" onerror="avatarImgFailed(this)" style="width:100%;height:100%;object-fit:cover;">`;
+      slot.innerHTML = imgTag;
       slot.style.background = 'transparent';
-      railSlots.forEach(rs => { rs.innerHTML = `<img src="${av.photo}" style="width:100%;height:100%;object-fit:cover;">`; });
+      railSlots.forEach(rs => { rs.innerHTML = imgTag; });
     } else {
       slot.innerHTML = av.label;
       slot.style.background = 'rgba(0,0,0,0.12)';
@@ -4432,20 +4435,19 @@
       </div>`).join('');
     row.innerHTML = html;
   }
-  function setOutcomeFilter(v){ activeOutcomeFilter = (activeOutcomeFilter === v) ? '' : v; renderAll(); }
+  function setOutcomeFilter(v){ activeOutcomeFilter = v; renderAll(); }
   function renderOutcomeFilterRow(doneList){
     const row = document.getElementById('outcomeFilterRow');
     if(!row) return;
     if(activeStatusFilter !== 'done'){ row.style.display = 'none'; row.innerHTML = ''; return; }
-    const n = o => doneList.filter(t => t.outcome === o).length;
+    const n = o => doneList.filter(t => outcomeBucket(t) === o).length;
     const pill = (val, cls, label, count) => `<button class="outcome-filter-pill ${cls} ${activeOutcomeFilter===val?'active':''}" onclick="setOutcomeFilter('${val}')">${label}<small>${count}</small></button>`;
     row.style.display = 'flex';
-    row.innerHTML = `<button class="outcome-filter-pill all ${activeOutcomeFilter===''?'active':''}" onclick="activeOutcomeFilter=''; renderAll();">All<small>${doneList.length}</small></button>`
-      + pill('Won','won','🏆 Won', n('Won')) + pill('Lost','lost','❌ Lost', n('Lost')) + pill('Other','other','📋 Other Tasks', n('Other'));
+    row.innerHTML = pill('Won','won','🏆 Won', n('Won')) + pill('Lost','lost','❌ Lost', n('Lost')) + pill('Other','other','📋 Other Tasks', n('Other'));
   }
   function setStatusFilter(status){
     activeStatusFilter = status;
-    activeOutcomeFilter = '';
+    activeOutcomeFilter = 'Won';
     renderAll();
   }
 
@@ -4629,10 +4631,23 @@
     renderAll();
   }
 
+  // If a profile picture can't be loaded (deleted file, blocked link, bad format), show the initials instead of a broken image.
+  function avatarImgFailed(img){
+    try{
+      console.warn('Profile picture failed to load:', img.getAttribute('src'));
+      const box = img.parentElement, label = img.dataset.label || '?', color = img.dataset.color || '#999';
+      if(box){
+        box.style.padding = ''; box.style.overflow = '';
+        if(!box.classList.contains('avatar')){ box.textContent = label; return; }   // header / rail slots
+        box.style.background = color; box.style.color = color === 'var(--wa-header)' ? 'var(--wa-header-text)' : '#fff';
+        box.textContent = label;
+      }
+    }catch(e){}
+  }
   function avatarHtml(av, sizeClass){
     const cls = 'avatar' + (sizeClass ? ' ' + sizeClass : '');
     if(av.photo){
-      return `<div class="${cls}" style="padding:0; overflow:hidden;"><img src="${av.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;"></div>`;
+      return `<div class="${cls}" style="padding:0; overflow:hidden;"><img src="${escapeHtml(av.photo)}" data-label="${escapeHtml(av.label||'?')}" data-color="${escapeHtml(av.color||'#999')}" referrerpolicy="no-referrer" loading="lazy" onerror="avatarImgFailed(this)" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;"></div>`;
     }
     const isBrandColor = av.color === 'var(--wa-header)';
     const textColor = isBrandColor ? 'var(--wa-header-text)' : '#fff';
@@ -4699,7 +4714,7 @@
         return assignee && assignee.name.toLowerCase().includes(q);
       });
     }
-    if(activeStatusFilter) relevantTasks = relevantTasks.filter(t => t.status === activeStatusFilter);
+    if(activeStatusFilter) relevantTasks = relevantTasks.filter(t => effectiveStatus(t) === activeStatusFilter);
     if(activeCategoryFilter) relevantTasks = relevantTasks.filter(t => t.category === activeCategoryFilter);
     if(activeTypeFilter) relevantTasks = relevantTasks.filter(t => t.taskType === activeTypeFilter);
     if(activeLobFilter) relevantTasks = relevantTasks.filter(t => t.lineOfBusiness === activeLobFilter);
@@ -4709,7 +4724,7 @@
       relevantTasks = relevantTasks.filter(t => t.taskType === 'Renewal');
     }
     renderOutcomeFilterRow(relevantTasks);
-    if(activeStatusFilter === 'done' && activeOutcomeFilter) relevantTasks = relevantTasks.filter(t => t.outcome === activeOutcomeFilter);
+    if(activeStatusFilter === 'done') relevantTasks = relevantTasks.filter(t => outcomeBucket(t) === (activeOutcomeFilter || 'Won'));
 
     const withActivity = relevantTasks.map(t => {
       let latest = t.created;
@@ -4832,9 +4847,9 @@
     // Keep the open task visible in the list: switch to its own tab (Open / Completed / Inward) if needed,
     // clear filters that would hide it, then scroll it into view.
     let activeRow = document.querySelector('#chatList .chat-row.active');
-    if(!activeRow && activeOutcomeFilter && t.outcome !== activeOutcomeFilter){ activeOutcomeFilter = ''; renderAll(); activeRow = document.querySelector('#chatList .chat-row.active'); }
-    if(!activeRow && activeStatusFilter && t.status !== activeStatusFilter){
-      activeStatusFilter = t.status;
+    if(!activeRow && activeStatusFilter === 'done' && outcomeBucket(t) !== activeOutcomeFilter){ activeOutcomeFilter = outcomeBucket(t); renderAll(); activeRow = document.querySelector('#chatList .chat-row.active'); }
+    if(!activeRow && activeStatusFilter && effectiveStatus(t) !== activeStatusFilter){
+      activeStatusFilter = effectiveStatus(t);
       renderAll();
       activeRow = document.querySelector('#chatList .chat-row.active');
     }
@@ -7243,7 +7258,7 @@
     const av = currentUserAvatarData();
     const name = currentIdentityName() || 'Team Tasks';
     if(av.photo){
-      slot.innerHTML = `<img src="${av.photo}" style="width:100%;height:100%;object-fit:cover;">`;
+      slot.innerHTML = `<img src="${escapeHtml(av.photo)}" data-label="${escapeHtml(av.label||'?')}" referrerpolicy="no-referrer" onerror="avatarImgFailed(this)" style="width:100%;height:100%;object-fit:cover;">`;
       slot.style.background = 'transparent';
     } else {
       slot.innerHTML = av.label;
