@@ -297,6 +297,13 @@
     background:none; border:none; color: var(--wa-header); font-size:12px; cursor:pointer; font-weight:600;
   }
 
+  .outcome-filter-row{ display:flex; gap:6px; flex-wrap:wrap; padding:8px 12px 2px; }
+  .outcome-filter-pill{ border:1.5px solid var(--wa-border); background:#fff; color:var(--wa-text); font-size:12px; font-weight:700; padding:5px 12px; border-radius:16px; cursor:pointer; white-space:nowrap; font-family:inherit; }
+  .outcome-filter-pill small{ font-weight:800; opacity:.7; margin-left:3px; }
+  .outcome-filter-pill:hover{ background:#f0f0ee; }
+  .outcome-filter-pill.active{ color:#fff; border-color:transparent; }
+  .outcome-filter-pill.active.all{ background:var(--wa-sage); } .outcome-filter-pill.active.won{ background:#1d7a3a; }
+  .outcome-filter-pill.active.lost{ background:#C0392B; } .outcome-filter-pill.active.other{ background:#64748b; }
   .status-filter-row{
     display:flex; gap:0; padding: 6px 12px 4px; margin: 0 0 4px;
   }
@@ -521,8 +528,10 @@
   .outcome-pill.won{ background:#d9f2e0; color:#1d7a3a; }
   .outcome-pill.lost{ background:#fde5e2; color:#C0392B; }
   button.outcome-pill{ border:none; cursor:pointer; }
-  .outcome-choice-row{ display:flex; gap:12px; margin:16px 0 12px; }
-  .outcome-choice{ flex:1; padding:16px 10px; border-radius:12px; border:2px solid var(--wa-border); background:#fff; font-size:16px; font-weight:800; cursor:pointer; }
+  .outcome-choice-row{ display:flex; gap:8px; margin:16px 0 12px; }
+  .outcome-choice.other{ color:#475569; } .outcome-choice.other:hover, .outcome-choice.other.sel{ background:#e8edf2; border-color:#64748b; }
+  .outcome-pill.other{ background:#e8edf2; color:#475569; }
+  .outcome-choice{ flex:1; padding:16px 6px; border-radius:12px; border:2px solid var(--wa-border); background:#fff; font-size:14.5px; font-weight:800; cursor:pointer; }
   .outcome-choice.won{ color:#1d7a3a; } .outcome-choice.won:hover{ background:#d9f2e0; border-color:#1d7a3a; }
   .outcome-choice.won.sel{ background:#d9f2e0; border-color:#1d7a3a; } .outcome-choice.lost.sel{ background:#fde5e2; border-color:#C0392B; }
   .outcome-choice.lost{ color:#C0392B; } .outcome-choice.lost:hover{ background:#fde5e2; border-color:#C0392B; }
@@ -1613,6 +1622,7 @@
     </div>
     <div class="direction-filter-row" id="directionFilterRow"></div>
     <div class="status-filter-row" id="statusFilterRow"></div>
+    <div class="outcome-filter-row" id="outcomeFilterRow" style="display:none;"></div>
     <div id="backupReminderBanner"></div>
     <div class="chat-list" id="chatList"></div>
   </div>
@@ -2019,6 +2029,7 @@
     <div class="outcome-choice-row">
       <button class="outcome-choice won" id="outcomeBtnWon" onclick="pickOutcome('Won')">🏆 Won</button>
       <button class="outcome-choice lost" id="outcomeBtnLost" onclick="pickOutcome('Lost')">❌ Lost</button>
+      <button class="outcome-choice other" id="outcomeBtnOther" onclick="pickOutcome('Other')">📋 Other Tasks</button>
     </div>
     <div id="outcomeWonFields" style="display:none; margin-bottom:10px;">
       <label style="font-size:12px; font-weight:700; color:var(--wa-text-soft);">New company</label>
@@ -2111,7 +2122,7 @@
         <div class="field">
           <label>Status</label>
           <select id="taskStatusInput" onchange="updateOutcomeFieldVisibility()">
-            <option value="open">Open</option>
+            <option value="open">Pending</option>
             <option value="done">Completed</option>
             <option value="inward">Inward</option>
           </select>
@@ -2149,12 +2160,13 @@
       </div>
 
       <div class="form-section" id="taskOutcomeSection">
-        <div class="form-section-title">Outcome (Won / Lost)</div>
+        <div class="form-section-title">Outcome (Won / Lost / Other Tasks)</div>
         <div class="section-hint" id="taskOutcomeHint">Active when a New or Renewal task is marked Completed.</div>
         <div class="field">
           <div class="pill-toggle-group" id="taskOutcomeToggle">
             <button type="button" class="pill-toggle-btn" data-value="Won" onclick="selectPillToggle('taskOutcomeToggle','taskOutcomeInput',this)">🏆 Won</button>
             <button type="button" class="pill-toggle-btn" data-value="Lost" onclick="selectPillToggle('taskOutcomeToggle','taskOutcomeInput',this)">❌ Lost</button>
+            <button type="button" class="pill-toggle-btn" data-value="Other" onclick="selectPillToggle('taskOutcomeToggle','taskOutcomeInput',this)">📋 Other Tasks</button>
           </div>
           <input type="hidden" id="taskOutcomeInput">
           <input type="text" id="taskOutcomeNoteInput" placeholder="Reason / remarks (optional)" style="margin-top:8px;">
@@ -2487,6 +2499,7 @@
   let activeLabelFilter = ''; // labelId or '' for Any
   let activeTypeFilter = ''; // 'New' | 'Renewal' | '' for Any
   let activeLobFilter = ''; // 'GI' | 'LI' | 'Short term' | '' for Any
+  let activeOutcomeFilter = '';   // '' | 'Won' | 'Lost' | 'Other' — only used on the Completed tab
   let activeStatusFilter = 'open'; // 'open' | 'done' — no "All" option anymore
   let activeDirectionFilter = null; // 'given' | 'received' | null for "All" (member self-view only)
   let activeMemberFilter = ''; // memberId or '' for All team members
@@ -2848,7 +2861,7 @@
   };
   const BULK_QUIET_HEADERS = ['excel row','reason','row','sr no','sr','s no','sno','serial no','no','#','sl no'];
   const BULK_TYPE_MAP = { 'new':'New', 'renewal':'Renewal', 'endo':'Endo', 'endorsement':'Endo', 'others':'Others', 'other':'Others' };
-  const BULK_STATUS_MAP = { 'open':'open', 'completed':'done', 'complete':'done', 'done':'done', 'closed':'done' };
+  const BULK_STATUS_MAP = { 'open':'open', 'pending':'open', 'completed':'done', 'complete':'done', 'done':'done', 'closed':'done' };
   const VALID_PRIORITIES = ['Low','Medium','High','Urgent'];
   const BULK_MONTHS = { jan:1, feb:2, mar:3, apr:4, may:5, jun:6, jul:7, aug:8, sep:9, sept:9, oct:10, nov:11, dec:12 };
 
@@ -3000,9 +3013,9 @@
       ['Labels','No','Tags for the task','Separate several with commas, e.g.  Motor, Urgent.  Names that do not exist yet can be created automatically during the upload'],
       ['Renewal Date','No','Policy renewal / expiry date','Only used when Type = Renewal. DD/MM/YYYY'],
       ['Old Policy Number','No','','Only used when Type = Renewal'],
-      ['Status','No','Open or already finished','Open or Completed. Left blank = Open'],
+      ['Status','No','Pending or already finished','Pending or Completed. Left blank = Pending'],
       ['Completed On','No','When it was finished','Only for Completed rows. DD/MM/YYYY. Left blank = today'],
-      ['Outcome','Completed New / Renewal rows','Won or Lost','Required when Status = Completed and Type is New or Renewal'],
+      ['Outcome','Completed New / Renewal rows','Won, Lost or Other Tasks','Required when Status = Completed and Type is New or Renewal. For other types it can be left blank (counted as Other Tasks).'],
       ['Outcome Note','No','Why it was won / lost','Free text'],
       ['Slot','No (Renewal rows)','Renewal slot','One of: ' + SLOT_OPTIONS.join(', ') + '. Format the column as Text, otherwise Excel turns 1-10 into a date (the app repairs that, but Text is safest).'],
       ['Stage','No (Renewal rows)','Where the renewal stands','Quote pending, Quote sent, Follow up, Expected. Left blank = Quote pending. (Won / Lost here also works and completes the row.)'],
@@ -3342,7 +3355,7 @@
       const statusRaw = txt('Status');
       if(statusRaw){
         status = BULK_STATUS_MAP[statusRaw.toLowerCase()];
-        if(!status) errors.push(`Status "${statusRaw}" isn't valid — use Open or Completed.`);
+        if(!status) errors.push(`Status "${statusRaw}" isn't valid — use Pending (or Open) or Completed.`);
       }
       if(!statusRaw && stageOutcome) status = 'done';
       let completedAtMs = null, outcome = null, outcomeNote = '';
@@ -3351,14 +3364,12 @@
         const completedIso = dateField('Completed On', 'Completed On');
         if(completedIso){ const [cy, cm, cd] = completedIso.split('-').map(Number); completedAtMs = new Date(cy, cm-1, cd, 12).getTime(); }
         else completedAtMs = Date.now();
-        if(outcomeApplies(taskType)){
-          const o = { 'won':'Won', 'win':'Won', 'lost':'Lost', 'loss':'Lost' }[outcomeRaw.toLowerCase()];
-          if(!outcomeRaw) errors.push(`Completed ${taskType} tasks need an Outcome (Won or Lost).`);
-          else if(!o) errors.push(`Outcome "${outcomeRaw}" isn't valid — use Won or Lost.`);
-          else { outcome = o; outcomeNote = outcomeNoteRaw; }
-        } else if(outcomeRaw || outcomeNoteRaw){
-          warnings.push('Outcome ignored — Won/Lost only applies to New and Renewal tasks.');
-        }
+        const o = { 'won':'Won', 'win':'Won', 'lost':'Lost', 'loss':'Lost', 'other':'Other', 'others':'Other', 'other task':'Other', 'other tasks':'Other' }[outcomeRaw.toLowerCase()];
+        if(!outcomeRaw){
+          if(outcomeRequiredType(taskType)) errors.push(`Completed ${taskType} tasks need an Outcome (Won, Lost or Other Tasks).`);
+          else { outcome = 'Other'; outcomeNote = outcomeNoteRaw; }   // completed non-sales task with no outcome given
+        } else if(!o) errors.push(`Outcome "${outcomeRaw}" isn't valid — use Won, Lost or Other Tasks.`);
+        else { outcome = o; outcomeNote = outcomeNoteRaw; }
       } else if(outcomeRaw || outcomeNoteRaw || bulkCellText(completedOnRaw)){
         warnings.push('Outcome / Completed On ignored because the task is not Completed.');
       }
@@ -4408,7 +4419,7 @@
   function labelById(id){ return labels.find(l=>l.id===id); }
 
   const STATUS_FILTERS = [
-    { status: 'open', label: 'Open', color: 'var(--wa-amber)' },
+    { status: 'open', label: 'Pending', color: 'var(--wa-amber)' },
     { status: 'done', label: 'Completed', color: 'var(--wa-sage)' },
     { status: 'inward', label: 'Inward', color: '#5B2C91' },
   ];
@@ -4421,8 +4432,20 @@
       </div>`).join('');
     row.innerHTML = html;
   }
+  function setOutcomeFilter(v){ activeOutcomeFilter = (activeOutcomeFilter === v) ? '' : v; renderAll(); }
+  function renderOutcomeFilterRow(doneList){
+    const row = document.getElementById('outcomeFilterRow');
+    if(!row) return;
+    if(activeStatusFilter !== 'done'){ row.style.display = 'none'; row.innerHTML = ''; return; }
+    const n = o => doneList.filter(t => t.outcome === o).length;
+    const pill = (val, cls, label, count) => `<button class="outcome-filter-pill ${cls} ${activeOutcomeFilter===val?'active':''}" onclick="setOutcomeFilter('${val}')">${label}<small>${count}</small></button>`;
+    row.style.display = 'flex';
+    row.innerHTML = `<button class="outcome-filter-pill all ${activeOutcomeFilter===''?'active':''}" onclick="activeOutcomeFilter=''; renderAll();">All<small>${doneList.length}</small></button>`
+      + pill('Won','won','🏆 Won', n('Won')) + pill('Lost','lost','❌ Lost', n('Lost')) + pill('Other','other','📋 Other Tasks', n('Other'));
+  }
   function setStatusFilter(status){
     activeStatusFilter = status;
+    activeOutcomeFilter = '';
     renderAll();
   }
 
@@ -4685,6 +4708,8 @@
     if(renewalsViewMode){
       relevantTasks = relevantTasks.filter(t => t.taskType === 'Renewal');
     }
+    renderOutcomeFilterRow(relevantTasks);
+    if(activeStatusFilter === 'done' && activeOutcomeFilter) relevantTasks = relevantTasks.filter(t => t.outcome === activeOutcomeFilter);
 
     const withActivity = relevantTasks.map(t => {
       let latest = t.created;
@@ -4807,6 +4832,7 @@
     // Keep the open task visible in the list: switch to its own tab (Open / Completed / Inward) if needed,
     // clear filters that would hide it, then scroll it into view.
     let activeRow = document.querySelector('#chatList .chat-row.active');
+    if(!activeRow && activeOutcomeFilter && t.outcome !== activeOutcomeFilter){ activeOutcomeFilter = ''; renderAll(); activeRow = document.querySelector('#chatList .chat-row.active'); }
     if(!activeRow && activeStatusFilter && t.status !== activeStatusFilter){
       activeStatusFilter = t.status;
       renderAll();
@@ -4930,7 +4956,7 @@
     const prioColors = { urgent: 'var(--wa-rust)', high: '#e07a3f', medium: 'var(--wa-amber)', low: 'var(--wa-sage)' };
     const borderColor = prioColors[t.priority.toLowerCase()] || 'var(--wa-header)';
     const statusMeta = {
-      open: { label: 'Open', color: 'var(--wa-amber)' },
+      open: { label: 'Pending', color: 'var(--wa-amber)' },
       done: { label: 'Completed', color: 'var(--wa-sage)' },
       inward: { label: 'Inward', color: '#5B2C91' },
     }[t.status] || { label: t.status, color: '#999' };
@@ -4962,7 +4988,7 @@
             ${t.oldPolicyNumber ? `<span><b>Old policy no.:</b> ${escapeHtml(t.oldPolicyNumber)}</span>` : ''}
             ${t.slot ? `<span><b>Slot:</b> ${escapeHtml(t.slot)}</span>` : ''}
             ${((t.taskType === 'Renewal' || t.taskType === 'New') && t.status !== 'done') ? `<span><b>Stage:</b> ${escapeHtml(renewalStageOf(t))}</span>` : ''}
-            ${(t.outcome && t.status === 'done') ? `<span><b>Outcome:</b> ${t.outcome === 'Won' ? '🏆 Won' : '❌ Lost'}${t.outcomeNote ? ' — ' + escapeHtml(t.outcomeNote) : ''}</span>` : ''}
+            ${(t.outcome && t.status === 'done') ? `<span><b>Outcome:</b> ${outcomeLabel(t.outcome)}${t.outcomeNote ? ' — ' + escapeHtml(t.outcomeNote) : ''}</span>` : ''}
             ${(t.status === 'done' && t.outcome === 'Won' && t.newCompany) ? `<span><b>New company:</b> ${escapeHtml(t.newCompany)}</span>` : ''}
             ${(t.status === 'done' && t.outcome === 'Won' && t.newPremium != null) ? `<span><b>New premium:</b> ${escapeHtml(formatRupees(t.newPremium))}</span>` : ''}
             ${(t.status === 'done' && t.outcome === 'Lost' && t.lostReason) ? `<span><b>Lost reason:</b> ${escapeHtml(t.lostReason)}</span>` : ''}
@@ -4978,7 +5004,7 @@
           <div class="status-badge-select">
             <span class="status-badge-dot" style="background:${statusMeta.color}"></span>
             <select onchange="moveTask('${t.id}', this.value)" style="color:${statusMeta.color};" ${canChangeStatus(t)?'':'disabled title="Only the assignor (or Super Admin) can change this task\'s status"'}>
-              <option value="open" ${t.status==='open'?'selected':''}>Open</option>
+              <option value="open" ${t.status==='open'?'selected':''}>Pending</option>
               <option value="done" ${t.status==='done'?'selected':''}>Completed</option>
               <option value="inward" ${t.status==='inward'?'selected':''}>Inward</option>
             </select>
@@ -5363,7 +5389,7 @@
       return;
     }
     if(status === 'done' && t.status !== 'done' && outcomeApplies(t.taskType)){
-      openOutcomeModal(id, false);   // New / Renewal: ask Won or Lost before completing
+      openOutcomeModal(id, false);   // every task: ask Won / Lost / Other Tasks before completing
       renderAll();                   // keep the dropdown on its current value until they choose
       return;
     }
@@ -5376,7 +5402,9 @@
   }
 
   // ---- Won / Lost outcome (New and Renewal tasks, asked only when completing) ----
-  function outcomeApplies(taskType){ return taskType === 'New' || taskType === 'Renewal'; }
+  function outcomeApplies(taskType){ return true; }   // every task gets Won / Lost / Other Tasks when it is completed
+  function outcomeRequiredType(taskType){ return taskType === 'New' || taskType === 'Renewal'; }   // bulk upload only: these must state an outcome
+  function outcomeLabel(o){ return o === 'Won' ? '🏆 Won' : (o === 'Lost' ? '❌ Lost' : '📋 Other Tasks'); }
   function updateOutcomeFieldVisibility(){
     const type = document.getElementById('taskTypeInput').value;
     const status = document.getElementById('taskStatusInput').value;
@@ -5399,13 +5427,14 @@
     const rh = document.getElementById('taskRenewalHint');
     if(rh) rh.textContent = renewalOn ? 'Fill in the policy being renewed.' : 'Active when Type is Renewal.';
     const oh = document.getElementById('taskOutcomeHint');
-    if(oh) oh.textContent = outcomeOn ? 'Required to complete a New / Renewal task.' : 'Active when a New or Renewal task is marked Completed.';
+    if(oh) oh.textContent = outcomeOn ? 'Required to complete a task: Won, Lost or Other Tasks.' : 'Active when the task is marked Completed.';
   }
   let pendingOutcomeTaskId = null, pendingOutcomeEditOnly = false, pendingOutcomeVal = '';
   function pickOutcome(val){
     pendingOutcomeVal = val;
     document.getElementById('outcomeBtnWon').classList.toggle('sel', val === 'Won');
     document.getElementById('outcomeBtnLost').classList.toggle('sel', val === 'Lost');
+    document.getElementById('outcomeBtnOther').classList.toggle('sel', val === 'Other');
     document.getElementById('outcomeWonFields').style.display = val === 'Won' ? 'block' : 'none';
     document.getElementById('outcomeLostFields').style.display = val === 'Lost' ? 'block' : 'none';
     document.getElementById('outcomeSaveBtn').disabled = !val;
@@ -5431,7 +5460,7 @@
     const t = tasks.find(x => x.id === pendingOutcomeTaskId);
     const val = pendingOutcomeVal;
     if(!t){ cancelOutcome(); return; }
-    if(!val){ alert('Choose Won or Lost first.'); return; }
+    if(!val){ alert('Choose Won, Lost or Other Tasks first.'); return; }
     const reason = document.getElementById('outcomeLostReasonInput').value;
     if(val === 'Lost' && !reason){ alert('Please pick the reason this was lost — it is used to analyse lost renewals.'); return; }
     t.outcome = val;
@@ -5441,8 +5470,10 @@
       const pr = document.getElementById('outcomeNewPremiumInput').value;
       t.newPremium = pr === '' ? null : Math.max(0, Number(pr));
       t.lostReason = '';
-    } else {
+    } else if(val === 'Lost'){
       t.lostReason = reason; t.newCompany = ''; t.newPremium = null;
+    } else {
+      t.lostReason = ''; t.newCompany = ''; t.newPremium = null;   // Other Tasks: nothing more to record
     }
     if(!pendingOutcomeEditOnly){
       t.status = 'done';
@@ -5456,8 +5487,8 @@
   }
   function outcomePillHtml(t, clickable){
     if(!t.outcome || t.status !== 'done') return '';
-    const cls = t.outcome === 'Won' ? 'won' : 'lost';
-    const label = (t.outcome === 'Won' ? '🏆 Won' : '❌ Lost');
+    const cls = t.outcome === 'Won' ? 'won' : (t.outcome === 'Lost' ? 'lost' : 'other');
+    const label = outcomeLabel(t.outcome);
     const extra = t.outcome === 'Lost' ? (t.lostReason ? ' — ' + t.lostReason : '') : ((t.newCompany || t.newPremium != null) ? ' — ' + [t.newCompany, t.newPremium != null ? formatRupees(t.newPremium) : ''].filter(Boolean).join(' · ') : '');
     const tip = escapeHtml((t.outcomeNote || '') + extra) || (clickable ? 'Click to change outcome' : '');
     return clickable
@@ -5892,7 +5923,7 @@
     if(outcomeApplies(taskType) && data.status === 'done'){
       const outcomeVal = document.getElementById('taskOutcomeInput').value;
       const freshlyCompleting = !existingForOutcome || existingForOutcome.status !== 'done';
-      if(!outcomeVal && freshlyCompleting){ alert('This is a ' + taskType + ' task — please mark the Outcome as Won or Lost before completing it.'); return; }
+      if(!outcomeVal && freshlyCompleting){ alert('Please mark the Outcome as Won, Lost or Other Tasks before completing this task.'); return; }
       data.outcome = outcomeVal || (existingForOutcome && existingForOutcome.outcome) || null;
       data.outcomeNote = outcomeVal ? document.getElementById('taskOutcomeNoteInput').value.trim() : ((existingForOutcome && existingForOutcome.outcomeNote) || '');
       data.newCompany = ''; data.newPremium = null; data.lostReason = '';
@@ -6428,7 +6459,7 @@
       if(t.assignee === me && assignorName && t.assignorId !== me) bits.push('from ' + escapeHtml(assignorName));
       else if(t.assignee !== me && ent) bits.push('to ' + escapeHtml(ent.name));
     }
-    const statusText = t.status === 'inward' ? 'Inward' : (done ? (t.outcome ? 'Completed · ' + escapeHtml(t.outcome) : 'Completed') : (dayInfo ? escapeHtml(dayInfo.text) : 'No due date'));
+    const statusText = t.status === 'inward' ? 'Inward' : (done ? (t.outcome ? 'Completed · ' + escapeHtml(t.outcome === 'Other' ? 'Other Tasks' : t.outcome) : 'Completed') : (dayInfo ? escapeHtml(dayInfo.text) : 'No due date'));
     const statusCls = done ? 'done' : (dayInfo && dayInfo.overdue ? 'overdue' : (dayInfo && dayInfo.today ? 'today' : ''));
     return `<div class="cal-row ${done ? 'is-done' : ''}" style="border-left-color:${CAL_PRIO_COLORS[t.priority] || 'var(--wa-header)'}" onclick="calOpenTask('${t.id}')">
       <div class="cal-row-main">
@@ -6496,7 +6527,7 @@
     });
 
     // Toolbar
-    const statusSeg = [['all', 'All'], ['open', 'Open'], ['done', 'Completed']].map(([v, l]) => `<button class="${calStatus === v ? 'active' : ''}" onclick="calSetStatus('${v}')">${l}</button>`).join('');
+    const statusSeg = [['all', 'All'], ['open', 'Pending'], ['done', 'Completed']].map(([v, l]) => `<button class="${calStatus === v ? 'active' : ''}" onclick="calSetStatus('${v}')">${l}</button>`).join('');
     const dirSeg = isTeam ? '' : `<div class="cal-seg">${[['all', 'All'], ['received', 'Received'], ['given', 'Given']].map(([v, l]) => `<button class="${calDirection === v ? 'active' : ''}" onclick="calSetDirection('${v}')">${l}</button>`).join('')}</div>`;
     // Dropdown filters — the same ones the task list / task dashboard use (type, tag, category, line of business) plus priority.
     const sel = (cur, setter, allLabel, opts) => `<select class="cal-select ${cur ? 'active' : ''}" onchange="${setter}(this.value)"><option value="">${allLabel}</option>${opts.map(([v, l]) => `<option value="${escapeHtml(v)}" ${cur === v ? 'selected' : ''}>${escapeHtml(l)}</option>`).join('')}</select>`;
@@ -6591,11 +6622,11 @@
         const nDone = items.length - nOpen;
         const pill = (cls, n, label) => `<span class="cal-pill ${cls}" title="${n} ${label.toLowerCase()}"><b>${n}</b><em>${label}</em></span>`;
         const pills = items.length
-          ? `<div class="cal-pills">${nDone ? pill('done', nDone, 'Completed') : ''}${nOpen ? pill('open', nOpen, 'Open') : ''}${nOver ? pill('over', nOver, 'Overdue') : ''}</div>` : '';
+          ? `<div class="cal-pills">${nDone ? pill('done', nDone, 'Completed') : ''}${nOpen ? pill('open', nOpen, 'Pending') : ''}${nOver ? pill('over', nOver, 'Overdue') : ''}</div>` : '';
         cells += `<div class="cal-cell ${inMonth ? '' : 'other-month'} ${iso === todayIso ? 'today' : ''} ${calSelected === iso ? 'selected' : ''}" onclick="calSelectDay('${iso}')">
           <div class="cal-daynum"><span>${dt.getDate()}</span></div>${pills}</div>`;
       }
-      main = `<div class="cal-legend"><span><i class="done"></i>Completed</span><span><i class="open"></i>Open</span><span><i class="over"></i>Overdue (open, past due date)</span><em>Click a day to see its tasks</em></div><div class="cal-layout"><div class="cal-grid">${cells}</div>${calDayPanelHtml(byDate, noDue, isTeam)}</div>`;
+      main = `<div class="cal-legend"><span><i class="done"></i>Completed</span><span><i class="open"></i>Pending</span><span><i class="over"></i>Overdue (open, past due date)</span><em>Click a day to see its tasks</em></div><div class="cal-layout"><div class="cal-grid">${cells}</div>${calDayPanelHtml(byDate, noDue, isTeam)}</div>`;
     }
     if(calView === 'agenda' && calSelected === 'none'){
       main += calDayPanelHtml(byDate, noDue, isTeam);
@@ -6941,7 +6972,7 @@
     const kpiHtml = `
       <div class="kpi-grid">
         <div class="kpi-card"><div class="kpi-value">${total}</div><div class="kpi-label">${dashLockedPerson?'My tasks':'Total tasks'}</div></div>
-        <div class="kpi-card"><div class="kpi-value">${byStatus.open||0}</div><div class="kpi-label">Open tasks</div></div>
+        <div class="kpi-card"><div class="kpi-value">${byStatus.open||0}</div><div class="kpi-label">Pending tasks</div></div>
         <div class="kpi-card"><div class="kpi-value ${overdue.length?'warn':''}">${overdue.length}</div><div class="kpi-label">Overdue${byStatus.open ? ' (' + overdueRate + '%)' : ''}</div></div>
         <div class="kpi-card"><div class="kpi-value">${completionRate}%</div><div class="kpi-label">Completion rate</div></div>
         <div class="kpi-card"><div class="kpi-value">${avgCompletionDays!==null ? avgCompletionDays + 'd' : '—'}</div><div class="kpi-label">Avg. time to complete</div></div>
@@ -6950,7 +6981,7 @@
       </div>`;
 
     const statusColors = { open: 'var(--wa-amber)', done: 'var(--wa-sage)', inward: '#5B2C91' };
-    const statusLabels = { open: 'Open', done: 'Completed', inward: 'Inward' };
+    const statusLabels = { open: 'Pending', done: 'Completed', inward: 'Inward' };
     const statusHtml = Object.keys(statusLabels).map(k => barRow(statusLabels[k], byStatus[k], total, statusColors[k])).join('');
 
     const prioColors = { Urgent: 'var(--wa-rust)', High: '#e07a3f', Medium: 'var(--wa-amber)', Low: 'var(--wa-sage)' };
@@ -7040,7 +7071,7 @@
           </div>`;
       }).join('');
       return `<div class="dash-section"><h3>Team leaderboard <span style="font-weight:400; color:var(--wa-text-soft); font-size:11.5px;">(all tasks, this period)</span></h3>
-        <div class="leaderboard-legend"><span><i class="dot open"></i>Open</span><span><i class="dot done"></i>Completed</span></div>
+        <div class="leaderboard-legend"><span><i class="dot open"></i>Pending</span><span><i class="dot done"></i>Completed</span></div>
         ${html}</div>`;
     })();
 
@@ -7074,7 +7105,7 @@
       <div class="dash-grid-2">
         ${leaderboardSection}
         <div class="dash-section"><h3>Tasks by tag ${clearTagBtn}</h3>
-          <div class="leaderboard-legend"><span><i class="dot open"></i>Open</span><span><i class="dot done"></i>Completed</span></div>
+          <div class="leaderboard-legend"><span><i class="dot open"></i>Pending</span><span><i class="dot done"></i>Completed</span></div>
           ${labelHtml}
         </div>
       </div>
