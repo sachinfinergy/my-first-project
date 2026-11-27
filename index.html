@@ -614,6 +614,8 @@
     background:#e1f2fb; color:#54656f; font-size:11.5px; padding:5px 12px; border-radius:8px;
   }
 
+  .system-note{ text-align:center; margin:10px 0; }
+  .system-note span{ display:inline-block; background:#fff3c4; color:#54656f; font-size:12px; padding:6px 12px; border-radius:8px; max-width:88%; box-shadow:0 1px 1px rgba(0,0,0,.08); }
   .bubble-row{ display:flex; margin-bottom:8px; }
   .bubble-row.out{ justify-content:flex-end; }
   .bubble-row.in{ justify-content:flex-start; }
@@ -5084,6 +5086,12 @@
     const isAdmin = session && session.type === 'admin';
     let lastDateStr = null;
     return notes.map((n, idx) => {
+      if(n.system){
+        const sd = new Date(n.time).toDateString();
+        let dv = '';
+        if(sd !== lastDateStr){ dv = `<div class="day-divider"><span>${dayLabel(n.time)}</span></div>`; lastDateStr = sd; }
+        return `${dv}<div class="system-note"><span>${escapeHtml(n.text)} · ${clockTime(n.time)}</span></div>`;
+      }
       const isMe = n.authorId === me;
       const canDelete = isMe || isAdmin;
       const ticks = isMe ? tickMarkHtml(n, t) : '';
@@ -5942,7 +5950,14 @@
         alert('A task only moves to "Inward" status by actually converting it. Use the "Inward This" button on the task to do that.');
       }
       if(data.status !== t.status){ data.completedAt = data.status === 'done' ? Date.now() : null; }
+      const prevAssignee = t.assignee;
       Object.assign(t, data);
+      if(prevAssignee && data.assignee && prevAssignee !== data.assignee){
+        const nameOf = id => id === 'admin' ? (adminName || 'Super Admin') : ((memberById(id) || {}).name || 'Unknown');
+        if(!t.notes) t.notes = [];
+        const by = currentIdentity();
+        t.notes.push({ system: true, authorId: by, text: `🔁 Task reassigned from ${nameOf(prevAssignee)} to ${nameOf(data.assignee)} by ${nameOf(by)}`, time: Date.now(), readBy: [by] });
+      }
     } else {
       data.status = 'open';
       newId = 'T-' + String(taskCounter++).padStart(3,'0');
